@@ -1,0 +1,27 @@
+# Logs
+logs/
+*.log
+
+# Dependencias
+node_modules/
+
+# Variables de entorno (¡NUNCA subir al repositorio!)
+.env
+
+# Credenciales de Firebase (¡NUNCA subir al repositorio!)
+firebase-credentials.json
+*-credentials.json
+*serviceAccount*.json
+serviceAccountKey*.json
+
+# Directorios de sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Builds
+dist/
+build/

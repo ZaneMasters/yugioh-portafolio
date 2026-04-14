@@ -1,0 +1,799 @@
+{
+  "info": {
+    "name": "Yu-Gi-Oh! Inventory API",
+    "_postman_id": "yugioh-inventory-api-v1",
+    "description": "Colección completa para probar la API REST de inventario de cartas Yu-Gi-Oh!.\n\n**Base URL:** `http://localhost:3000/api/v1`\n\n**Variables de entorno recomendadas:**\n- `baseUrl` → `http://localhost:3000/api/v1`\n- `cardId` → ID de Firestore de una carta creada",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "cardId",
+      "value": "",
+      "type": "string",
+      "description": "ID de Firestore de una carta. Se puede setear automáticamente con el script del POST /cards."
+    }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["health"]
+            },
+            "description": "Verifica que el servidor esté activo."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has status ok', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.status).to.eql('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🌐 API Externa (YGOProdeck)",
+      "item": [
+        {
+          "name": "Buscar cartas por nombre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/external/cards?name=Dark Magician",
+              "host": ["{{baseUrl}}"],
+              "path": ["external", "cards"],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "Dark Magician",
+                  "description": "Nombre parcial o completo de la carta"
+                }
+              ]
+            },
+            "description": "Busca cartas en la API externa de YGOProdeck usando el parámetro `fname` (búsqueda parcial).\n\nLa respuesta queda cacheada en memoria por el TTL configurado (default 5 min)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response tiene estructura correcta', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  pm.expect(json.count).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar cartas por nombre — Blue-Eyes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/external/cards?name=Blue-Eyes",
+              "host": ["{{baseUrl}}"],
+              "path": ["external", "cards"],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "Blue-Eyes"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar cartas por nombre — vacío (error esperado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/external/cards?name=",
+              "host": ["{{baseUrl}}"],
+              "path": ["external", "cards"],
+              "query": [
+                {
+                  "key": "name",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Debe retornar 400 — El parámetro name es requerido."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 cuando name está vacío', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener carta por ID externo — Dark Magician",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/external/cards/46986414",
+              "host": ["{{baseUrl}}"],
+              "path": ["external", "cards", "46986414"]
+            },
+            "description": "Obtiene una carta específica por su ID numérico de YGOProdeck.\n\n**ID de Dark Magician:** 46986414"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Carta es Dark Magician', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data.name).to.eql('Dark Magician');",
+                  "  pm.expect(json.data.cardId).to.eql(46986414);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener carta por ID externo — Blue-Eyes White Dragon",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/external/cards/89631139",
+              "host": ["{{baseUrl}}"],
+              "path": ["external", "cards", "89631139"]
+            },
+            "description": "ID de Blue-Eyes White Dragon: 89631139"
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener carta — ID inválido (error esperado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/external/cards/abc",
+              "host": ["{{baseUrl}}"],
+              "path": ["external", "cards", "abc"]
+            },
+            "description": "Debe retornar 400 — El ID debe ser un número entero positivo."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 con ID no numérico', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📦 Inventario de Cartas",
+      "item": [
+        {
+          "name": "Registrar carta — por nombre",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dark Magician\",\n  \"condition\": \"near_mint\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cards",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards"]
+            },
+            "description": "Registra una carta buscándola por nombre exacto en la API de YGOProdeck.\n\nSi la carta ya existe en el inventario, incrementa la cantidad.\n\n**condition válidos:** `new`, `near_mint`, `lightly_played`, `moderately_played`, `heavily_played`, `damaged`"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test('Status 201 o 200', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "pm.test('Response success = true', () => {",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Card tiene id de Firestore', () => {",
+                  "  pm.expect(json.data.id).to.be.a('string');",
+                  "});",
+                  "",
+                  "// Guardar el ID de Firestore como variable de colección",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('cardId', json.data.id);",
+                  "  console.log('cardId guardado:', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar carta — por cardId externo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cardId\": 89631139,\n  \"condition\": \"new\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cards",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards"]
+            },
+            "description": "Registra una carta usando el ID numérico de la API de YGOProdeck.\n\n**cardId 89631139** = Blue-Eyes White Dragon"
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar carta — duplicado (incrementa cantidad)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dark Magician\",\n  \"condition\": \"near_mint\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cards",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards"]
+            },
+            "description": "Si la carta ya existe (mismo cardId), el endpoint retorna 200 e incrementa la quantity en lugar de crear un duplicado."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 en duplicado', () => pm.response.to.have.status(200));",
+                  "pm.test('Mensaje indica cantidad actualizada', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.message).to.include('Cantidad actualizada');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar carta — validación sin name ni cardId (error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": \"new\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cards",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards"]
+            },
+            "description": "Debe retornar 422 — Debes proporcionar al menos name o cardId."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 por validación', () => pm.response.to.have.status(422));",
+                  "pm.test('Response tiene errors array', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.errors).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar carta — condition inválido (error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dark Magician\",\n  \"condition\": \"perfect\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cards",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards"]
+            },
+            "description": "Debe retornar 422 — condition `perfect` no es válido."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 con condition inválido', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar inventario — todas las cartas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cards",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards"]
+            },
+            "description": "Retorna todas las cartas del inventario ordenadas por fecha de creación descendente."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response tiene count y data array', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.count).to.be.a('number');",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar inventario — filtro por nombre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cards?name=dark",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards"],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "dark",
+                  "description": "Búsqueda substring insensible a mayúsculas"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar inventario — filtro por type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cards?type=Normal Monster",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "Normal Monster",
+                  "description": "Filtro exacto por tipo de carta"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar inventario — filtro por archetype",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cards?archetype=Dark Magician",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards"],
+              "query": [
+                {
+                  "key": "archetype",
+                  "value": "Dark Magician"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar inventario — filtros combinados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cards?type=Normal Monster&archetype=Dark Magician",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "Normal Monster"
+                },
+                {
+                  "key": "archetype",
+                  "value": "Dark Magician"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener carta por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cards/{{cardId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards", "{{cardId}}"]
+            },
+            "description": "Obtiene una carta del inventario por su ID de Firestore.\n\n**Tip:** El script de POST /cards guarda el ID automáticamente en la variable `cardId`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Card tiene los campos esperados', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data).to.have.property('cardId');",
+                  "  pm.expect(json.data).to.have.property('name');",
+                  "  pm.expect(json.data).to.have.property('quantity');",
+                  "  pm.expect(json.data).to.have.property('condition');",
+                  "  pm.expect(json.data).to.have.property('image');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener carta — ID inexistente (error)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cards/id-que-no-existe-000",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards", "id-que-no-existe-000"]
+            },
+            "description": "Debe retornar 404 — Carta no encontrada."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar carta — quantity y condition",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 3,\n  \"condition\": \"lightly_played\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cards/{{cardId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards", "{{cardId}}"]
+            },
+            "description": "Actualiza `quantity` y/o `condition` de la carta.\n\nAl menos uno de los dos campos es requerido."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Quantity actualizada a 3', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data.quantity).to.eql(3);",
+                  "  pm.expect(json.data.condition).to.eql('lightly_played');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar carta — solo quantity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cards/{{cardId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards", "{{cardId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar carta — solo condition",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": \"heavily_played\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cards/{{cardId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards", "{{cardId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar carta — sin campos (error)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cards/{{cardId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards", "{{cardId}}"]
+            },
+            "description": "Debe retornar 422 — Debes proporcionar al menos quantity o condition."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 con body vacío', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar carta",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cards/{{cardId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards", "{{cardId}}"]
+            },
+            "description": "⚠️ Elimina permanentemente la carta del inventario en Firestore.\n\nUsa la variable `cardId` guardada automáticamente por el POST."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Mensaje de eliminación', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.message).to.include('eliminada');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar carta — ID inexistente (error)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cards/id-inexistente-999",
+              "host": ["{{baseUrl}}"],
+              "path": ["cards", "id-inexistente-999"]
+            },
+            "description": "Debe retornar 404 — Carta no encontrada."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
