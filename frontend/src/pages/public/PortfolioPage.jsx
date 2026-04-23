@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Sparkles, User, Ghost } from 'lucide-react'
+import { Sparkles, Ghost } from 'lucide-react'
 import { Navbar } from '../../components/layout/Navbar'
 import { CardGrid } from '../../components/cards/CardGrid'
 import { FiltersPanel } from '../../components/filters/FiltersPanel'
@@ -36,7 +36,7 @@ export default function PortfolioPage() {
   // ── Estado: usuario no encontrado ─────────────────────────────────────────────
   if (notFound) {
     return (
-      <div className="min-h-screen bg-[#0d0f1a] flex flex-col">
+      <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
           <motion.div
@@ -65,7 +65,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0f1a]">
+    <div className="min-h-screen ">
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
@@ -75,16 +75,6 @@ export default function PortfolioPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-10 text-center"
         >
-          {/* Avatar / badge del coleccionista */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', delay: 0.1 }}
-            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-purple-600 flex items-center justify-center shadow-lg shadow-amber-500/20 mx-auto mb-4"
-          >
-            <User className="w-8 h-8 text-white" />
-          </motion.div>
-
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium mb-4">
             <Sparkles className="w-3.5 h-3.5" />
             Portafolio de {displayName}

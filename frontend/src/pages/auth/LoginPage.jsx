@@ -21,7 +21,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0f1a] flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       {/* Fondo decorativo */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-amber-500/5 rounded-full blur-3xl" />

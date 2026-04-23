@@ -2,21 +2,21 @@ import { Outlet, NavLink } from 'react-router-dom'
 import { Sidebar } from '../../components/layout/Sidebar'
 import { Search, Package, ExternalLink, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { YuGiOhIcon } from '../../components/ui/YuGiOhIcon'
+import logo from '../../assets/logo.png'
 
 export default function AdminLayout() {
   const { user, logout } = useAuth()
   return (
-    <div className="flex min-h-screen bg-[#0d0f1a]">
+    <div className="flex min-h-screen ">
       <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar móvil */}
-        <div className="md:hidden flex flex-col bg-[#111827] border-b border-white/5">
+        <div className="md:hidden flex flex-col bg-[#111827]/80 backdrop-blur-sm border-b border-white/5">
           {/* Fila 1: Logo e iconos minimalistas */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
             <div className="flex items-center gap-2">
-              <YuGiOhIcon className="w-6 h-6 text-[#5895f9]" />
+              <img src={logo} alt="Yu-Gi-Oh!" className="h-6 w-auto object-contain" />
               <span className="text-white text-xs font-bold tracking-wider">PANEL ADMIN</span>
             </div>
             <div className="flex items-center gap-4">

@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { Search, Package, ExternalLink, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { YuGiOhIcon } from '../ui/YuGiOhIcon'
+import logo from '../../assets/logo.png'
 
 const navItems = [
   { to: '/admin/search', icon: Search, label: 'Buscar Cartas' },
@@ -12,13 +12,12 @@ export function Sidebar() {
   const { user, logout } = useAuth()
 
   return (
-    <aside className="hidden md:flex flex-col w-60 shrink-0 bg-[#111827] border-r border-white/5 min-h-screen">
+    <aside className="hidden md:flex flex-col w-60 shrink-0 bg-[#111827]/80 backdrop-blur-sm border-r border-white/5 min-h-screen">
       {/* Logo */}
       <div className="px-6 py-6 border-b border-white/5">
-        <div className="flex items-center gap-2.5">
-          <YuGiOhIcon className="w-8 h-8 text-[#5895f9]" />
+        <div className="flex items-center gap-3">
+          <img src={logo} alt="Yu-Gi-Oh!" className="h-8 w-auto object-contain" />
           <div>
-            <p className="text-sm font-semibold text-white">Yu-Gi-Oh!</p>
             <p className="text-xs text-slate-500">Panel Admin</p>
           </div>
         </div>

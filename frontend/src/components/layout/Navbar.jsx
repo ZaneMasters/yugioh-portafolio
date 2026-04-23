@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { LayoutGrid, Settings, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { YuGiOhIcon } from '../ui/YuGiOhIcon'
+import logo from '../../assets/logo.png'
 
 export function Navbar() {
   const { user } = useAuth()
@@ -21,10 +22,14 @@ export function Navbar() {
     <header className="sticky top-0 z-30 glass border-b border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
         {/* Brand */}
-        <NavLink to={galleryLink} className="flex items-center gap-2.5 group shrink-0">
-          <YuGiOhIcon className="w-8 h-8 text-[#5895f9] group-hover:text-amber-400 transition-colors" />
-          <span className="font-bold text-white text-lg tracking-tight group-hover:text-amber-400 transition-colors">
-            Gi-Oh! <span className="text-gradient font-black hidden sm:inline">Inventory</span>
+        <NavLink to={galleryLink} className="flex items-center gap-3 group shrink-0">
+          <img
+            src={logo}
+            alt="Yu-Gi-Oh!"
+            className="h-8 w-auto object-contain drop-shadow-md"
+          />
+          <span className="text-gradient font-black text-lg tracking-tight hidden sm:inline">
+            Inventory
           </span>
         </NavLink>
 
