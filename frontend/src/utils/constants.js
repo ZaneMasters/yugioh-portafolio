@@ -23,7 +23,7 @@ export const CARD_TYPES = [
   'Ritual Monster',
   'Fusion Monster',
   'Synchro Monster',
-  'Xyz Monster',
+  'XYZ Monster',
   'Link Monster',
   'Pendulum Effect Monster',
   'Spell Card',

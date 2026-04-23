@@ -77,18 +77,20 @@ export function clearSearchCache() {
 /**
  * Retorna el resultado cacheado para una búsqueda por nombre, o null si no existe.
  * @param {string} name
+ * @param {string} lang
  */
-export function getCachedSearch(name) {
-  return read(`search:${name.trim().toLowerCase()}`)
+export function getCachedSearch(name, lang = 'en') {
+  return read(`search:${name.trim().toLowerCase()}:lang:${lang}`)
 }
 
 /**
  * Guarda los resultados de una búsqueda por nombre.
  * @param {string} name
  * @param {Array} results
+ * @param {string} lang
  */
-export function setCachedSearch(name, results) {
-  save(`search:${name.trim().toLowerCase()}`, results, SEARCH_TTL_MS)
+export function setCachedSearch(name, results, lang = 'en') {
+  save(`search:${name.trim().toLowerCase()}:lang:${lang}`, results, SEARCH_TTL_MS)
 }
 
 /**

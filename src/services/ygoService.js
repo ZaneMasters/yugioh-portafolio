@@ -100,40 +100,70 @@ async function withCache(key, ttl, fetch) {
 /**
  * Busca cartas en YGOProdeck por nombre (búsqueda parcial con fname).
  */
-async function searchByName(name) {
-  const key = `search:name:${name.toLowerCase()}`;
+async function searchByName(name, lang = 'en') {
+  const key = `search:name:${name.toLowerCase()}:lang:${lang}`;
   return withCache(key, SEARCH_TTL, async () => {
-    const response = await ygoAxios.get('/cardinfo.php', { params: { fname: name } });
-    return response.data.data.map(mapExternalCard);
+    const params = { fname: name };
+    if (lang !== 'en') params.language = lang;
+    
+    try {
+      const response = await ygoAxios.get('/cardinfo.php', { params });
+      return response.data.data.map(mapExternalCard);
+    } catch (err) {
+      if (err.response && err.response.status === 400) {
+        return [];
+      }
+      throw err;
+    }
   });
 }
 
 /**
  * Obtiene una carta específica por su cardId de la API externa.
  */
-async function getByCardId(cardId) {
+async function getByCardId(cardId, lang = 'en') {
   const id  = Number(cardId);
-  const key = `card:id:${id}`;
+  const key = `card:id:${id}:lang:${lang}`;
   return withCache(key, CARD_TTL, async () => {
-    const response = await ygoAxios.get('/cardinfo.php', { params: { id } });
-    if (!response.data.data || response.data.data.length === 0) {
-      throw new AppError(`Carta con ID ${id} no encontrada en la API externa.`, 404);
+    const params = { id };
+    if (lang !== 'en') params.language = lang;
+
+    try {
+      const response = await ygoAxios.get('/cardinfo.php', { params });
+      if (!response.data.data || response.data.data.length === 0) {
+        throw new AppError(`Carta con ID ${id} no encontrada en la API externa.`, 404);
+      }
+      return mapExternalCard(response.data.data[0]);
+    } catch (err) {
+      if (err.response && err.response.status === 400) {
+        throw new AppError(`Carta con ID ${id} no encontrada en la API externa.`, 404);
+      }
+      throw err;
     }
-    return mapExternalCard(response.data.data[0]);
   });
 }
 
 /**
  * Obtiene una carta por nombre exacto.
  */
-async function getByExactName(name) {
-  const key = `card:name:${name.toLowerCase()}`;
+async function getByExactName(name, lang = 'en') {
+  const key = `card:name:${name.toLowerCase()}:lang:${lang}`;
   return withCache(key, CARD_TTL, async () => {
-    const response = await ygoAxios.get('/cardinfo.php', { params: { name } });
-    if (!response.data.data || response.data.data.length === 0) {
-      throw new AppError(`Carta "${name}" no encontrada en la API externa.`, 404);
+    const params = { name };
+    if (lang !== 'en') params.language = lang;
+
+    try {
+      const response = await ygoAxios.get('/cardinfo.php', { params });
+      if (!response.data.data || response.data.data.length === 0) {
+        throw new AppError(`Carta "${name}" no encontrada en la API externa.`, 404);
+      }
+      return mapExternalCard(response.data.data[0]);
+    } catch (err) {
+      if (err.response && err.response.status === 400) {
+        throw new AppError(`Carta "${name}" no encontrada en la API externa.`, 404);
+      }
+      throw err;
     }
-    return mapExternalCard(response.data.data[0]);
   });
 }
 

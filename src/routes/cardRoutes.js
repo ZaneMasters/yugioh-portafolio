@@ -11,7 +11,7 @@ const router = Router();
 
 /**
  * @route   POST /api/v1/cards
- * @desc    Registrar carta en el inventario (busca en API externa, evita duplicados)
+ * @desc    Registrar carta en el inventario del usuario autenticado
  * @access  Private (requiere Firebase ID Token)
  */
 router.post(
@@ -23,11 +23,20 @@ router.post(
 
 /**
  * @route   GET /api/v1/cards
- * @desc    Listar todas las cartas del inventario con filtros opcionales
+ * @desc    Listar todas las cartas del inventario del administrador autenticado
  * @query   name, type, archetype
- * @access  Public (la galería pública no requiere login)
+ * @access  Private (requiere Firebase ID Token)
  */
-router.get('/', cardController.getAllCards);
+router.get('/', authMiddleware, cardController.getAllCards);
+
+/**
+ * @route   GET /api/v1/portfolio/:slug/cards
+ * @desc    Portafolio público de un usuario identificado por su email-slug
+ * @example GET /api/v1/portfolio/angel/cards → cartas de angel@yugioh.com
+ * @query   name, type, archetype
+ * @access  Public
+ */
+router.get('/portfolio/:slug/cards', cardController.getPortfolioBySlug);
 
 /**
  * @route   GET /api/v1/cards/:id
@@ -42,7 +51,7 @@ router.get(
 
 /**
  * @route   PUT /api/v1/cards/:id
- * @desc    Actualizar quantity y/o condition de una carta
+ * @desc    Actualizar quantity y/o condition (solo el propietario)
  * @access  Private (requiere Firebase ID Token)
  */
 router.put(
@@ -54,7 +63,7 @@ router.put(
 
 /**
  * @route   DELETE /api/v1/cards/:id
- * @desc    Eliminar una carta del inventario
+ * @desc    Eliminar una carta del inventario (solo el propietario)
  * @access  Private (requiere Firebase ID Token)
  */
 router.delete(

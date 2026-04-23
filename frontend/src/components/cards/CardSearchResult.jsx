@@ -1,19 +1,15 @@
-import { motion } from 'framer-motion'
-import { Plus, Sword, Shield, Star } from 'lucide-react'
+import { Plus, Sword, Shield } from 'lucide-react'
 import { Button } from '../ui/Button'
 
 export function CardSearchResult({ card, onAdd, adding }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-3 p-3 rounded-xl bg-[#1a2235] border border-white/5 group hover:border-amber-500/20 transition-all"
-    >
+    <div className="flex items-center gap-3 p-3 rounded-xl bg-[#1a2235] border border-white/5 group hover:border-amber-500/20 transition-all">
       {/* Imagen */}
       <div className="shrink-0 w-14 h-20 rounded-lg overflow-hidden bg-black/30">
         <img
-          src={card.image}
+          src={card.imageSmall || card.image}
           alt={card.name}
+          loading="lazy"
           className="w-full h-full object-contain"
           onError={(e) => { e.target.src = '/card-placeholder.png' }}
         />
@@ -55,6 +51,6 @@ export function CardSearchResult({ card, onAdd, adding }) {
       >
         Agregar
       </Button>
-    </motion.div>
+    </div>
   )
 }

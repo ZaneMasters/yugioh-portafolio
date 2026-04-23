@@ -7,9 +7,11 @@ const {
   FIREBASE_CREDENTIALS_PATH,
   FIREBASE_CREDENTIALS_BASE64,
   FIREBASE_PROJECT_ID,
+  FIREBASE_STORAGE_BUCKET,
 } = require('./env');
 
 let db;
+let bucket;
 
 /**
  * Inicializa Firebase Admin SDK y retorna la instancia de Firestore.
@@ -41,13 +43,16 @@ function initFirebase() {
     logger.info('🔑 Firebase inicializado con Application Default Credentials (ADC)');
   }
 
-  admin.initializeApp({
-    credential,
-    projectId: FIREBASE_PROJECT_ID,
-  });
+  const appConfig = { credential, projectId: FIREBASE_PROJECT_ID };
+  if (FIREBASE_STORAGE_BUCKET) {
+    appConfig.storageBucket = FIREBASE_STORAGE_BUCKET;
+  }
+  admin.initializeApp(appConfig);
 
   db = admin.firestore();
+  bucket = FIREBASE_STORAGE_BUCKET ? admin.storage().bucket() : null;
   logger.info(`✅ Firestore conectado al proyecto: ${FIREBASE_PROJECT_ID}`);
+  if (bucket) logger.info(`🪣 Firebase Storage listo: ${FIREBASE_STORAGE_BUCKET}`);
   return db;
 }
 
@@ -55,13 +60,19 @@ function initFirebase() {
  * Retorna la instancia de Firestore (la inicializa si aún no existe).
  */
 function getFirestore() {
-  if (!db) {
-    return initFirebase();
-  }
+  if (!db) initFirebase();
   return db;
+}
+
+/**
+ * Retorna el bucket de Firebase Storage (null si no está configurado).
+ */
+function getStorage() {
+  if (!bucket && FIREBASE_STORAGE_BUCKET) initFirebase();
+  return bucket;
 }
 
 // Inicializar al requerir el módulo
 initFirebase();
 
-module.exports = { getFirestore };
+module.exports = { getFirestore, getStorage };

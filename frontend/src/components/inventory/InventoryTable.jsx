@@ -11,7 +11,7 @@ export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading
     <div className="overflow-x-auto rounded-xl border border-white/5 bg-[#111827]">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-white/5 bg-white/[0.02]">
+          <tr className="hidden md:table-row border-b border-white/5 bg-white/[0.02]">
             {HEADERS.map((h) => (
               <th key={h} className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 {h}

@@ -1,30 +1,36 @@
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useTransition } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Search, Loader2, PackagePlus } from 'lucide-react'
 import { SearchInput } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { CardSearchResult } from '../../components/cards/CardSearchResult'
 import { EmptyState } from '../../components/ui/EmptyState'
-import { Button } from '../../components/ui/Button'
 import { useSearchCards } from '../../hooks/useSearchCards'
 import { useCards } from '../../hooks/useCards'
 import { useDebounce } from '../../hooks/useDebounce'
 import { CONDITIONS } from '../../utils/constants'
 
+const MAX_VISIBLE = 20
+
 export default function SearchPage() {
   const [query, setQuery] = useState('')
   const [addingId, setAddingId] = useState(null)
+  const [isPending, startTransition] = useTransition()
 
   // Config de cantidad/condición default al agregar
   const [defaultQty, setDefaultQty] = useState(1)
   const [defaultCond, setDefaultCond] = useState('new')
 
-  const debouncedQuery = useDebounce(query, 500)
+  const debouncedQuery = useDebounce(query, 650)
   const { results, searching, search } = useSearchCards()
   const { addCard } = useCards()
 
   useEffect(() => {
-    search(debouncedQuery)
+    // La búsqueda de red ocurre fuera de la transición para que el spinner
+    // aparezca rápido, pero el renderizado de la lista es de baja prioridad
+    startTransition(() => {
+      search(debouncedQuery)
+    })
   }, [debouncedQuery])
 
   const handleAdd = async (card) => {
@@ -37,6 +43,9 @@ export default function SearchPage() {
     setAddingId(null)
   }
 
+  const visibleResults = results.slice(0, MAX_VISIBLE)
+  const hiddenCount = results.length - visibleResults.length
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       {/* Header */}
@@ -44,13 +53,15 @@ export default function SearchPage() {
         <h1 className="text-2xl font-bold text-white mb-1">Buscar Cartas</h1>
         <p className="text-slate-400 text-sm">
           Busca cartas en la base de datos de YGOProdeck y agrégalas a tu inventario.
+          <br />
+          <span className="text-amber-500/90 text-xs font-medium">Nota: Las búsquedas deben realizarse con el nombre de la carta en Inglés.</span>
         </p>
       </div>
 
       {/* Barra de búsqueda */}
       <div className="glass rounded-xl p-4 mb-6 space-y-4">
         <SearchInput
-          placeholder="Escribe el nombre de la carta... (ej: Dark Magician)"
+          placeholder="Escribe el nombre en inglés... (ej: Dark Magician)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
@@ -82,7 +93,7 @@ export default function SearchPage() {
       </div>
 
       {/* Resultados */}
-      {searching ? (
+      {searching || isPending ? (
         <div className="flex flex-col items-center py-16 gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
           <p className="text-slate-500 text-sm">Buscando en YGOProdeck...</p>
@@ -103,9 +114,10 @@ export default function SearchPage() {
         <div className="space-y-2">
           <p className="text-xs text-slate-500 mb-3">
             {results.length} resultado{results.length !== 1 ? 's' : ''} encontrado{results.length !== 1 ? 's' : ''}
+            {hiddenCount > 0 && ` — mostrando los primeros ${MAX_VISIBLE}`}
           </p>
           <AnimatePresence>
-            {results.map((card) => (
+            {visibleResults.map((card) => (
               <CardSearchResult
                 key={card.cardId}
                 card={card}
@@ -114,6 +126,11 @@ export default function SearchPage() {
               />
             ))}
           </AnimatePresence>
+          {hiddenCount > 0 && (
+            <p className="text-center text-xs text-slate-600 pt-2">
+              + {hiddenCount} resultados más — refina tu búsqueda para encontrar la carta exacta.
+            </p>
+          )}
         </div>
       )}
     </div>

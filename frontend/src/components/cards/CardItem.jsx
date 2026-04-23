@@ -1,9 +1,8 @@
 import { motion } from 'framer-motion'
-import { Badge } from '../ui/Badge'
 import { FRAME_TYPE_COLORS } from '../../utils/constants'
-import { Sword, Shield, Star, Layers } from 'lucide-react'
+import { Sword, Shield, Star, Layers, Eye } from 'lucide-react'
 
-export function CardItem({ card }) {
+export function CardItem({ card, onSelect }) {
   const frameGradient = FRAME_TYPE_COLORS[card.frameType] ?? FRAME_TYPE_COLORS.normal
 
   return (
@@ -14,10 +13,12 @@ export function CardItem({ card }) {
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
+      onClick={() => onSelect?.(card)}
       className={`
         group relative rounded-xl overflow-hidden border border-white/5
         bg-gradient-to-b ${frameGradient} bg-[#1a2235]
-        card-glow cursor-default transition-shadow duration-300
+        card-glow cursor-pointer transition-shadow duration-300
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50
       `}
     >
       {/* Imagen */}
@@ -29,6 +30,12 @@ export function CardItem({ card }) {
           className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
           onError={(e) => { e.target.src = '/card-placeholder.png' }}
         />
+        {/* Overlay hover: "Ver detalles" */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-medium border border-white/20">
+            <Eye className="w-3.5 h-3.5" /> Ver detalles
+          </span>
+        </div>
         {/* Quantity badge */}
         <div className="absolute top-2 right-2">
           <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-bold border border-white/10">
@@ -72,9 +79,7 @@ export function CardItem({ card }) {
           </div>
         )}
 
-        <div className="pt-1">
-          <Badge condition={card.condition} />
-        </div>
+
       </div>
     </motion.div>
   )

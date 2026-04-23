@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { Search, Package, ExternalLink, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { YuGiOhIcon } from '../ui/YuGiOhIcon'
 
 const navItems = [
   { to: '/admin/search', icon: Search, label: 'Buscar Cartas' },
@@ -8,16 +9,14 @@ const navItems = [
 ]
 
 export function Sidebar() {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
 
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 bg-[#111827] border-r border-white/5 min-h-screen">
       {/* Logo */}
       <div className="px-6 py-6 border-b border-white/5">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-            <span className="text-amber-400 font-bold text-sm">Yu</span>
-          </div>
+          <YuGiOhIcon className="w-8 h-8 text-[#5895f9]" />
           <div>
             <p className="text-sm font-semibold text-white">Yu-Gi-Oh!</p>
             <p className="text-xs text-slate-500">Panel Admin</p>
@@ -53,7 +52,7 @@ export function Sidebar() {
       <div className="px-4 py-4 border-t border-white/5">
         <div className="flex gap-2">
           <NavLink
-            to="/"
+            to={`/portfolio/${user?.email?.split('@')[0] || 'angel'}`}
             className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />

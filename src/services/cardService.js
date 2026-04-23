@@ -2,6 +2,7 @@
 
 const cardRepository = require('../repositories/cardRepository');
 const ygoService     = require('./ygoService');
+const imageService   = require('./imageService');
 const memCache       = require('../utils/cache');
 const AppError       = require('../utils/AppError');
 const logger         = require('../utils/logger');
@@ -9,61 +10,67 @@ const logger         = require('../utils/logger');
 /**
  * Servicio de inventario de cartas — Lógica de negocio.
  *
- * Caché del inventario (galería pública):
- *  - Lee: LRU en memoria con TTL de 2 min → evita consultas a Firestore en cada visita
- *  - Invalidación: POST/PUT/DELETE borran la caché → próxima visita lee datos frescos
+ * Multi-tenant: cada operación recibe `userId` para aislar datos por propietario.
  *
- * Orquesta comunicación entre:
- *  - cardRepository (Firestore)
- *  - ygoService (API externa)
+ * Caché del inventario:
+ *  - Clave: `inventory:${userId}:${filtros}` → cache independiente por usuario
+ *  - TTL: 2 minutos (INVENTORY_TTL)
+ *  - Invalidación: POST/PUT/DELETE borran solo el cache del usuario afectado
  */
 
-// Clave de caché para el inventario completo (sin filtros)
-const INVENTORY_CACHE_PREFIX = 'inventory:'
-const INVENTORY_TTL          = 2 * 60 // 2 minutos
+const INVENTORY_CACHE_PREFIX = 'inventory:';
+const INVENTORY_TTL          = 2 * 60; // 2 minutos
 
-/** Genera la clave de caché según los filtros aplicados */
-function inventoryKey(filters = {}) {
-  const sorted = Object.keys(filters).sort().map(k => `${k}=${filters[k]}`).join('&')
-  return `${INVENTORY_CACHE_PREFIX}${sorted || 'all'}`
+/** Genera la clave de caché por usuario y filtros */
+function inventoryKey(userId, filters = {}) {
+  const sorted = Object.keys(filters).sort().map(k => `${k}=${filters[k]}`).join('&');
+  return `${INVENTORY_CACHE_PREFIX}${userId || 'global'}:${sorted || 'all'}`;
 }
 
-/** Invalida todas las entradas de caché del inventario cuando hay una escritura */
-function invalidateInventoryCache() {
-  // La LRU no soporta wildcard — iteramos el store interno para borrar prefijo
+/** Invalida todas las entradas de caché del usuario dado */
+function invalidateInventoryCache(userId) {
+  const prefix = `${INVENTORY_CACHE_PREFIX}${userId || 'global'}:`;
   for (const key of memCache.store.keys()) {
-    if (key.startsWith(INVENTORY_CACHE_PREFIX)) {
-      memCache.delete(key)
+    if (key.startsWith(prefix)) {
+      memCache.delete(key);
     }
   }
-  logger.debug('🗑️  Inventory cache invalidated')
+  logger.debug(`🗑️  Inventory cache invalidated → userId: ${userId || 'global'}`);
 }
 
 // ── Registrar carta ────────────────────────────────────────────────────────────
 
-async function registerCard(dto) {
-  const { name, cardId, condition, quantity } = dto;
+/**
+ * Registra una carta en el inventario del usuario.
+ * @param {Object} dto - { name?, cardId?, condition?, quantity? }
+ * @param {string} userId - UID de Firebase del propietario
+ */
+async function registerCard(dto, userId) {
+  const { name, cardId, condition, quantity, lang = 'en' } = dto;
 
   let externalCard;
   if (cardId) {
-    externalCard = await ygoService.getByCardId(cardId);
+    externalCard = await ygoService.getByCardId(cardId, lang);
   } else {
-    externalCard = await ygoService.getByExactName(name);
+    externalCard = await ygoService.getByExactName(name, lang);
   }
 
   logger.info(`🔍 Carta encontrada en API: ${externalCard.name} (ID: ${externalCard.cardId})`);
 
-  const existing = await cardRepository.findByCardId(externalCard.cardId);
+  // Buscar duplicado dentro del inventario del mismo usuario
+  const existing = await cardRepository.findByCardId(externalCard.cardId, userId);
 
   if (existing) {
     const updatedQuantity = existing.quantity + (quantity || 1);
-    const updated = await cardRepository.update(existing.id, { quantity: updatedQuantity });
+    const updated = await cardRepository.update(existing.id, { quantity: updatedQuantity }, userId);
     logger.info(`♻️  Carta duplicada. Cantidad actualizada: ${existing.name} → ${updatedQuantity}`);
-    invalidateInventoryCache(); // ← galería verá el cambio en la próxima visita
+    invalidateInventoryCache(userId);
     return { card: updated, created: false };
   }
 
+  // Guardar la carta inmediatamente con la URL de YGOProdeck (respuesta rápida al usuario)
   const newCard = await cardRepository.create({
+    userId,
     cardId:    externalCard.cardId,
     name:      externalCard.name,
     type:      externalCard.type,
@@ -74,35 +81,55 @@ async function registerCard(dto) {
     atk:       externalCard.atk,
     def:       externalCard.def,
     desc:      externalCard.desc,
-    image:     externalCard.image,
+    image:     externalCard.image,      // URL temporal de YGOProdeck
     frameType: externalCard.frameType,
     condition: condition || 'new',
     quantity:  quantity  || 1,
   });
 
-  invalidateInventoryCache(); // ← galería verá la nueva carta
+  invalidateInventoryCache(userId);
+
+  // ── Subida de imagen en segundo plano (fire-and-forget) ───────────────────
+  // No bloqueamos la respuesta — la imagen se comprime y sube a Storage
+  // de forma asíncrona y luego se actualiza el campo image en Firestore.
+  setImmediate(() => {
+    imageService.uploadCardImage(externalCard.cardId, externalCard.image)
+      .then(async (storageUrl) => {
+        if (storageUrl && storageUrl !== externalCard.image) {
+          await cardRepository.update(newCard.id, { image: storageUrl }, null);
+          invalidateInventoryCache(userId);
+          logger.info(`🔄 Imagen actualizada a Storage para carta: ${externalCard.name}`);
+        }
+      })
+      .catch((err) => {
+        // Error silencioso — la carta ya está guardada con la URL de YGOProdeck
+        logger.warn(`⚠️  Background image upload falló para ${externalCard.cardId}: ${err.message}`);
+      });
+  });
+
   return { card: newCard, created: true };
 }
 
-// ── Listar cartas (galería pública) ───────────────────────────────────────────
+// ── Listar cartas (galería pública / portafolio) ───────────────────────────────
 
 /**
- * Retorna todas las cartas del inventario con filtros opcionales.
- * Respetadas desde la caché LRU si están disponibles.
+ * Retorna cartas con filtros opcionales, scope por usuario si se indica.
+ * @param {Object} filters
+ * @param {string|null} userId - null = sin filtro de usuario (legacy / global)
  */
-async function listCards(filters = {}) {
-  const key    = inventoryKey(filters)
-  const cached = memCache.get(key)
+async function listCards(filters = {}, userId = null) {
+  const key    = inventoryKey(userId, filters);
+  const cached = memCache.get(key);
 
   if (cached) {
-    logger.debug(`⚡ Inventory cache HIT → ${key}`)
-    return cached
+    logger.debug(`⚡ Inventory cache HIT → ${key}`);
+    return cached;
   }
 
-  const cards = await cardRepository.findAll(filters);
-  memCache.set(key, cards) // TTL por defecto de la instancia (CACHE_TTL_SECONDS del .env)
-  logger.debug(`💾 Inventory cache SET → ${key} (${cards.length} cartas)`)
-  return cards
+  const cards = await cardRepository.findAll(filters, userId);
+  memCache.set(key, cards);
+  logger.debug(`💾 Inventory cache SET → ${key} (${cards.length} cartas)`);
+  return cards;
 }
 
 // ── Obtener carta por ID ───────────────────────────────────────────────────────
@@ -113,7 +140,7 @@ async function getCardById(id) {
 
 // ── Actualizar carta ───────────────────────────────────────────────────────────
 
-async function updateCard(id, dto) {
+async function updateCard(id, dto, userId) {
   const updates = {};
 
   if (dto.quantity !== undefined) {
@@ -125,16 +152,16 @@ async function updateCard(id, dto) {
     updates.condition = dto.condition;
   }
 
-  const card = await cardRepository.update(id, updates);
-  invalidateInventoryCache(); // ← galería siempre verá datos actualizados
+  const card = await cardRepository.update(id, updates, userId);
+  invalidateInventoryCache(userId);
   return card;
 }
 
 // ── Eliminar carta ─────────────────────────────────────────────────────────────
 
-async function deleteCard(id) {
-  const result = await cardRepository.delete(id);
-  invalidateInventoryCache(); // ← carta desaparece de la galería
+async function deleteCard(id, userId) {
+  const result = await cardRepository.delete(id, userId);
+  invalidateInventoryCache(userId);
   return result;
 }
 
@@ -145,4 +172,3 @@ module.exports = {
   updateCard,
   deleteCard,
 };
-

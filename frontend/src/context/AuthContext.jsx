@@ -11,11 +11,11 @@ const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
-  const [loading, setLoading] = useState(true) // espera a que Firebase confirme sesión
+  const [loading, setLoading] = useState(true)
 
   // Escuchar cambios de sesión — Firebase la persiste automáticamente
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
       setLoading(false)
     })
@@ -24,8 +24,6 @@ export function AuthProvider({ children }) {
 
   /**
    * Login con email + contraseña.
-   * La contraseña NUNCA toca el frontend — Firebase la verifica en su servidor.
-   * Devuelve true si OK, false si error.
    */
   const login = async (email, password) => {
     try {
@@ -58,4 +56,3 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext)
 }
-

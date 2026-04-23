@@ -26,7 +26,7 @@ const errorHandler = (err, _req, res, _next) => {
   }
 
   // ── Errores de Firebase ───────────────────────────────────────────────────────
-  if (err.code && err.code.startsWith('firestore/')) {
+  if (err.code && typeof err.code === 'string' && err.code.startsWith('firestore/')) {
     logger.error('Firestore error', { code: err.code, message: err.message });
     return res.status(503).json({
       success: false,
