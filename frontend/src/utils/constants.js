@@ -17,17 +17,19 @@ export const CONDITION_COLORS = {
   damaged:           'bg-rose-900/40 text-rose-400 border-rose-500/30',
 }
 
+// Valores enviados al backend como query param ?type=...
+// El backend usa includes() para tipos que tienen múltiples subtipos (Pendulum, Ritual)
 export const CARD_TYPES = [
-  'Normal Monster',
-  'Effect Monster',
-  'Ritual Monster',
-  'Fusion Monster',
-  'Synchro Monster',
-  'XYZ Monster',
-  'Link Monster',
-  'Pendulum Effect Monster',
-  'Spell Card',
-  'Trap Card',
+  { label: 'Normal Monster',    value: 'Normal Monster'    },
+  { label: 'Effect Monster',    value: 'Effect Monster'    },
+  { label: 'Ritual Monster',    value: 'Ritual'            },
+  { label: 'Fusion Monster',    value: 'Fusion Monster'    },
+  { label: 'Synchro Monster',   value: 'Synchro Monster'   },
+  { label: 'XYZ Monster',       value: 'XYZ Monster'       },
+  { label: 'Link Monster',      value: 'Link Monster'      },
+  { label: 'Pendulum Monster',  value: 'Pendulum'          },
+  { label: 'Spell Card',        value: 'Spell Card'        },
+  { label: 'Trap Card',         value: 'Trap Card'         },
 ]
 
 export const FRAME_TYPE_COLORS = {

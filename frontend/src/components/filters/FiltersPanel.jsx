@@ -2,7 +2,7 @@ import { SearchInput } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { CARD_TYPES } from '../../utils/constants'
 
-const typeOptions = CARD_TYPES.map((t) => ({ value: t, label: t }))
+const typeOptions = CARD_TYPES
 
 export function FiltersPanel({ filters, onChange }) {
   return (
@@ -14,17 +14,17 @@ export function FiltersPanel({ filters, onChange }) {
         className="flex-1"
       />
       <Select
-        placeholder="Tipo de carta"
+        placeholder="Todas las Cartas"
         options={typeOptions}
         value={filters.type}
         onChange={(e) => onChange({ ...filters, type: e.target.value })}
-        className="sm:w-44"
+        className="sm:w-52"
       />
       <SearchInput
         placeholder="Arquetipo..."
         value={filters.archetype}
         onChange={(e) => onChange({ ...filters, archetype: e.target.value })}
-        className="sm:w-44"
+        className="sm:w-52"
       />
     </div>
   )

@@ -39,18 +39,26 @@ class CardRepository {
       query = query.where('userId', '==', userId);
     }
 
-    // Firestore soporta filtros de igualdad directamente
-    if (filters.type) {
-      query = query.where('type', '==', filters.type);
-    }
+    // Filtro de archetype — igualdad exacta (Firestore)
     if (filters.archetype) {
       query = query.where('archetype', '==', filters.archetype);
     }
 
+    // NOTA: el filtro de `type` se aplica en memoria (abajo) porque YGOProdeck
+    // devuelve múltiples subtipos para Pendulum ('Pendulum Effect Monster',
+    // 'Pendulum Normal Monster', etc.) y Ritual ('Ritual Monster', 'Ritual Effect Monster').
+    // Firestore solo soporta igualdad exacta, así que filtramos con includes().
+
     const snapshot = await query.get();
     let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    // Filtro de nombre (substring insensible a mayúsculas, no soportado nativamente por Firestore)
+    // Filtro de tipo (substring insensible a mayúsculas — cubre todos los subtipos)
+    if (filters.type) {
+      const typeLower = filters.type.toLowerCase();
+      cards = cards.filter((c) => c.type && c.type.toLowerCase().includes(typeLower));
+    }
+
+    // Filtro de nombre (substring insensible a mayúsculas)
     if (filters.name) {
       const nameLower = filters.name.toLowerCase();
       cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));

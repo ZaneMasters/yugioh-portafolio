@@ -5,19 +5,32 @@ import { X, Sword, Shield, Star, Layers, Zap, Scroll, GitMerge, Link2 } from 'lu
 import { Badge } from '../ui/Badge'
 import { FRAME_TYPE_COLORS, CONDITION_COLORS, CONDITIONS } from '../../utils/constants'
 
-// Iconos y colores por tipo de carta
-const TYPE_META = {
-  'Normal Monster':            { label: 'Monstruo Normal',       color: 'text-yellow-400',  bg: 'bg-yellow-500/10' },
-  'Effect Monster':            { label: 'Monstruo de Efecto',    color: 'text-orange-400',  bg: 'bg-orange-500/10' },
-  'Ritual Monster':            { label: 'Monstruo Ritual',       color: 'text-blue-400',    bg: 'bg-blue-500/10'   },
-  'Fusion Monster':            { label: 'Monstruo de Fusión',    color: 'text-purple-400',  bg: 'bg-purple-500/10' },
-  'Synchro Monster':           { label: 'Monstruo Sincronía',    color: 'text-slate-300',   bg: 'bg-slate-500/10'  },
-  'XYZ Monster':               { label: 'Monstruo XYZ',          color: 'text-gray-300',    bg: 'bg-gray-500/10'   },
-  'Link Monster':              { label: 'Monstruo Enlace',       color: 'text-sky-400',     bg: 'bg-sky-500/10'    },
-  'Pendulum Effect Monster':   { label: 'Monstruo Péndulo',      color: 'text-teal-400',    bg: 'bg-teal-500/10'   },
-  'Spell Card':                { label: 'Carta Mágica',          color: 'text-emerald-400', bg: 'bg-emerald-500/10'},
-  'Trap Card':                 { label: 'Carta de Trampa',       color: 'text-rose-400',    bg: 'bg-rose-500/10'   },
+// Metadatos de tipo. El orden importa: los más específicos van primero.
+// La resolución usa includes() para cubrir todos los subtipos de YGOProdeck
+// (ej: 'Pendulum Normal Monster', 'Ritual Effect Monster', etc.)
+const TYPE_META_LIST = [
+  { key: 'pendulum',        label: 'Monstruo Péndulo',      color: 'text-teal-400',    bg: 'bg-teal-500/10'   },
+  { key: 'ritual',          label: 'Monstruo Ritual',       color: 'text-blue-400',    bg: 'bg-blue-500/10'   },
+  { key: 'fusion',          label: 'Monstruo de Fusión',    color: 'text-purple-400',  bg: 'bg-purple-500/10' },
+  { key: 'synchro',         label: 'Monstruo Sincronía',    color: 'text-slate-300',   bg: 'bg-slate-500/10'  },
+  { key: 'xyz',             label: 'Monstruo XYZ',          color: 'text-gray-300',    bg: 'bg-gray-500/10'   },
+  { key: 'link',            label: 'Monstruo Enlace',       color: 'text-sky-400',     bg: 'bg-sky-500/10'    },
+  { key: 'normal monster',  label: 'Monstruo Normal',       color: 'text-yellow-400',  bg: 'bg-yellow-500/10' },
+  { key: 'effect monster',  label: 'Monstruo de Efecto',    color: 'text-orange-400',  bg: 'bg-orange-500/10' },
+  { key: 'spell card',      label: 'Carta Mágica',          color: 'text-emerald-400', bg: 'bg-emerald-500/10'},
+  { key: 'trap card',       label: 'Carta de Trampa',       color: 'text-rose-400',    bg: 'bg-rose-500/10'   },
+]
+
+/** Resuelve metadatos de tipo usando includes() para cubrir todos los subtipos */
+function resolveTypeMeta(type) {
+  if (!type) return { label: '—', color: 'text-slate-400', bg: 'bg-slate-500/10' }
+  const lower = type.toLowerCase()
+  return (
+    TYPE_META_LIST.find((m) => lower.includes(m.key)) ??
+    { label: type, color: 'text-slate-400', bg: 'bg-slate-500/10' }
+  )
 }
+
 
 const conditionLabel = (value) =>
   CONDITIONS.find((c) => c.value === value)?.label ?? value
@@ -42,7 +55,7 @@ export function CardDetailModal({ card, onClose }) {
   }, [open])
 
   const frameGradient = card ? (FRAME_TYPE_COLORS[card.frameType] ?? FRAME_TYPE_COLORS.normal) : ''
-  const typeMeta = card ? (TYPE_META[card.type] ?? { label: card.type, color: 'text-slate-400', bg: 'bg-slate-500/10' }) : {}
+  const typeMeta = card ? resolveTypeMeta(card.type) : {}
 
   return createPortal(
     <AnimatePresence>
