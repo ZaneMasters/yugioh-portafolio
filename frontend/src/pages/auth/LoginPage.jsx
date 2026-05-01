@@ -35,15 +35,17 @@ export default function LoginPage() {
         className="relative w-full max-w-sm"
       >
         <div className="glass rounded-2xl p-8 border border-white/10 shadow-2xl">
-          {/* Logo */}
+          {/* Banner */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-purple-600 shadow-lg shadow-amber-500/25 mb-4">
-              <span className="text-white font-black text-2xl">Yu</span>
-            </div>
-            <h1 className="text-2xl font-black text-white">
-              Gi-Oh! <span className="text-gradient">Inventory</span>
+            <img 
+              src="/og-image.png" 
+              alt="Yu-Gi-Oh! Inventory" 
+              className="w-full h-32 object-cover rounded-xl shadow-lg shadow-amber-500/10 mb-6 border border-white/10" 
+            />
+            <h1 className="text-2xl font-black text-white font-display">
+              Yu-Gi-Oh! <span className="text-gradient">Inventory</span>
             </h1>
-            <p className="text-slate-400 text-sm mt-1">Panel de Administración</p>
+            <p className="text-slate-400 text-sm mt-1 font-heading">Panel de Administración</p>
           </div>
 
           <div className="flex items-center gap-3 mb-6">

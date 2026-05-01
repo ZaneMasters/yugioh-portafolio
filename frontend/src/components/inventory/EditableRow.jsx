@@ -80,7 +80,7 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
                          text-center px-2 py-1 outline-none focus:border-amber-500/60"
             />
           ) : (
-            <span className="text-sm text-slate-200 font-medium">×{card.quantity}</span>
+            <span className="text-sm text-slate-200 font-stat">×{card.quantity}</span>
           )}
         </td>
 

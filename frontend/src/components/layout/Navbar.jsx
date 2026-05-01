@@ -28,7 +28,7 @@ export function Navbar() {
             alt="Yu-Gi-Oh!"
             className="h-8 w-auto object-contain drop-shadow-md"
           />
-          <span className="text-gradient font-black text-lg tracking-tight hidden sm:inline">
+          <span className="text-gradient font-black text-lg tracking-wider hidden sm:inline font-display">
             Inventory
           </span>
         </NavLink>

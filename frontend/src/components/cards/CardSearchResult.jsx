@@ -54,7 +54,7 @@ export function CardSearchResult({ card, destination = 'inventory', onAdd, addin
             <p className="text-xs text-purple-400/70">{card.archetype}</p>
           )}
           {(card.atk !== null || card.def !== null) && (
-            <div className="flex gap-2 text-xs">
+            <div className="flex gap-2 text-xs font-stat">
               {card.atk !== null && (
                 <span className="flex items-center gap-0.5 text-red-400">
                   <Sword className="w-3 h-3" />{card.atk}
@@ -93,7 +93,7 @@ export function CardSearchResult({ card, destination = 'inventory', onAdd, addin
           >
             <Minus className="w-3 h-3" />
           </button>
-          <span className="w-7 text-center text-sm font-mono text-white select-none">
+          <span className="w-7 text-center text-sm font-stat text-white select-none">
             {qty}
           </span>
           <button

@@ -14,7 +14,18 @@
   --color-danger: #ef4444;
   --color-success: #22c55e;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* ── Tipografías ────────────────────────────────────────────────────────── */
+  /* UI/cuerpo principal — angular, legible, estilo juego de cartas           */
+  --font-sans: "Rajdhani", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Títulos épicos (h1 de páginas públicas) — romano/místico               */
+  --font-display: "Cinzel Decorative", "Cinzel", serif;
+
+  /* Headings secundarios, sidebar, labels de sección                        */
+  --font-heading: "Cinzel", serif;
+
+  /* Números y stats (ATK/DEF, cantidades, monoespaciado)                    */
+  --font-mono: "Share Tech Mono", ui-monospace, monospace;
 
   --radius-card: 0.75rem;
   --radius-btn: 0.5rem;
@@ -37,7 +48,6 @@
     background-position: center center;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    /* Oscurecer la imagen: usamos la capa de color encima */
     position: relative;
   }
 
@@ -53,9 +63,18 @@
 
   body {
     font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 500; /* Rajdhani luce mejor en 500 */
+    letter-spacing: 0.01em;
     @apply antialiased;
     position: relative;
     z-index: 1;
+  }
+
+  /* Headings usan Cinzel por defecto */
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    letter-spacing: 0.04em;
   }
 
   ::-webkit-scrollbar {
@@ -73,6 +92,29 @@
 }
 
 @layer utilities {
+  /* Título épico — para h1 de portafolio y páginas hero */
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.06em;
+  }
+
+  /* Heading secundario — secciones, sidebar labels */
+  .font-heading {
+    font-family: var(--font-heading);
+    letter-spacing: 0.04em;
+  }
+
+  /* Texto de UI normal (ya es el default del body) */
+  .font-ui {
+    font-family: var(--font-sans);
+  }
+
+  /* Números, stats, cantidades */
+  .font-stat {
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+  }
+
   .glass {
     background: rgba(17, 24, 39, 0.7);
     backdrop-filter: blur(12px);

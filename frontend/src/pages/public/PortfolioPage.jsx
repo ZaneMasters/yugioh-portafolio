@@ -35,6 +35,15 @@ export default function PortfolioPage() {
     ? slug.charAt(0).toUpperCase() + slug.slice(1)
     : ''
 
+  // Actualizar título de la pestaña dinámicamente
+  useEffect(() => {
+    if (displayName) {
+      const tabLabel = currentTab === 'inventory' ? 'Colección' : 'Wishlist'
+      document.title = `${tabLabel} de ${displayName} — Yu-Gi-Oh! Inventory`
+    }
+    return () => { document.title = 'Yu-Gi-Oh! Inventory — Gestiona tu colección' }
+  }, [displayName, currentTab])
+
   // Refetch cuando cambian los filtros o la pestaña
   useEffect(() => {
     const params = {
@@ -96,7 +105,7 @@ export default function PortfolioPage() {
             Portafolio de {displayName}
           </div>
 
-          <h1 className="text-4xl sm:text-5xl font-black text-white mb-3">
+          <h1 className="text-4xl sm:text-5xl font-black text-white mb-3 font-display">
             {currentTab === 'inventory' ? 'Colección de ' : 'Cartas Buscadas por '}
             <span className="text-gradient">{displayName}</span>
           </h1>
