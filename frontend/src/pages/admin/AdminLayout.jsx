@@ -7,7 +7,7 @@ import logo from '../../assets/logo.png'
 export default function AdminLayout() {
   const { user, logout } = useAuth()
   return (
-    <div className="flex min-h-screen ">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden">

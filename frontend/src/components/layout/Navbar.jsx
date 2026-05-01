@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutGrid, Settings, User } from 'lucide-react'
+import { LayoutGrid, Settings } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { YuGiOhIcon } from '../ui/YuGiOhIcon'
 import logo from '../../assets/logo.png'
@@ -35,31 +35,13 @@ export function Navbar() {
 
         {/* Nav */}
         <nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar">
-          {/* Portafolio propio — solo si está logueado */}
-          {mySlug && (
-            <NavLink
-              to={`/portfolio/${mySlug}`}
-              className={({ isActive }) =>
-                `flex items-center gap-1.5 px-2.5 py-2 sm:px-3 rounded-lg text-sm transition-all ${
-                  isActive
-                    ? 'text-amber-400 bg-amber-500/10'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                }`
-              }
-              title="Mi Portafolio"
-            >
-              <User className="w-4 h-4 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Mi Portafolio</span>
-            </NavLink>
-          )}
-
-          {/* Galería principal (context-aware: se queda en el portafolio actual) */}
+          {/* Galería principal */}
           <NavLink
             to={galleryLink}
             end
             className={({ isActive }) =>
               `flex items-center gap-1.5 px-2.5 py-2 sm:px-3 rounded-lg text-sm transition-all ${
-                isActive
+                isActive && !location.search.includes('tab=wishlist')
                   ? 'text-amber-400 bg-amber-500/10'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               }`
@@ -69,7 +51,6 @@ export function Navbar() {
             <LayoutGrid className="w-4 h-4" />
             <span className="hidden sm:inline">Galería</span>
           </NavLink>
-
           {/* Admin / Login */}
           {user ? (
             <NavLink

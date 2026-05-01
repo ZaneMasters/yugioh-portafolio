@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Sparkles, Ghost } from 'lucide-react'
 import { Navbar } from '../../components/layout/Navbar'
@@ -15,8 +15,19 @@ import { useDebounce } from '../../hooks/useDebounce'
  */
 export default function PortfolioPage() {
   const { slug } = useParams()
-  const { cards, loading, notFound, fetchPortfolio } = usePortfolio(slug)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { cards, loading, notFound, fetchPortfolio, fetchPublicWishlist } = usePortfolio(slug)
   const [filters, setFilters] = useState({ name: '', type: '', archetype: '' })
+  
+  const currentTab = searchParams.get('tab') === 'wishlist' ? 'wishlist' : 'inventory'
+  
+  const handleTabChange = (tab) => {
+    setSearchParams((prev) => {
+      prev.set('tab', tab)
+      return prev
+    })
+  }
+
   const debouncedName = useDebounce(filters.name, 400)
 
   // Nombre para mostrar — capitaliza la primera letra del slug
@@ -24,14 +35,19 @@ export default function PortfolioPage() {
     ? slug.charAt(0).toUpperCase() + slug.slice(1)
     : ''
 
-  // Refetch cuando cambian los filtros
+  // Refetch cuando cambian los filtros o la pestaña
   useEffect(() => {
-    fetchPortfolio({
+    const params = {
       name:      debouncedName,
       type:      filters.type,
       archetype: filters.archetype,
-    })
-  }, [debouncedName, filters.type, filters.archetype, fetchPortfolio])
+    }
+    if (currentTab === 'inventory') {
+      fetchPortfolio(params)
+    } else {
+      fetchPublicWishlist(params)
+    }
+  }, [debouncedName, filters.type, filters.archetype, currentTab, fetchPortfolio, fetchPublicWishlist])
 
   // ── Estado: usuario no encontrado ─────────────────────────────────────────────
   if (notFound) {
@@ -81,18 +97,44 @@ export default function PortfolioPage() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-black text-white mb-3">
-            Colección de{' '}
+            {currentTab === 'inventory' ? 'Colección de ' : 'Cartas Buscadas por '}
             <span className="text-gradient">{displayName}</span>
           </h1>
 
           <p className="text-slate-400 text-base max-w-md mx-auto">
             {loading
-              ? 'Cargando colección...'
+              ? 'Cargando...'
               : cards.length > 0
-              ? `${cards.length} carta${cards.length === 1 ? '' : 's'} en la colección`
-              : 'Esta colección está vacía por ahora'}
+              ? `${cards.length} carta${cards.length === 1 ? '' : 's'} en la ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
+              : currentTab === 'inventory' 
+                ? 'Esta colección está vacía por ahora' 
+                : 'No hay cartas en la wishlist'}
           </p>
         </motion.div>
+
+        {/* Pestañas (Tabs) */}
+        <div className="flex justify-center border-b border-white/10 mb-8 max-w-lg mx-auto">
+          <button
+            onClick={() => handleTabChange('inventory')}
+            className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+              currentTab === 'inventory'
+                ? 'border-amber-400 text-amber-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-white/20'
+            }`}
+          >
+            Colección
+          </button>
+          <button
+            onClick={() => handleTabChange('wishlist')}
+            className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+              currentTab === 'wishlist'
+                ? 'border-amber-400 text-amber-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-white/20'
+            }`}
+          >
+            Wishlist
+          </button>
+        </div>
 
         {/* Filtros */}
         <motion.div

@@ -4,9 +4,9 @@ import { TableRowSkeleton } from '../ui/Skeleton'
 import { EmptyState } from '../ui/EmptyState'
 import { Package } from 'lucide-react'
 
-const HEADERS = ['Carta', 'Arquetipo', 'Cantidad', 'Condición', 'Acciones']
+export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading, mode = 'inventory' }) {
+  const HEADERS = ['Carta', 'Arquetipo', 'Cantidad', mode === 'inventory' ? 'Condición' : 'Rareza', 'Acciones']
 
-export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-white/5 bg-[#111827]">
       <table className="w-full text-left text-sm">
@@ -27,7 +27,7 @@ export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading
               <td colSpan={5}>
                 <EmptyState
                   icon={Package}
-                  title="Inventario vacío"
+                  title={mode === 'inventory' ? 'Inventario vacío' : 'Wishlist vacía'}
                   description="Busca y agrega cartas desde el buscador."
                 />
               </td>
@@ -41,6 +41,7 @@ export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading
                   onEdit={onEdit}
                   onDelete={onDelete}
                   actionLoading={actionLoading}
+                  mode={mode}
                 />
               ))}
             </AnimatePresence>

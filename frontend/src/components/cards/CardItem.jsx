@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { FRAME_TYPE_COLORS } from '../../utils/constants'
 import { Sword, Shield, Star, Layers, Eye } from 'lucide-react'
+import { Badge } from '../ui/Badge'
 
 export function CardItem({ card, onSelect }) {
   const frameGradient = FRAME_TYPE_COLORS[card.frameType] ?? FRAME_TYPE_COLORS.normal
@@ -37,10 +38,15 @@ export function CardItem({ card, onSelect }) {
           </span>
         </div>
         {/* Quantity badge */}
-        <div className="absolute top-2 right-2">
+        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
           <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-bold border border-white/10">
             <Layers className="w-3 h-3" /> ×{card.quantity}
           </span>
+          {card.rarity ? (
+            <Badge rarity={card.rarity} />
+          ) : card.condition ? (
+            <Badge condition={card.condition} />
+          ) : null}
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Sword, Shield, Star, Layers, Zap, Scroll, GitMerge, Link2 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
-import { FRAME_TYPE_COLORS, CONDITION_COLORS, CONDITIONS } from '../../utils/constants'
+import { FRAME_TYPE_COLORS, CONDITION_COLORS, CONDITIONS, RARITIES } from '../../utils/constants'
 
 // Metadatos de tipo. El orden importa: los más específicos van primero.
 // La resolución usa includes() para cubrir todos los subtipos de YGOProdeck
@@ -34,6 +34,9 @@ function resolveTypeMeta(type) {
 
 const conditionLabel = (value) =>
   CONDITIONS.find((c) => c.value === value)?.label ?? value
+
+const rarityLabel = (value) =>
+  RARITIES.find((r) => r.value === value)?.label ?? value
 
 /**
  * Modal de detalles de carta con toda la información del inventario.
@@ -143,12 +146,16 @@ export function CardDetailModal({ card, onClose }) {
                       </div>
                     )}
 
-                    {/* Inventario: cantidad + condición */}
+                    {/* Inventario: cantidad + condición/rareza */}
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 border border-white/10 text-xs text-white font-bold">
                         <Layers className="w-3 h-3" /> ×{card.quantity}
                       </span>
-                      <Badge condition={card.condition} />
+                      {card.rarity ? (
+                        <Badge rarity={card.rarity} />
+                      ) : (
+                        <Badge condition={card.condition} />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -186,7 +193,11 @@ export function CardDetailModal({ card, onClose }) {
                   {card.frameType && (
                     <DetailChip label="Tipo" value={card.frameType.charAt(0).toUpperCase() + card.frameType.slice(1)} />
                   )}
-                  <DetailChip label="Condición" value={conditionLabel(card.condition)} />
+                  {card.rarity ? (
+                    <DetailChip label="Rareza" value={rarityLabel(card.rarity)} />
+                  ) : (
+                    <DetailChip label="Condición" value={conditionLabel(card.condition)} />
+                  )}
                   <DetailChip label="Cantidad" value={`×${card.quantity}`} />
                   {card.archetype && (
                     <DetailChip label="Arquetipo" value={card.archetype} />

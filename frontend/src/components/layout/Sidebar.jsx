@@ -12,7 +12,7 @@ export function Sidebar() {
   const { user, logout } = useAuth()
 
   return (
-    <aside className="hidden md:flex flex-col w-60 shrink-0 bg-[#111827]/80 backdrop-blur-sm border-r border-white/5 min-h-screen">
+    <aside className="hidden md:flex flex-col w-60 shrink-0 bg-[#111827]/80 backdrop-blur-sm border-r border-white/5 sticky top-0 h-screen overflow-y-auto">
       {/* Logo */}
       <div className="px-6 py-6 border-b border-white/5">
         <div className="flex items-center gap-3">

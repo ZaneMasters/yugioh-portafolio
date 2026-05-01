@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import * as cardService from '../services/cardService'
+import * as wishlistService from '../services/wishlistService'
 
 /**
  * Hook para cargar el portafolio público de un usuario por su slug.
@@ -32,5 +33,24 @@ export function usePortfolio(slug) {
     }
   }, [slug])
 
-  return { cards, loading, notFound, fetchPortfolio }
+  const fetchPublicWishlist = useCallback(async (filters = {}) => {
+    if (!slug) return
+    setLoading(true)
+    setNotFound(false)
+    try {
+      const res = await wishlistService.getPublicWishlist(slug, filters)
+      setCards(res.data ?? [])
+    } catch (err) {
+      if (err.message?.includes('404') || err.message?.toLowerCase().includes('no existe')) {
+        setNotFound(true)
+        setCards([])
+      } else {
+        toast.error(err.message || 'Error al cargar la wishlist')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [slug])
+
+  return { cards, loading, notFound, fetchPortfolio, fetchPublicWishlist }
 }

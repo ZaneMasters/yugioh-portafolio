@@ -1,4 +1,5 @@
 import api from './api'
+import publicApi from './publicApi'
 
 /** Obtener todas las cartas del inventario con filtros opcionales */
 export const getCards = (filters = {}) => {
@@ -18,7 +19,9 @@ export const getPortfolioCards = (slug, filters = {}) => {
   if (filters.name) params.name = filters.name
   if (filters.type) params.type = filters.type
   if (filters.archetype) params.archetype = filters.archetype
-  return api.get(`/cards/portfolio/${slug}/cards`, { params })
+  // Ruta pública — no requiere Firebase token, usar publicApi para evitar el
+  // delay de inicialización del SDK de Auth en la primera carga.
+  return publicApi.get(`/cards/portfolio/${slug}/cards`, { params })
 }
 
 /** Obtener carta por ID de Firestore */
