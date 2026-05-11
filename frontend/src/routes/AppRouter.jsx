@@ -8,6 +8,9 @@ import AdminLayout from '../pages/admin/AdminLayout'
 import SearchPage from '../pages/admin/SearchPage'
 import InventoryPage from '../pages/admin/InventoryPage'
 
+import RecoverPasswordPage from '../pages/auth/RecoverPasswordPage'
+import ProfilePage from '../pages/admin/ProfilePage'
+
 // Slug del admin principal — usuarios acceden a / y son redirigidos aquí
 const DEFAULT_PORTFOLIO_SLUG = 'angel'
 
@@ -28,8 +31,9 @@ export default function AppRouter() {
           {/* Galería global legacy (opcional, se puede eliminar) */}
           <Route path="/gallery" element={<GalleryPage />} />
 
-          {/* Login */}
+          {/* Login y Recuperar */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/recover-password" element={<RecoverPasswordPage />} />
 
           {/* Panel admin — protegido */}
           <Route
@@ -43,6 +47,7 @@ export default function AppRouter() {
             <Route index element={<Navigate to="search" replace />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="inventory" element={<InventoryPage />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
 
           {/* Fallback */}

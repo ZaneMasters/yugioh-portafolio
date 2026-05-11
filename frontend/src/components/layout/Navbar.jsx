@@ -5,11 +5,11 @@ import { YuGiOhIcon } from '../ui/YuGiOhIcon'
 import logo from '../../assets/logo.png'
 
 export function Navbar() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const location = useLocation()
 
-  // Derivar el slug del email del usuario logueado
-  const mySlug = user?.email ? user.email.split('@')[0] : null
+  // Usar el slug guardado, y si no, el prefijo del email como fallback
+  const mySlug = profile?.slug || (user?.email ? user.email.split('@')[0] : null)
 
   // Si estamos viendo un portafolio específico, mantenernos en ese portafolio.
   // Si estamos en el admin, ir al portafolio del usuario actual (mySlug).

@@ -6,17 +6,32 @@ import {
 } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import toast from 'react-hot-toast'
+import { getProfile } from '../services/authService'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
+  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
   // Escuchar cambios de sesión — Firebase la persiste automáticamente
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
+      if (firebaseUser) {
+        try {
+          // Obtener el slug y datos del backend
+          const res = await getProfile()
+          setProfile(res.data)
+        } catch (error) {
+          console.error('Error fetching profile:', error)
+          // Fallback al slug del email si falla la red
+          setProfile({ slug: firebaseUser.email.split('@')[0], email: firebaseUser.email })
+        }
+      } else {
+        setProfile(null)
+      }
       setLoading(false)
     })
     return () => unsubscribe()
@@ -46,8 +61,12 @@ export function AuthProvider({ children }) {
     toast.success('Sesión cerrada')
   }
 
+  const updateProfileContext = (newProfile) => {
+    setProfile(newProfile)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, login, logout, updateProfileContext }}>
       {children}
     </AuthContext.Provider>
   )

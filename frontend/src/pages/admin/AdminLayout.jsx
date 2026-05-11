@@ -1,11 +1,11 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { Sidebar } from '../../components/layout/Sidebar'
-import { Search, Package, ExternalLink, LogOut } from 'lucide-react'
+import { Search, Package, ExternalLink, LogOut, Key } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
 
 export default function AdminLayout() {
-  const { user, logout } = useAuth()
+  const { user, profile, logout } = useAuth()
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
@@ -21,7 +21,7 @@ export default function AdminLayout() {
             </div>
             <div className="flex items-center gap-4">
               <NavLink
-                to={`/portfolio/${user?.email?.split('@')[0] || 'angel'}`}
+                to={`/portfolio/${profile?.slug || user?.email?.split('@')[0] || 'angel'}`}
                 className="text-slate-500 hover:text-amber-400 transition-colors"
                 title="Ir a mi Galería"
               >
@@ -58,6 +58,16 @@ export default function AdminLayout() {
               }
             >
               <Package className="w-4 h-4" /> Inventario
+            </NavLink>
+            <NavLink
+              to="/admin/profile"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm flex-1 justify-center transition-all ${
+                  isActive ? 'bg-amber-500/15 text-amber-400' : 'text-slate-400 hover:bg-white/5'
+                }`
+              }
+            >
+              <Key className="w-4 h-4" /> Perfil
             </NavLink>
           </div>
         </div>

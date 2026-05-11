@@ -20,6 +20,7 @@ const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
 const cache = new Map();
 
 const admin = require('firebase-admin');
+const userRepository = require('../repositories/userRepository');
 
 /**
  * @param {string} slug - Prefijo del email (ej. 'angel')
@@ -38,8 +39,16 @@ async function slugToUid(slug) {
     cache.delete(slugLower); // expirado
   }
 
-  // 2. Buscar en Firebase Auth iterando usuarios
+  // 2. Buscar en Firestore (nueva estrategia con slugs personalizados)
   try {
+    const uidFromDb = await userRepository.getUidBySlug(slugLower);
+    if (uidFromDb) {
+      cache.set(slugLower, { uid: uidFromDb, expiresAt: Date.now() + CACHE_TTL_MS });
+      logger.debug(`🔍 slugToUid FOUND (in DB) → ${slugLower} = ${uidFromDb}`);
+      return uidFromDb;
+    }
+
+    // 3. Fallback: Buscar en Firebase Auth iterando usuarios (para cuentas antiguas que no han guardado perfil)
     let pageToken;
     do {
       const result = await admin.auth().listUsers(1000, pageToken);
@@ -49,8 +58,16 @@ async function slugToUid(slug) {
         const prefix = user.email.split('@')[0].toLowerCase();
         
         if (prefix === slugLower) {
+          // Validar que el usuario no tenga ya un slug personalizado distinto
+          const userProfile = await userRepository.getProfile(user.uid);
+          if (userProfile && userProfile.slug && userProfile.slug !== slugLower) {
+            // Si tiene un slug guardado y es distinto al prefijo del correo, 
+            // el prefijo antiguo ya no es válido.
+            continue;
+          }
+
           cache.set(slugLower, { uid: user.uid, expiresAt: Date.now() + CACHE_TTL_MS });
-          logger.debug(`🔍 slugToUid FOUND → ${slugLower} = ${user.uid} (${user.email})`);
+          logger.debug(`🔍 slugToUid FOUND (Fallback) → ${slugLower} = ${user.uid} (${user.email})`);
           return user.uid;
         }
       }

@@ -1,15 +1,16 @@
 import { NavLink } from 'react-router-dom'
-import { Search, Package, ExternalLink, LogOut } from 'lucide-react'
+import { Search, Package, ExternalLink, LogOut, Key } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
 
 const navItems = [
   { to: '/admin/search', icon: Search, label: 'Buscar Cartas' },
   { to: '/admin/inventory', icon: Package, label: 'Mi Inventario' },
+  { to: '/admin/profile', icon: Key, label: 'Perfil' },
 ]
 
 export function Sidebar() {
-  const { user, logout } = useAuth()
+  const { user, profile, logout } = useAuth()
 
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 bg-[#111827]/80 backdrop-blur-sm border-r border-white/5 sticky top-0 h-screen overflow-y-auto">
@@ -51,7 +52,7 @@ export function Sidebar() {
       <div className="px-4 py-4 border-t border-white/5">
         <div className="flex gap-2">
           <NavLink
-            to={`/portfolio/${user?.email?.split('@')[0] || 'angel'}`}
+            to={`/portfolio/${profile?.slug || user?.email?.split('@')[0] || 'angel'}`}
             className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />

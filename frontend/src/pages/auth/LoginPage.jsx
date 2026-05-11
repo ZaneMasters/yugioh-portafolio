@@ -103,6 +103,16 @@ export default function LoginPage() {
               </button>
             </div>
 
+            <div className="flex justify-end pt-1 pb-2">
+              <a 
+                href="/recover-password" 
+                onClick={(e) => { e.preventDefault(); navigate('/recover-password') }}
+                className="text-xs text-amber-500 hover:text-amber-400 transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </a>
+            </div>
+
             <button
               type="submit"
               disabled={loading || !password || !email}
