@@ -38,7 +38,7 @@ jobs:
       # ── Construir .env del Backend ───────────────────────────
       - name: 📝 Create Backend .env
         run: |
-          echo "FIREBASE_API_KEY=${{ secrets.BACKEND_FIREBASE_API_KEY }}" >> .env
+          echo "GCP_API_KEY=${{ secrets.BACKEND_FIREBASE_API_KEY }}" >> .env
 
       # ── Deploy a Firebase ────────────────────────────────────
       - name: 🚀 Deploy to Firebase (Hosting + Functions)

@@ -3,7 +3,7 @@
 const admin = require('firebase-admin');
 const axios = require('axios');
 const logger = require('../utils/logger');
-const { FIREBASE_API_KEY } = require('../config/env');
+const { GCP_API_KEY } = require('../config/env');
 const userRepository = require('../repositories/userRepository');
 const { invalidateSlugCache } = require('../utils/slugToUid');
 
@@ -69,9 +69,9 @@ const recoverPassword = async (req, res, next) => {
     }
 
     // Si se configuró la Web API Key, usamos la REST API de Firebase para enviar el correo directamente
-    if (FIREBASE_API_KEY) {
+    if (GCP_API_KEY) {
       try {
-        const url = `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${FIREBASE_API_KEY}`;
+        const url = `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${GCP_API_KEY}`;
         await axios.post(url, {
           requestType: 'PASSWORD_RESET',
           email: userRecord.email,
