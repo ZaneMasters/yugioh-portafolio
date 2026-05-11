@@ -19,12 +19,12 @@ jobs:
 
       # ── Backend ──────────────────────────────────────────────
       - name: 📦 Install Backend dependencies
-        run: npm ci
+        run: npm install
 
       # ── Frontend ─────────────────────────────────────────────
       - name: 📦 Install Frontend dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: npm install
 
       - name: 🏗️ Build Frontend
         working-directory: ./frontend
