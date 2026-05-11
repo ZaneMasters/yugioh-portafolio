@@ -9,9 +9,12 @@ const router        = require('./routes');
 const app = express();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// En producción, ALLOWED_ORIGINS debe ser la URL de tu frontend en Vercel
+// En producción, ALLOWED_ORIGINS debe ser la URL de tu frontend en Vercel o Firebase
 // Ejemplo: ALLOWED_ORIGINS=https://yugioh-inventory.vercel.app
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5174')
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS || 
+  'http://localhost:5173,http://localhost:5174,https://yugioh-8fc03.web.app,https://yugioh-8fc03.firebaseapp.com'
+)
   .split(',')
   .map((o) => o.trim())
 
