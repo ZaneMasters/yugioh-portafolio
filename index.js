@@ -9,30 +9,24 @@ const app    = require('./src/app');
 const logger = require('./src/utils/logger');
 const { PORT } = require('./src/config/env');
 
-// ── Detectar entorno ──────────────────────────────────────────────────────────
-// K_SERVICE es inyectada por Google Cloud Run/Functions automáticamente
-const isCloudFunction = !!(process.env.K_SERVICE || process.env.FUNCTION_NAME || process.env.FUNCTIONS_EMULATOR);
+// Exporta la app Express como una Cloud Function HTTP llamada "api"
+// Firebase Hosting redirige /api/** a esta función
+const { onRequest } = require('firebase-functions/v2/https');
 
-if (isCloudFunction) {
-  // ── Modo Cloud Functions ───────────────────────────────────────────────────
-  // Exporta la app Express como una Cloud Function HTTP llamada "api"
-  // Firebase Hosting redirige /api/** a esta función
-  const { onRequest } = require('firebase-functions/v2/https');
+exports.api = onRequest(
+  {
+    region: 'us-central1',
+    memory: '256MiB',
+    timeoutSeconds: 30,
+    // Las variables de entorno se configuran con:
+    // firebase functions:config:set o en Firebase Console → Functions → Configuration
+  },
+  app,
+);
 
-  exports.api = onRequest(
-    {
-      region: 'us-central1',
-      memory: '256MiB',
-      timeoutSeconds: 30,
-      // Las variables de entorno se configuran con:
-      // firebase functions:config:set o en Firebase Console → Functions → Configuration
-    },
-    app,
-  );
-
-  logger.info('☁️  Running as Cloud Function — Express app exported as "api"');
-} else {
-  // ── Modo servidor local ────────────────────────────────────────────────────
+// ── Modo servidor local ────────────────────────────────────────────────────
+// Solo se inicia si el archivo se ejecuta directamente (ej. `node index.js` o `npm run dev`)
+if (require.main === module) {
   const port = PORT || 3000;
 
   app.listen(port, () => {
