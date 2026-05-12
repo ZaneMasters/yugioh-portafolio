@@ -1,58 +1,69 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '../context/AuthContext'
 import { ProtectedRoute } from '../components/layout/ProtectedRoute'
-import GalleryPage from '../pages/public/GalleryPage'
-import PortfolioPage from '../pages/public/PortfolioPage'
-import LoginPage from '../pages/auth/LoginPage'
-import AdminLayout from '../pages/admin/AdminLayout'
-import SearchPage from '../pages/admin/SearchPage'
-import InventoryPage from '../pages/admin/InventoryPage'
 
-import RecoverPasswordPage from '../pages/auth/RecoverPasswordPage'
-import ProfilePage from '../pages/admin/ProfilePage'
+// Carga perezosa (Lazy Loading) para optimizar el peso del bundle inicial
+const GalleryPage = lazy(() => import('../pages/public/GalleryPage'))
+const PortfolioPage = lazy(() => import('../pages/public/PortfolioPage'))
+const LoginPage = lazy(() => import('../pages/auth/LoginPage'))
+const AdminLayout = lazy(() => import('../pages/admin/AdminLayout'))
+const SearchPage = lazy(() => import('../pages/admin/SearchPage'))
+const InventoryPage = lazy(() => import('../pages/admin/InventoryPage'))
+const RecoverPasswordPage = lazy(() => import('../pages/auth/RecoverPasswordPage'))
+const ProfilePage = lazy(() => import('../pages/admin/ProfilePage'))
 
 // Slug del admin principal — usuarios acceden a / y son redirigidos aquí
 const DEFAULT_PORTFOLIO_SLUG = 'angel'
+
+// Fallback visual mientras se descargan los chunks de las páginas
+const PageLoader = () => (
+  <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+    <div className="w-10 h-10 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin"></div>
+  </div>
+)
 
 export default function AppRouter() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          {/* Raíz → portafolio del admin principal */}
-          <Route
-            path="/"
-            element={<Navigate to={`/portfolio/${DEFAULT_PORTFOLIO_SLUG}`} replace />}
-          />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Raíz → portafolio del admin principal */}
+            <Route
+              path="/"
+              element={<Navigate to={`/portfolio/${DEFAULT_PORTFOLIO_SLUG}`} replace />}
+            />
 
-          {/* Portafolio público de cualquier usuario por slug */}
-          <Route path="/portfolio/:slug" element={<PortfolioPage />} />
+            {/* Portafolio público de cualquier usuario por slug */}
+            <Route path="/portfolio/:slug" element={<PortfolioPage />} />
 
-          {/* Galería global legacy (opcional, se puede eliminar) */}
-          <Route path="/gallery" element={<GalleryPage />} />
+            {/* Galería global legacy (opcional, se puede eliminar) */}
+            <Route path="/gallery" element={<GalleryPage />} />
 
-          {/* Login y Recuperar */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/recover-password" element={<RecoverPasswordPage />} />
+            {/* Login y Recuperar */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/recover-password" element={<RecoverPasswordPage />} />
 
-          {/* Panel admin — protegido */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="search" replace />} />
-            <Route path="search" element={<SearchPage />} />
-            <Route path="inventory" element={<InventoryPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-          </Route>
+            {/* Panel admin — protegido */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="search" replace />} />
+              <Route path="search" element={<SearchPage />} />
+              <Route path="inventory" element={<InventoryPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+            </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   )

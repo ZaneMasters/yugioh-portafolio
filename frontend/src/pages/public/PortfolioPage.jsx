@@ -73,16 +73,13 @@ export default function PortfolioPage() {
             <h1 className="text-2xl font-bold text-white mb-2">
               Portafolio no encontrado
             </h1>
-            <p className="text-slate-400 mb-6">
-              No existe ningún coleccionista con el slug{' '}
+            <p className="text-slate-400 mb-2">
+              No hemos podido encontrar ningún coleccionista bajo la URL{' '}
               <span className="text-amber-400 font-mono">"{slug}"</span>.
             </p>
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-medium hover:bg-amber-500/20 transition-colors"
-            >
-              Volver al inicio
-            </Link>
+            <p className="text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
+              Es posible que el usuario haya cambiado su nombre público recientemente o que el enlace contenga un error tipográfico. Por favor, pídele el enlace correcto.
+            </p>
           </motion.div>
         </main>
       </div>
