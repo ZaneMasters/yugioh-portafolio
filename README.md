@@ -1,134 +1,128 @@
-# 🃏 Yu-Gi-Oh! Inventory API
+# 🃏 Yu-Gi-Oh! Portfolio & Inventory App
 
-Backend REST para gestionar un inventario personal de cartas Yu-Gi-Oh!, integrado con la API pública de [YGOProdeck](https://db.ygoprodeck.com/api/v7/) y Firebase Firestore como base de datos.
-
----
-
-## 🚀 Stack tecnológico
-
-| Tecnología | Uso |
-|---|---|
-| **Node.js + Express** | Servidor HTTP y routing |
-| **Firebase Admin SDK** | Autenticación y acceso a Firestore |
-| **Firestore** | Base de datos NoSQL en la nube |
-| **Axios** | Consumo de la API externa de YGOProdeck |
-| **Zod** | Validación de schemas de entrada |
-| **Winston + Morgan** | Logging estructurado y HTTP logs |
-| **LRU Cache** | Caché en memoria para reducir llamadas externas |
-| **Nodemon** | Recarga automática en desarrollo |
+Plataforma Full Stack diseñada para gestionar y compartir públicamente tu colección personal de cartas de Yu-Gi-Oh! y tu *Wishlist*. Se integra con la API pública de [YGOProdeck](https://db.ygoprodeck.com/api/v7/) para los datos de las cartas y utiliza Firebase (Firestore, Auth, Cloud Run Functions, Hosting) para toda su infraestructura en la nube.
 
 ---
 
-## 📁 Estructura del proyecto
+## 🚀 Stack Tecnológico
+
+**Frontend (React / Vite)**
+- **Vite (v8 + Rolldown)**: Bundler ultra rápido con *Code Splitting* (`manualChunks`).
+- **React 19 + React Router**: Navegación SPA con *Lazy Loading* y `Suspense`.
+- **TailwindCSS + Framer Motion**: Estilos modernos, diseño *Glassmorphism* y micro-interacciones.
+- **Lucide React & React Hot Toast**: Iconos y notificaciones.
+
+**Backend (Node.js / Express)**
+- **Firebase Admin SDK**: Autenticación, validación de JWT y acceso a Firestore.
+- **Express + Firebase Cloud Functions v2 (Cloud Run)**: API Serverless.
+- **Zod**: Validación estricta de schemas.
+- **LRU Cache & Caché en Memoria**: Minimiza llamadas externas y consultas a la base de datos para la resolución de perfiles (slugs).
+
+---
+
+## 📁 Estructura del Monorepo
 
 ```
-API/
-├── index.js                        # Entry point — arranca el servidor
-├── firebase-credentials.json       # ⚠️ NO subir a Git
-├── .env                            # Variables de entorno
-├── .env.example                    # Plantilla de variables
-└── src/
-    ├── app.js                      # Configuración de Express
-    ├── config/
-    │   └── firebase.js             # Inicialización Firebase Admin SDK
-    ├── controllers/
-    │   ├── cardController.js       # Controladores del inventario
-    │   └── externalController.js  # Controladores API externa
-    ├── services/
-    │   ├── cardService.js          # Lógica de negocio del inventario
-    │   └── ygoService.js           # Integración con YGOProdeck
-    ├── repositories/
-    │   └── cardRepository.js       # Acceso a datos Firestore
-    ├── routes/
-    │   ├── cardRoutes.js           # Rutas /api/v1/cards
-    │   └── externalRoutes.js       # Rutas /api/v1/external
-    ├── middlewares/
-    │   ├── authMiddleware.js       # Verificación Firebase ID Token
-    │   ├── validate.js             # Validación con Zod
-    │   └── errorHandler.js        # Manejo centralizado de errores
-    ├── dtos/
-    │   ├── createCardDto.js        # Schema de creación
-    │   └── updateCardDto.js        # Schema de actualización
-    └── utils/
-        ├── cache.js                # LRU Cache en memoria
-        ├── logger.js               # Instancia de Winston
-        └── AppError.js             # Clase de error operacional
+/
+├── .github/workflows/
+│   └── firebase-deploy.yml         # Pipeline CI/CD inteligente (Frontend / Backend)
+├── frontend/                       # Aplicación React + Vite
+│   ├── src/
+│   │   ├── components/             # UI Reutilizable
+│   │   ├── context/                # AuthContext (Estado global)
+│   │   ├── pages/                  # Vistas (Admin, Público, Login)
+│   │   └── routes/                 # AppRouter (Lazy Loading)
+│   └── vite.config.js              # Configuración de compilación optimizada
+├── src/                            # Backend Node.js
+│   ├── controllers/                # Controladores (ej. cardController)
+│   ├── services/                   # Lógica de negocio e integración con YGOProdeck
+│   ├── repositories/               # Abstracción de base de datos (Firestore)
+│   ├── utils/                      # Caching (slugToUid), Logger, ErrorHandler
+│   ├── dtos/                       # Schemas de validación (Zod)
+│   └── app.js                      # Configuración de Express
+├── index.js                        # Entry point (Server local y exportación Functions)
+├── firebase.json                   # Reglas de Hosting y redirecciones API
+└── package.json                    # Dependencias del backend y scripts globales
 ```
 
 ---
 
-## ⚙️ Variables de entorno
+## ⚡ Optimizaciones Clave Implementadas
 
-Crea un archivo `.env` en la raíz basado en `.env.example`:
-
-```env
-# Servidor
-PORT=3000
-NODE_ENV=development
-
-# Firebase Admin SDK
-FIREBASE_CREDENTIALS_PATH=./firebase-credentials.json
-FIREBASE_PROJECT_ID=yugioh-8fc03
-
-# API Externa
-YGO_API_BASE_URL=https://db.ygoprodeck.com/api/v7
-
-# Caché en memoria
-CACHE_TTL_SECONDS=300
-CACHE_MAX_SIZE=200
-
-# Logging
-LOG_LEVEL=info
-```
+1. **Lazy Loading en Frontend**: Usamos `React.lazy()` en el enrutador. Un visitante público no descarga el código del panel de administración ni la interfaz gráfica del administrador, ahorrando más del 70% del ancho de banda inicial.
+2. **Code Splitting (Chunks Manuales)**: Las librerías pesadas (React, Firebase, Framer) se empaquetan en archivos separados. Si haces un pequeño cambio visual, los visitantes mantienen el código de las librerías cacheadas en sus navegadores.
+3. **Smart CI/CD (GitHub Actions)**: El pipeline de despliegue utiliza `dorny/paths-filter`. **Si solo cambias código de React, solo se despliega Firebase Hosting**, evitando despliegues innecesarios del Backend y ahorrando costos.
+4. **Caché CDN y Backend**: Las rutas públicas de portafolio usan cabeceras `Cache-Control` agresivas (120 segundos) que actúan directamente en la red de Firebase Hosting (Edge). Además, un caché en memoria en el backend evita consultas redundantes a Firestore al traducir slugs a UIDs.
 
 ---
 
 ## 🔑 Configuración de Firebase
 
 ### 1. Obtener credenciales del Admin SDK
-
 1. Ve a [Firebase Console](https://console.firebase.google.com/) → **Configuración del proyecto** (⚙️)
 2. Pestaña **"Cuentas de servicio"**
 3. Selecciona **Node.js** → **"Generar nueva clave privada"**
-4. Renombra el archivo descargado a `firebase-credentials.json`
-5. Colócalo en la raíz del proyecto (`API/`)
+4. Renombra el archivo descargado a `firebase-credentials.json` y colócalo en la raíz del proyecto.
 
 ### 2. Habilitar Email/Password en Firebase Auth
-
 1. Ve a **Authentication** → **Sign-in method**
 2. Habilita **"Correo electrónico/Contraseña"**
 
 ### 3. Crear usuario administrador
-
 1. Ve a **Authentication** → **Users**
-2. **"Agregar usuario"** → ingresa tu email y contraseña
+2. **"Agregar usuario"** → ingresa tu email y contraseña.
 
 ---
 
-## 🚀 Instalación y ejecución
+## ⚙️ Variables de Entorno
 
-```bash
-# Instalar dependencias
-npm install
-
-# Desarrollo (con recarga automática)
-npm run dev
-
-# Producción
-npm start
+Crea un archivo `.env` en la raíz (basado en `.env.example`):
+```env
+PORT=3000
+NODE_ENV=development
+FIREBASE_CREDENTIALS_PATH=./firebase-credentials.json
+FIREBASE_PROJECT_ID=tu-proyecto-id
+YGO_API_BASE_URL=https://db.ygoprodeck.com/api/v7
+CACHE_TTL_SECONDS=300
+CACHE_MAX_SIZE=200
+LOG_LEVEL=info
 ```
 
-El servidor arranca en `http://localhost:3000`
+Crea un archivo `.env` dentro de la carpeta `frontend/`:
+```env
+VITE_FIREBASE_API_KEY=tu_api_key
+VITE_FIREBASE_AUTH_DOMAIN=tu_proyecto.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=tu_proyecto
+VITE_FIREBASE_APP_ID=tu_app_id
+```
 
 ---
 
-## 📡 Endpoints
+## 🚀 Instalación y Ejecución Local
+
+Necesitarás dos terminales corriendo simultáneamente.
+
+1. **Instalar Dependencias**:
+```bash
+npm install # En la raíz (Backend)
+cd frontend && npm install # En la carpeta frontend
+```
+
+2. **Arrancar el Servidor Local**:
+```bash
+npm run dev # En la raíz (Puerto 3000)
+cd frontend && npm run dev # En la carpeta frontend (Puerto 5173 proxy)
+```
+
+---
+
+## 📡 Endpoints (Backend REST API)
 
 ### Inventario — `/api/v1/cards`
 
 | Método | Ruta | Descripción | Auth |
 |---|---|---|---|
-| `GET` | `/api/v1/cards` | Listar inventario (filtros: `name`, `type`, `archetype`) | 🌍 Público |
+| `GET` | `/api/v1/cards` | Listar inventario (filtros: `name`, `type`, `archetype`) | 🔒 Privado |
 | `GET` | `/api/v1/cards/:id` | Obtener carta por ID de Firestore | 🌍 Público |
 | `POST` | `/api/v1/cards` | Registrar carta (busca en YGOProdeck, evita duplicados) | 🔒 Privado |
 | `PUT` | `/api/v1/cards/:id` | Actualizar `quantity` y/o `condition` | 🔒 Privado |
@@ -140,6 +134,12 @@ El servidor arranca en `http://localhost:3000`
 |---|---|---|---|
 | `GET` | `/api/v1/external/cards?name=xxx` | Buscar cartas en YGOProdeck | 🌍 Público |
 | `GET` | `/api/v1/external/cards/:id` | Obtener carta por ID numérico | 🌍 Público |
+
+### Portafolio Público — `/api/v1/portfolio`
+
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| `GET` | `/api/v1/portfolio/:slug/cards` | Obtener las cartas de un coleccionista usando su slug | 🌍 Público |
 
 ### Sistema
 
@@ -185,84 +185,35 @@ El token se obtiene automáticamente desde el frontend con Firebase Auth SDK.
 ```
 
 ### Condiciones válidas
-
-| Valor | Descripción |
-|---|---|
-| `new` | Nueva |
-| `near_mint` | Near Mint |
-| `lightly_played` | Lightly Played |
-| `moderately_played` | Moderately Played |
-| `heavily_played` | Heavily Played |
-| `damaged` | Dañada |
+- `new` (Nueva)
+- `near_mint` (Near Mint)
+- `lightly_played` (Lightly Played)
+- `moderately_played` (Moderately Played)
+- `heavily_played` (Heavily Played)
+- `damaged` (Dañada)
 
 ---
 
 ## 🧪 Testing con Postman
 
 Importa el archivo `yugioh-inventory-api.postman_collection.json` incluido en el proyecto.
-
 La colección incluye variables automáticas que capturan el `cardId` de Firestore entre peticiones para facilitar el flujo completo: `POST → GET → PUT → DELETE`.
 
 ---
 
-## 🛡️ Seguridad
+## 🛡️ Seguridad y Consideraciones
 
-- `firebase-credentials.json` está en `.gitignore` — **nunca lo subas a Git**
-- Los tokens JWT de Firebase expiran cada hora y se renuevan automáticamente
-- La caché LRU reduce llamadas a la API externa y mejora tiempos de respuesta
-- Todos los inputs son validados con Zod antes de llegar al controlador
-
----
-
-## 📋 .gitignore recomendado
-
-```
-node_modules/
-.env
-firebase-credentials.json
-dist/
-*.log
-```
+- `firebase-credentials.json` está en `.gitignore` — **nunca lo subas a Git**.
+- Los tokens JWT de Firebase expiran cada hora y se renuevan automáticamente.
+- La caché LRU reduce llamadas a la API externa y mejora tiempos de respuesta.
+- Todos los inputs son validados con Zod antes de llegar al controlador.
 
 ---
 
 ## 🚀 Despliegue CI/CD (GitHub Actions + Firebase)
 
-El proyecto está configurado para desplegarse automáticamente a Firebase (Hosting para el frontend, Cloud Functions para el backend) en cada push a la rama `main` mediante GitHub Actions.
+El proyecto está configurado para desplegarse automáticamente a Firebase en cada push a la rama `main`.
 
-### 1. Requisitos Previos en Firebase
-
-1. Asegúrate de que el plan de tu proyecto en Firebase sea **Blaze (pago por uso)**. Es estrictamente necesario para que Cloud Functions pueda hacer peticiones externas (a YGOProdeck). El nivel gratuito de este plan es más que suficiente para no tener cargos reales.
-2. Tu archivo `firebase.json` en la raíz está configurado para subir el frontend (`frontend/dist`) y redirigir las peticiones `/api/**` a tu Cloud Function (`api`).
-
-### 2. Configurar Secretos en GitHub
-
-Para que GitHub Actions tenga permisos para subir tu código a Firebase necesita una clave de autenticación. Usaremos el archivo `firebase-credentials.json` que descargaste previamente.
-
-1. Entra a tu repositorio en **GitHub**.
-2. Ve a la pestaña **Settings** (Configuración).
-3. En la barra lateral izquierda ve a **Secrets and variables** → **Actions**.
-4. Haz clic en el botón verde **"New repository secret"**.
-5. Llena los datos exactamente así:
-   - **Name:** `FIREBASE_SERVICE_ACCOUNT_KEY`
-   - **Secret:** Abre en tu PC tu archivo `firebase-credentials.json` y copia/pega **ABSOLUTAMENTE TODO** el contenido (abre la llave `{` y cierra con la llave `}`).
-6. Clic en **Add secret**.
-
-### 3. Flujo de Trabajo (Deploy)
-
-Asegúrate de ejecutar estos comandos en la raíz correcta de tu proyecto (dentro de la carpeta `API/`):
-
-```bash
-# 1. Agrega tus cambios
-git add .
-
-# 2. Crea un commit
-git commit -m "feat: nueva funcionalidad"
-
-# 3. Empuja los cambios a GitHub (esto detona el despliegue automático)
-git push origin main
-```
-
-Puedes ir a la pestaña **Actions** en tu repositorio para ver el progreso del pipeline. El archivo orquestador vive en `.github/workflows/firebase-deploy.yml`.
-
-> **Nota para Entornos de Producción:** Cloud Functions usará automáticamente **Application Default Credentials** provistas por el entorno de Google. No subir nunca `firebase-credentials.json` a GitHub.
+1. **Configurar Secretos en GitHub**: Ve a Settings → Secrets and variables → Actions y agrega `FIREBASE_SERVICE_ACCOUNT_KEY` (contenido completo de tu JSON). Agrega también los secretos del frontend (`VITE_FIREBASE_API_KEY`, etc.) y `BACKEND_FIREBASE_API_KEY`.
+2. Asegúrate de tener el plan **Blaze (pago por uso)** en Firebase (requerido para funciones Node 22+).
+3. **Flujo Inteligente**: Gracias al uso de `dorny/paths-filter`, el backend (Cloud Functions) solo se redesplegará si realizas modificaciones dentro de `src/`, el `package.json` raíz o el propio `firebase.json`. Modificaciones exclusivas del `frontend/` desplegarán únicamente el *Hosting*.
