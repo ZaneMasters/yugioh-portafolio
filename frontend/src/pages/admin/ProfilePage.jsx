@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Lock, Eye, EyeOff, Save, User, Link as LinkIcon } from 'lucide-react'
+import { Lock, Eye, EyeOff, Save, User, Link as LinkIcon, Info } from 'lucide-react'
 import { changePassword, updateProfile } from '../../services/authService'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
@@ -134,6 +134,12 @@ export default function ProfilePage() {
             <p className="text-xs text-slate-500 mt-2 ml-1">
               Solo se permiten letras minúsculas, números y guiones. Al cambiarlo, tu URL anterior dejará de funcionar.
             </p>
+            <div className="flex items-start gap-2 p-3 mt-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <Info className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-blue-200/80 leading-relaxed">
+                Debido a sistemas de caché para optimizar la velocidad, <strong>el cambio podría tardar hasta 10 minutos</strong> en reflejarse globalmente. Durante este periodo, la URL anterior podría seguir funcionando temporalmente.
+              </p>
+            </div>
           </div>
         </form>
       </motion.div>
