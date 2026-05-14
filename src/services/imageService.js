@@ -22,7 +22,7 @@ const logger = require('../utils/logger');
  */
 
 const STORAGE_FOLDER = 'cards';
-// Dimensiones máximas — suficientes para portafolio, HEVC/WebP reduce ~80%
+// Dimensiones máximas — suficientes para portafolio, WebP reduce ~80% vs JPG original
 const IMG_WIDTH  = 200;
 const IMG_HEIGHT = 290;
 const IMG_QUALITY = 80; // WebP quality 0-100

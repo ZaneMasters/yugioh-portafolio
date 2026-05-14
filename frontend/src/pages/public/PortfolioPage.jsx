@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useParams, Link, useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Sparkles, Ghost } from 'lucide-react'
 import { Navbar } from '../../components/layout/Navbar'
@@ -11,16 +11,21 @@ import { useDebounce } from '../../hooks/useDebounce'
 /**
  * Página de portafolio público de un usuario.
  * Accesible en: /portfolio/:slug
- * El slug es el prefijo del email (ej. 'angel' para angel@yugioh.com)
+ * Usa paginación cursor-based del backend: carga 20 cartas iniciales y
+ * obtiene más automáticamente cuando el usuario hace scroll al final.
  */
 export default function PortfolioPage() {
   const { slug } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { cards, loading, notFound, fetchPortfolio, fetchPublicWishlist } = usePortfolio(slug)
+  const {
+    cards, loading, loadingMore, notFound, hasMore, totalCount,
+    fetchPortfolio, fetchMorePortfolio,
+    fetchPublicWishlist, fetchMoreWishlist,
+  } = usePortfolio(slug)
   const [filters, setFilters] = useState({ name: '', type: '', archetype: '' })
-  
+
   const currentTab = searchParams.get('tab') === 'wishlist' ? 'wishlist' : 'inventory'
-  
+
   const handleTabChange = (tab) => {
     setSearchParams((prev) => {
       prev.set('tab', tab)
@@ -29,11 +34,15 @@ export default function PortfolioPage() {
   }
 
   const debouncedName = useDebounce(filters.name, 400)
+  const debouncedArchetype = useDebounce(filters.archetype, 400)
 
   // Nombre para mostrar — capitaliza la primera letra del slug
   const displayName = slug
     ? slug.charAt(0).toUpperCase() + slug.slice(1)
     : ''
+
+  // ── Todos los hooks deben declararse antes de cualquier return condicional ──
+  const observerTarget = useRef(null)
 
   // Actualizar título de la pestaña dinámicamente
   useEffect(() => {
@@ -44,21 +53,48 @@ export default function PortfolioPage() {
     return () => { document.title = 'Yu-Gi-Oh! Inventory — Gestiona tu colección' }
   }, [displayName, currentTab])
 
-  // Refetch cuando cambian los filtros o la pestaña
+  // Refetch cuando cambian los filtros o la pestaña (reset de cursor)
   useEffect(() => {
     const params = {
       name:      debouncedName,
       type:      filters.type,
-      archetype: filters.archetype,
+      archetype: debouncedArchetype,
     }
     if (currentTab === 'inventory') {
       fetchPortfolio(params)
     } else {
       fetchPublicWishlist(params)
     }
-  }, [debouncedName, filters.type, filters.archetype, currentTab, fetchPortfolio, fetchPublicWishlist])
+  }, [debouncedName, filters.type, debouncedArchetype, currentTab, fetchPortfolio, fetchPublicWishlist])
 
-  // ── Estado: usuario no encontrado ─────────────────────────────────────────────
+  // IntersectionObserver — carga más cartas cuando el usuario llega al final
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          const params = {
+            name:      debouncedName,
+            type:      filters.type,
+            archetype: debouncedArchetype,
+          }
+          if (currentTab === 'inventory') {
+            fetchMorePortfolio(params)
+          } else {
+            fetchMoreWishlist(params)
+          }
+        }
+      },
+      { rootMargin: '300px' }
+    )
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current)
+    }
+
+    return () => observer.disconnect()
+  }, [hasMore, loadingMore, debouncedName, filters.type, debouncedArchetype, currentTab, fetchMorePortfolio, fetchMoreWishlist])
+
+  // ── Estado: usuario no encontrado ──────────────────────────────────────────
   if (notFound) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -110,10 +146,10 @@ export default function PortfolioPage() {
           <p className="text-slate-400 text-base max-w-md mx-auto">
             {loading
               ? 'Cargando...'
-              : cards.length > 0
-              ? `${cards.length} carta${cards.length === 1 ? '' : 's'} en la ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
-              : currentTab === 'inventory' 
-                ? 'Esta colección está vacía por ahora' 
+              : totalCount > 0
+              ? `${totalCount} carta${totalCount === 1 ? '' : 's'} en la ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
+              : currentTab === 'inventory'
+                ? 'Esta colección está vacía por ahora'
                 : 'No hay cartas en la wishlist'}
           </p>
         </motion.div>
@@ -154,6 +190,13 @@ export default function PortfolioPage() {
 
         {/* Grid de cartas */}
         <CardGrid cards={cards} loading={loading} />
+
+        {/* Intersection Observer Target — trigger de carga incremental */}
+        <div ref={observerTarget} className="h-10 mt-10 flex justify-center">
+          {loadingMore && (
+            <div className="w-8 h-8 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+          )}
+        </div>
       </main>
     </div>
   )

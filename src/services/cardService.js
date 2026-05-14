@@ -116,20 +116,27 @@ async function registerCard(dto, userId) {
  * Retorna cartas con filtros opcionales, scope por usuario si se indica.
  * @param {Object} filters
  * @param {string|null} userId - null = sin filtro de usuario (legacy / global)
+ * @param {{ limit?: number, cursor?: string, paginate?: boolean }} pagination
  */
-async function listCards(filters = {}, userId = null) {
+async function listCards(filters = {}, userId = null, pagination = {}) {
   const key    = inventoryKey(userId, filters);
   const cached = memCache.get(key);
 
-  if (cached) {
+  // Si está paginando, no usamos caché global (cada página tiene su propio cursor)
+  if (cached && !pagination.paginate) {
     logger.debug(`⚡ Inventory cache HIT → ${key}`);
     return cached;
   }
 
-  const cards = await cardRepository.findAll(filters, userId);
-  memCache.set(key, cards);
-  logger.debug(`💾 Inventory cache SET → ${key} (${cards.length} cartas)`);
-  return cards;
+  const result = await cardRepository.findAll(filters, userId, pagination);
+
+  // Solo cacheamos el resultado completo (sin paginar) para no mezclar páginas
+  if (!pagination.paginate) {
+    memCache.set(key, result);
+    logger.debug(`💾 Inventory cache SET → ${key} (${result.cards.length} cartas)`);
+  }
+
+  return result;
 }
 
 // ── Obtener carta por ID ───────────────────────────────────────────────────────

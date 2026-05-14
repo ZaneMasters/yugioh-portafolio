@@ -33,7 +33,7 @@ const getAllCards = async (req, res, next) => {
     if (archetype) filters.archetype = archetype;
 
     const userId = req.user.uid;
-    const cards = await wishlistService.listCards(filters, userId);
+    const { cards } = await wishlistService.listCards(filters, userId);
 
     return res.status(200).json({
       success: true,
@@ -48,7 +48,7 @@ const getAllCards = async (req, res, next) => {
 const getPublicWishlist = async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const { name, type, archetype } = req.query;
+    const { name, type, archetype, cursor, limit } = req.query;
     const filters = {};
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
@@ -59,11 +59,20 @@ const getPublicWishlist = async (req, res, next) => {
       throw new AppError('Usuario no encontrado o URL inválida', 404);
     }
 
-    const cards = await wishlistService.listCards(filters, targetUid);
+    const pagination = {
+      paginate: true,
+      limit:  Math.min(parseInt(limit) || 20, 100),
+      cursor: cursor || null,
+    };
+
+    const { cards, nextCursor, hasMore, totalCount } = await wishlistService.listCards(filters, targetUid, pagination);
 
     return res.status(200).json({
       success: true,
       count: cards.length,
+      totalCount,
+      hasMore,
+      nextCursor,
       data: cards,
     });
   } catch (err) {

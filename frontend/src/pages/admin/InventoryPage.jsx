@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { RefreshCw, LayoutList } from 'lucide-react'
 import { InventoryTable } from '../../components/inventory/InventoryTable'
@@ -18,14 +18,42 @@ export default function InventoryPage() {
   const { cards, loading, actionLoading, fetchCards, editCard, removeCard } = currentHooks
   const [filters, setFilters] = useState({ name: '', type: '', archetype: '' })
   const debouncedName = useDebounce(filters.name, 400)
+  const debouncedArchetype = useDebounce(filters.archetype, 400)
+  
+  // Límite de cartas visibles para paginación visual
+  const INITIAL_LIMIT = 20
+  const [visibleCount, setVisibleCount] = useState(INITIAL_LIMIT)
 
   useEffect(() => {
+    setVisibleCount(INITIAL_LIMIT)
     fetchCards({
       name: debouncedName,
       type: filters.type,
-      archetype: filters.archetype,
+      archetype: debouncedArchetype,
     })
-  }, [debouncedName, filters.type, filters.archetype, currentTab])
+  }, [debouncedName, filters.type, debouncedArchetype, currentTab])
+
+  const displayedCards = cards.slice(0, visibleCount)
+  const hasMoreCards = visibleCount < cards.length
+
+  const observerTarget = useRef(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreCards) {
+          setVisibleCount((prev) => prev + 20)
+        }
+      },
+      { rootMargin: '300px' }
+    )
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current)
+    }
+
+    return () => observer.disconnect()
+  }, [hasMoreCards])
 
   return (
     <div className="p-6">
@@ -85,13 +113,20 @@ export default function InventoryPage() {
         transition={{ delay: 0.1 }}
       >
         <InventoryTable
-          cards={cards}
+          cards={displayedCards}
           loading={loading}
           onEdit={editCard}
           onDelete={removeCard}
           actionLoading={actionLoading}
           mode={currentTab}
         />
+        
+        {/* Intersection Observer Target */}
+        <div ref={observerTarget} className="h-10 mt-8 flex justify-center">
+          {hasMoreCards && (
+            <div className="w-8 h-8 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin"></div>
+          )}
+        </div>
       </motion.div>
     </div>
   )

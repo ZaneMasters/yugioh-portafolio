@@ -46,7 +46,7 @@ const getAllCards = async (req, res, next) => {
     if (archetype) filters.archetype = archetype;
 
     const userId = req.user.uid;
-    const cards = await cardService.listCards(filters, userId);
+    const { cards } = await cardService.listCards(filters, userId);
 
     res.set('Cache-Control', 'private, max-age=0, no-cache');
 
@@ -68,9 +68,8 @@ const getAllCards = async (req, res, next) => {
 const getPortfolioBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const { name, type, archetype } = req.query;
+    const { name, type, archetype, cursor, limit } = req.query;
 
-    // Resolver slug → UID
     const uid = await slugToUid(slug);
     if (!uid) {
       throw new AppError(`No existe ningún usuario con el slug "${slug}".`, 404);
@@ -81,7 +80,13 @@ const getPortfolioBySlug = async (req, res, next) => {
     if (type)      filters.type      = type;
     if (archetype) filters.archetype = archetype;
 
-    const cards = await cardService.listCards(filters, uid);
+    const pagination = {
+      paginate: true,
+      limit:  Math.min(parseInt(limit) || 20, 100), // máx 100 por página
+      cursor: cursor || null,
+    };
+
+    const { cards, nextCursor, hasMore, totalCount } = await cardService.listCards(filters, uid, pagination);
 
     res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=30');
 
@@ -89,6 +94,9 @@ const getPortfolioBySlug = async (req, res, next) => {
       success: true,
       slug,
       count: cards.length,
+      totalCount,
+      hasMore,
+      nextCursor,
       data: cards,
     });
   } catch (err) {
