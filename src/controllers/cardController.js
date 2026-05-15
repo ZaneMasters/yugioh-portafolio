@@ -88,7 +88,8 @@ const getPortfolioBySlug = async (req, res, next) => {
 
     const { cards, nextCursor, hasMore, totalCount } = await cardService.listCards(filters, uid, pagination);
 
-    res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=30');
+    // Caché pública corta (5s) para balancear actualizaciones rápidas y ahorro de lecturas
+    res.set('Cache-Control', 'public, max-age=5, stale-while-revalidate=5');
 
     return res.status(200).json({
       success: true,
