@@ -9,13 +9,12 @@ export const getWishlist = (filters = {}) => {
   return api.get('/wishlist', { params })
 }
 
-export const getPublicWishlist = (slug, filters = {}) => {
+export const getPublicWishlist = (slug, filters = {}, cursor = null) => {
   const params = {}
   if (filters.name) params.name = filters.name
   if (filters.type) params.type = filters.type
   if (filters.archetype) params.archetype = filters.archetype
-  // Ruta pública — no requiere Firebase token, usar publicApi para evitar el
-  // delay de inicialización del SDK de Auth en la primera carga.
+  if (cursor) params.cursor = cursor
   return publicApi.get(`/wishlist/public/${slug}`, { params })
 }
 

@@ -22,47 +22,65 @@ class WishlistRepository {
   // ── READ ──────────────────────────────────────────────────────────────────────
 
   /**
-   * Obtiene todos los documentos de la colección con filtros opcionales.
-   * Si se pasa `userId`, filtra solo las cartas de ese usuario.
+   * Obtiene documentos con filtros opcionales y paginación cursor-based.
    *
    * @param {{ name?: string, type?: string, archetype?: string }} filters
-   * @param {string|null} userId - UID de Firebase del propietario
-   * @returns {Promise<Array>}
+   * @param {string|null} userId
+   * @param {{ limit?: number, cursor?: string, paginate?: boolean }} pagination
+   * @returns {Promise<{ cards: Array, nextCursor: string|null, hasMore: boolean }>}
    */
-  async findAll(filters = {}, userId = null) {
+  async findAll(filters = {}, userId = null, pagination = {}) {
+    const { limit = 20, cursor = null, paginate = false } = pagination;
+    const hasTextFilter = !!(filters.name || filters.type || filters.archetype);
+
+    if (!paginate || hasTextFilter) {
+      let query = this.collection;
+      if (userId) query = query.where('userId', '==', userId);
+
+      const snapshot = await query.get();
+      let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+      if (filters.archetype) {
+        const archLower = filters.archetype.toLowerCase();
+        cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
+      }
+      if (filters.type) {
+        const typeLower = filters.type.toLowerCase();
+        cards = cards.filter((c) => c.type && c.type.toLowerCase().includes(typeLower));
+      }
+      if (filters.name) {
+        const nameLower = filters.name.toLowerCase();
+        cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
+      }
+      cards.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      return { cards, nextCursor: null, hasMore: false, totalCount: cards.length };
+    }
+
+    // ── Paginación real ──────────────────────────────────────────────────────
     let query = this.collection;
+    if (userId) query = query.where('userId', '==', userId);
 
-    if (userId) {
-      query = query.where('userId', '==', userId);
-    }
+    const countSnapshot = await query.count().get();
+    const totalCount = countSnapshot.data().count;
 
-    if (filters.archetype) {
-      query = query.where('archetype', '==', filters.archetype);
-    }
+    query = query.orderBy('createdAt', 'desc');
+    if (cursor) query = query.startAfter(cursor);
+    query = query.limit(limit + 1);
 
     const snapshot = await query.get();
-    let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const docs = snapshot.docs;
+    const hasMore = docs.length > limit;
+    const pageDocs = hasMore ? docs.slice(0, limit) : docs;
 
-    // Filtro de tipo (substring insensible a mayúsculas)
-    if (filters.type) {
-      const typeLower = filters.type.toLowerCase();
-      cards = cards.filter((c) => c.type && c.type.toLowerCase().includes(typeLower));
-    }
+    const cards = pageDocs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const nextCursor = hasMore ? pageDocs[pageDocs.length - 1].data().createdAt : null;
 
-    // Filtro de nombre (substring insensible a mayúsculas)
-    if (filters.name) {
-      const nameLower = filters.name.toLowerCase();
-      cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
-    }
-
-    // Ordenar por fecha de creación descendente
-    cards.sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    });
-
-    return cards;
+    return { cards, nextCursor, hasMore, totalCount };
   }
 
   /**

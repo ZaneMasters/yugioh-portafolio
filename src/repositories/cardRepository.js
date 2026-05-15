@@ -22,56 +22,81 @@ class CardRepository {
   // ── READ ──────────────────────────────────────────────────────────────────────
 
   /**
-   * Obtiene todos los documentos de la colección con filtros opcionales.
-   * Si se pasa `userId`, filtra solo las cartas de ese usuario.
+   * Obtiene documentos con filtros opcionales y paginación cursor-based.
+   *
+   * Estrategia:
+   *  - Si hay filtros de texto (name/type): fetch all + filter en memoria (sin paginar)
+   *  - Si no hay filtros de texto: paginación real con startAfter(cursor) en Firestore
    *
    * @param {{ name?: string, type?: string, archetype?: string }} filters
-   * @param {string|null} userId - UID de Firebase del propietario (null = sin filtro)
-   * @returns {Promise<Array>}
+   * @param {string|null} userId  - UID del propietario (null = sin filtro)
+   * @param {{ limit?: number, cursor?: string, paginate?: boolean }} pagination
+   * @returns {Promise<{ cards: Array, nextCursor: string|null, hasMore: boolean }>}
    */
-  async findAll(filters = {}, userId = null) {
-    // ⚠️ No usamos orderBy en Firestore para evitar requerir índices compuestos
-    // al combinarlo con where(). El ordenamiento se aplica en memoria al final.
+  async findAll(filters = {}, userId = null, pagination = {}) {
+    const { limit = 20, cursor = null, paginate = false } = pagination;
+
+    // Si hay filtros de texto → fetch all y filtrar en memoria (no se puede paginar por substring)
+    const hasTextFilter = !!(filters.name || filters.type || filters.archetype);
+
+    if (!paginate || hasTextFilter) {
+      // ── Comportamiento original: fetch all ──────────────────────────────────
+      let query = this.collection;
+      if (userId) query = query.where('userId', '==', userId);
+
+      const snapshot = await query.get();
+      let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+      if (filters.archetype) {
+        const archLower = filters.archetype.toLowerCase();
+        cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
+      }
+      if (filters.type) {
+        const typeLower = filters.type.toLowerCase();
+        cards = cards.filter((c) => c.type && c.type.toLowerCase().includes(typeLower));
+      }
+      if (filters.name) {
+        const nameLower = filters.name.toLowerCase();
+        cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
+      }
+      cards.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      return { cards, nextCursor: null, hasMore: false, totalCount: cards.length };
+    }
+
+    // ── Paginación real con cursor ───────────────────────────────────────────
+    // Usa el índice compuesto userId + createdAt (ya existe en Firestore ✅)
     let query = this.collection;
+    if (userId) query = query.where('userId', '==', userId);
 
-    // Filtro multi-tenant — scope por propietario
-    if (userId) {
-      query = query.where('userId', '==', userId);
+    // Obtener total sin descargar documentos
+    const countSnapshot = await query.count().get();
+    const totalCount = countSnapshot.data().count;
+
+    // Ordenar por createdAt DESC para que las más nuevas aparezcan primero
+    query = query.orderBy('createdAt', 'desc');
+
+    // Cursor: continuar desde el último createdAt de la página anterior
+    if (cursor) {
+      query = query.startAfter(cursor);
     }
 
-    // Filtro de archetype — igualdad exacta (Firestore)
-    if (filters.archetype) {
-      query = query.where('archetype', '==', filters.archetype);
-    }
-
-    // NOTA: el filtro de `type` se aplica en memoria (abajo) porque YGOProdeck
-    // devuelve múltiples subtipos para Pendulum ('Pendulum Effect Monster',
-    // 'Pendulum Normal Monster', etc.) y Ritual ('Ritual Monster', 'Ritual Effect Monster').
-    // Firestore solo soporta igualdad exacta, así que filtramos con includes().
+    // Pedimos limit+1 para saber si hay más páginas sin una query extra
+    query = query.limit(limit + 1);
 
     const snapshot = await query.get();
-    let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const docs = snapshot.docs;
+    const hasMore = docs.length > limit;
+    const pageDocs = hasMore ? docs.slice(0, limit) : docs;
 
-    // Filtro de tipo (substring insensible a mayúsculas — cubre todos los subtipos)
-    if (filters.type) {
-      const typeLower = filters.type.toLowerCase();
-      cards = cards.filter((c) => c.type && c.type.toLowerCase().includes(typeLower));
-    }
+    const cards = pageDocs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const nextCursor = hasMore ? pageDocs[pageDocs.length - 1].data().createdAt : null;
 
-    // Filtro de nombre (substring insensible a mayúsculas)
-    if (filters.name) {
-      const nameLower = filters.name.toLowerCase();
-      cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
-    }
-
-    // Ordenar por fecha de creación descendente (en memoria)
-    cards.sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    });
-
-    return cards;
+    return { cards, nextCursor, hasMore, totalCount };
   }
 
   /**

@@ -82,19 +82,23 @@ async function registerCard(dto, userId) {
   return { card: newCard, created: true };
 }
 
-async function listCards(filters, userId) {
+async function listCards(filters, userId, pagination = {}) {
   const cacheKey = wishlistKey(userId, filters);
   const cached = memCache.get(cacheKey);
 
-  if (cached) {
+  if (cached && !pagination.paginate) {
     logger.debug(`⚡ Wishlist cache HIT: ${cacheKey}`);
     return cached;
   }
 
-  const cards = await wishlistRepository.findAll(filters, userId);
-  memCache.set(cacheKey, cards, WISHLIST_TTL);
-  logger.debug(`💾 Wishlist cache SET: ${cacheKey}`);
-  return cards;
+  const result = await wishlistRepository.findAll(filters, userId, pagination);
+
+  if (!pagination.paginate) {
+    memCache.set(cacheKey, result, WISHLIST_TTL);
+    logger.debug(`💾 Wishlist cache SET: ${cacheKey}`);
+  }
+
+  return result;
 }
 
 async function updateCard(id, updates, userId) {
