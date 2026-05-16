@@ -8,7 +8,7 @@ import { useInventoryStore } from '../store/useInventoryStore'
  * Lee del store Zustand y dispara los side-effects con el servicio.
  */
 export function useCards() {
-  const { cards, setCards, setLoading, loading } = useInventoryStore()
+  const { cards, setCards, setLoading, loading, updateCardLocally } = useInventoryStore()
   const [actionLoading, setActionLoading] = useState(false)
 
   /** Cargar todas las cartas con filtros opcionales */
@@ -45,8 +45,8 @@ export function useCards() {
     setActionLoading(true)
     try {
       await cardService.updateCard(id, payload)
+      updateCardLocally(id, payload)
       toast.success('Carta actualizada')
-      await fetchCards()
       return true
     } catch (err) {
       toast.error(err.message || 'Error al actualizar')
@@ -54,7 +54,7 @@ export function useCards() {
     } finally {
       setActionLoading(false)
     }
-  }, [fetchCards])
+  }, [updateCardLocally])
 
   /** Eliminar carta */
   const removeCard = useCallback(async (id) => {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { Pencil, Trash2, Check, X, Eye, EyeOff } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Select'
@@ -13,6 +13,7 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
   const [cond, setCond]         = useState(card.condition || 'new')
   const [rarity, setRarity]     = useState(card.rarity || 'Common')
   const [deleting, setDeleting] = useState(false)
+  const [toggling, setToggling] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
 
   const handleSave = async () => {
@@ -37,6 +38,12 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
     setShowConfirm(false)
   }
 
+  const handleToggleVisibility = async () => {
+    setToggling(true)
+    await onEdit(card.id, { isHidden: !card.isHidden })
+    setToggling(false)
+  }
+
   return (
     <>
       {/* ── Fila DESKTOP (md+): tabla real con 5 columnas ── */}
@@ -45,7 +52,7 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="hidden md:table-row border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+        className={`hidden md:table-row border-b border-white/5 hover:bg-white/[0.02] transition-colors ${card.isHidden ? 'opacity-60 bg-white/[0.02]' : ''}`}
       >
         {/* Carta */}
         <td className="px-4 py-3">
@@ -53,10 +60,13 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
             <img
               src={card.image}
               alt={card.name}
-              className="w-10 h-14 object-contain rounded bg-black/20 shrink-0"
+              className={`w-10 h-14 object-contain rounded bg-black/20 shrink-0 ${card.isHidden ? 'opacity-40 grayscale' : ''}`}
             />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-white line-clamp-2">{card.name}</p>
+              <p className="text-sm font-medium text-white line-clamp-2">
+                {card.name}
+                {card.isHidden && <EyeOff className="inline w-3 h-3 ml-2 text-slate-400" />}
+              </p>
               <p className="text-xs text-slate-500 mt-0.5">{card.type}</p>
             </div>
           </div>
@@ -120,6 +130,16 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
             ) : (
               <>
                 <Button variant="secondary" size="xs" icon={Pencil} onClick={() => setEditing(true)} />
+                {mode === 'wishlist' && (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    icon={card.isHidden ? Eye : EyeOff}
+                    loading={toggling}
+                    onClick={handleToggleVisibility}
+                    title={card.isHidden ? "Mostrar en wishlist pública" : "Ocultar de wishlist pública"}
+                  />
+                )}
                 <Button variant="danger"    size="xs" icon={Trash2} loading={deleting} onClick={() => setShowConfirm(true)} />
               </>
             )}
@@ -133,7 +153,7 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="md:hidden border-b border-white/5"
+        className={`md:hidden border-b border-white/5 ${card.isHidden ? 'opacity-60 bg-white/[0.02]' : ''}`}
       >
         <td colSpan={5} className="p-4">
           <div className="flex gap-3">
@@ -141,14 +161,17 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
             <img
               src={card.image}
               alt={card.name}
-              className="w-16 h-24 object-contain rounded bg-black/20 shrink-0"
+              className={`w-16 h-24 object-contain rounded bg-black/20 shrink-0 ${card.isHidden ? 'opacity-40 grayscale' : ''}`}
             />
 
             {/* Contenido */}
             <div className="flex-1 min-w-0 flex flex-col gap-2">
               {/* Nombre + tipo */}
               <div>
-                <p className="text-sm font-semibold text-white line-clamp-2">{card.name}</p>
+                <p className="text-sm font-semibold text-white line-clamp-2">
+                  {card.name}
+                  {card.isHidden && <EyeOff className="inline w-3 h-3 ml-2 text-slate-400" />}
+                </p>
                 <p className="text-xs text-slate-500 mt-0.5">{card.type}</p>
                 {card.archetype && (
                   <p className="text-xs text-amber-400/70 mt-0.5">{card.archetype}</p>
@@ -207,6 +230,18 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
                 ) : (
                   <>
                     <Button variant="secondary" size="xs" icon={Pencil} onClick={() => setEditing(true)}>Editar</Button>
+                    {mode === 'wishlist' && (
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        icon={card.isHidden ? Eye : EyeOff}
+                        loading={toggling}
+                        onClick={handleToggleVisibility}
+                        title={card.isHidden ? "Mostrar en wishlist pública" : "Ocultar de wishlist pública"}
+                      >
+                        {card.isHidden ? 'Mostrar' : 'Ocultar'}
+                      </Button>
+                    )}
                     <Button variant="danger"    size="xs" icon={Trash2} loading={deleting} onClick={() => setShowConfirm(true)}>Eliminar</Button>
                   </>
                 )}
