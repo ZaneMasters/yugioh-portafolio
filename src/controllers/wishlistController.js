@@ -67,13 +67,15 @@ const getPublicWishlist = async (req, res, next) => {
 
     const { cards, nextCursor, hasMore, totalCount } = await wishlistService.listCards(filters, targetUid, pagination);
 
+    const visibleCards = cards.filter(c => !c.isHidden);
+
     return res.status(200).json({
       success: true,
-      count: cards.length,
+      count: visibleCards.length,
       totalCount,
       hasMore,
       nextCursor,
-      data: cards,
+      data: visibleCards,
     });
   } catch (err) {
     next(err);

@@ -4,7 +4,7 @@ import * as wishlistService from '../services/wishlistService'
 import { useWishlistStore } from '../store/useWishlistStore'
 
 export function useWishlist() {
-  const { cards, setCards, setLoading, loading } = useWishlistStore()
+  const { cards, setCards, setLoading, loading, updateCardLocally } = useWishlistStore()
   const [actionLoading, setActionLoading] = useState(false)
 
   const fetchCards = useCallback(async (filters = {}) => {
@@ -50,8 +50,8 @@ export function useWishlist() {
     setActionLoading(true)
     try {
       await wishlistService.updateWishlistCard(id, payload)
+      updateCardLocally(id, payload)
       toast.success('Carta actualizada')
-      await fetchCards()
       return true
     } catch (err) {
       toast.error(err.message || 'Error al actualizar')
@@ -59,7 +59,7 @@ export function useWishlist() {
     } finally {
       setActionLoading(false)
     }
-  }, [fetchCards])
+  }, [updateCardLocally])
 
   const removeCard = useCallback(async (id) => {
     setActionLoading(true)

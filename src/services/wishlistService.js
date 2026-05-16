@@ -102,7 +102,7 @@ async function listCards(filters, userId, pagination = {}) {
 }
 
 async function updateCard(id, updates, userId) {
-  const allowedFields = ['quantity', 'rarity'];
+  const allowedFields = ['quantity', 'rarity', 'isHidden'];
   const payload = {};
   
   for (const field of allowedFields) {
