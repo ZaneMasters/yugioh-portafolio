@@ -147,7 +147,7 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
         </td>
       </motion.tr>
 
-      {/* ── Tarjeta MÓVIL (< md): layout de card ── */}
+      {/* ── Tarjeta MÓVIL (<md): layout de card ── */}
       <motion.tr
         layout
         initial={{ opacity: 0 }}
@@ -155,31 +155,52 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
         exit={{ opacity: 0 }}
         className={`md:hidden border-b border-white/5 ${card.isHidden ? 'opacity-60 bg-white/[0.02]' : ''}`}
       >
-        <td colSpan={5} className="p-4">
+        <td colSpan={5} className="p-3">
           <div className="flex gap-3">
             {/* Imagen */}
             <img
               src={card.image}
               alt={card.name}
-              className={`w-16 h-24 object-contain rounded bg-black/20 shrink-0 ${card.isHidden ? 'opacity-40 grayscale' : ''}`}
+              className={`w-14 h-20 object-contain rounded bg-black/20 shrink-0 ${card.isHidden ? 'opacity-40 grayscale' : ''}`}
             />
 
             {/* Contenido */}
             <div className="flex-1 min-w-0 flex flex-col gap-2">
-              {/* Nombre + tipo */}
-              <div>
-                <p className="text-sm font-semibold text-white line-clamp-2">
-                  {card.name}
-                  {card.isHidden && <EyeOff className="inline w-3 h-3 ml-2 text-slate-400" />}
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5">{card.type}</p>
-                {card.archetype && (
-                  <p className="text-xs text-amber-400/70 mt-0.5">{card.archetype}</p>
+
+              {/* Fila 1: nombre + botón visibilidad (wishlist) */}
+              <div className="flex items-start gap-1.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white leading-snug break-words">
+                    {card.name}
+                    {card.isHidden && <EyeOff className="inline w-3 h-3 ml-1.5 text-slate-400" />}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">{card.type}</p>
+                  {card.archetype && (
+                    <p className="text-xs text-amber-400/70 mt-0.5 truncate">{card.archetype}</p>
+                  )}
+                </div>
+                {/* Toggle visibilidad — solo wishlist, modo lectura */}
+                {mode === 'wishlist' && !editing && (
+                  <button
+                    onClick={handleToggleVisibility}
+                    disabled={toggling}
+                    className={`shrink-0 p-1.5 rounded-lg border transition-all ${
+                      card.isHidden
+                        ? 'bg-slate-700/40 border-slate-600/40 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/40'
+                        : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:text-slate-400 hover:border-slate-600/40'
+                    }`}
+                    title={card.isHidden ? 'Mostrar en wishlist pública' : 'Ocultar de wishlist pública'}
+                  >
+                    {toggling
+                      ? <span className="w-3.5 h-3.5 block border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      : card.isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />
+                    }
+                  </button>
                 )}
               </div>
 
-              {/* Cantidad + Condición */}
-              <div className="flex items-center gap-3 flex-wrap">
+              {/* Fila 2: cantidad + badge */}
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-slate-500">Cant:</span>
                   {editing ? (
@@ -203,14 +224,14 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
                       options={CONDITIONS}
                       value={cond}
                       onChange={(e) => setCond(e.target.value)}
-                      className="flex-1 min-w-[140px]"
+                      className="flex-1 min-w-[130px]"
                     />
                   ) : (
                     <Select
                       options={RARITIES}
                       value={rarity}
                       onChange={(e) => setRarity(e.target.value)}
-                      className="flex-1 min-w-[140px]"
+                      className="flex-1 min-w-[130px]"
                     />
                   )
                 ) : (
@@ -220,29 +241,17 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
                 )}
               </div>
 
-              {/* Botones */}
-              <div className="flex items-center gap-1.5 mt-1">
+              {/* Fila 3: botones editar / guardar / eliminar */}
+              <div className="flex items-center gap-1.5">
                 {editing ? (
                   <>
-                    <Button variant="success" size="xs" icon={Check} loading={actionLoading} onClick={handleSave} />
-                    <Button variant="ghost"   size="xs" icon={X}     onClick={handleCancel} />
+                    <Button variant="success" size="xs" icon={Check} loading={actionLoading} onClick={handleSave}>Guardar</Button>
+                    <Button variant="ghost"   size="xs" icon={X}     onClick={handleCancel}>Cancelar</Button>
                   </>
                 ) : (
                   <>
                     <Button variant="secondary" size="xs" icon={Pencil} onClick={() => setEditing(true)}>Editar</Button>
-                    {mode === 'wishlist' && (
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        icon={card.isHidden ? Eye : EyeOff}
-                        loading={toggling}
-                        onClick={handleToggleVisibility}
-                        title={card.isHidden ? "Mostrar en wishlist pública" : "Ocultar de wishlist pública"}
-                      >
-                        {card.isHidden ? 'Mostrar' : 'Ocultar'}
-                      </Button>
-                    )}
-                    <Button variant="danger"    size="xs" icon={Trash2} loading={deleting} onClick={() => setShowConfirm(true)}>Eliminar</Button>
+                    <Button variant="danger" size="xs" icon={Trash2} loading={deleting} onClick={() => setShowConfirm(true)}>Eliminar</Button>
                   </>
                 )}
               </div>
