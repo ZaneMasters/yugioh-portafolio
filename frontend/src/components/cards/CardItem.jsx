@@ -3,8 +3,9 @@ import { FRAME_TYPE_COLORS } from '../../utils/constants'
 import { Sword, Shield, Star, Layers, Eye } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 
-export function CardItem({ card, onSelect }) {
+export function CardItem({ card, onSelect, viewMode }) {
   const frameGradient = FRAME_TYPE_COLORS[card.frameType] ?? FRAME_TYPE_COLORS.normal
+  const isList = viewMode === 'list'
 
   return (
     <motion.div
@@ -17,13 +18,30 @@ export function CardItem({ card, onSelect }) {
       onClick={() => onSelect?.(card)}
       className={`
         group relative rounded-xl overflow-hidden border border-white/5
-        bg-gradient-to-b ${frameGradient} bg-[#1a2235]
-        card-glow cursor-pointer transition-shadow duration-300
+        bg-[#1a2235] card-glow cursor-pointer transition-shadow duration-300
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50
+        ${isList 
+          ? `flex flex-row items-stretch bg-gradient-to-r ${frameGradient} sm:flex-col sm:bg-gradient-to-b` 
+          : `flex flex-col bg-gradient-to-b ${frameGradient}`
+        }
       `}
     >
+      {/* Quantity badge */}
+      <div className="absolute top-2 right-2 flex flex-col gap-1 items-end z-10">
+        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-bold border border-white/10">
+          <Layers className="w-3 h-3" /> ×{card.quantity}
+        </span>
+        {card.rarity ? (
+          <Badge rarity={card.rarity} />
+        ) : card.condition ? (
+          <Badge condition={card.condition} />
+        ) : null}
+      </div>
+
       {/* Imagen */}
-      <div className="relative overflow-hidden h-56 bg-black/30">
+      <div className={`relative overflow-hidden bg-black/30 shrink-0 ${
+        isList ? 'w-24 sm:w-auto sm:h-56' : 'h-56'
+      }`}>
         <img
           src={card.image}
           alt={card.name}
@@ -37,21 +55,10 @@ export function CardItem({ card, onSelect }) {
             <Eye className="w-3.5 h-3.5" /> Ver detalles
           </span>
         </div>
-        {/* Quantity badge */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-bold border border-white/10">
-            <Layers className="w-3 h-3" /> ×{card.quantity}
-          </span>
-          {card.rarity ? (
-            <Badge rarity={card.rarity} />
-          ) : card.condition ? (
-            <Badge condition={card.condition} />
-          ) : null}
-        </div>
       </div>
 
       {/* Info */}
-      <div className="p-4 space-y-2">
+      <div className={`p-4 space-y-2 ${isList ? 'flex-1 min-w-0 sm:flex-none' : 'flex-none'}`}>
         <h3 className="font-semibold text-sm text-white leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors">
           {card.name}
         </h3>
