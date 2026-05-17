@@ -82,15 +82,15 @@ export function FiltersPanel({ filters, onChange }) {
           )}
         </div>
 
-        {/* Botón de filtros avanzados — mobile */}
+        {/* Botón de filtros avanzados — mobile y desktop */}
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`sm:hidden p-2.5 rounded-xl border transition-all flex items-center justify-center relative ${
+          className={`p-2.5 rounded-xl border transition-all flex items-center justify-center relative ${
             showAdvanced || hasAdvancedFilters
               ? 'bg-amber-500/20 border-amber-500/30 text-amber-400'
               : 'bg-black/20 text-slate-400 border-white/5 hover:bg-white/5'
           }`}
-          title="Filtros avanzados"
+          title={showAdvanced ? 'Ocultar filtros de tipo' : 'Mostrar filtros de tipo'}
         >
           <Filter size={18} />
           {hasAdvancedFilters && (
@@ -113,8 +113,8 @@ export function FiltersPanel({ filters, onChange }) {
         )}
       </div>
 
-      {/* Row 2: Chips de tipo — desktop siempre visible, mobile colapsable */}
-      <div className={`${showAdvanced ? 'flex' : 'hidden'} sm:flex flex-col gap-3`}>
+      {/* Row 2: Chips de tipo — colapsable en todas las pantallas */}
+      <div className={`${showAdvanced ? 'flex' : 'hidden'} flex-col gap-3`}>
         {/* Arquetipo — solo mobile */}
         <div className="relative sm:hidden">
           <input
