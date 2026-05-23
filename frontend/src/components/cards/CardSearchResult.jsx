@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Plus, Sword, Shield, Minus, ChevronDown } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Select'
 import { CONDITIONS, RARITIES } from '../../utils/constants'
 
-export function CardSearchResult({ card, destination = 'inventory', onAdd, adding, folders = [] }) {
+export const CardSearchResult = memo(function CardSearchResult({ card, destination = 'inventory', onAdd, adding, folders = [] }) {
   const [qty,      setQty]      = useState(1)
   const [cond,     setCond]     = useState('new')
   const [rarity,   setRarity]   = useState('Any')
@@ -144,4 +144,4 @@ export function CardSearchResult({ card, destination = 'inventory', onAdd, addin
       </div>
     </div>
   )
-}
+})

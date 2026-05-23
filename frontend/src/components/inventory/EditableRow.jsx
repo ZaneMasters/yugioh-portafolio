@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Pencil, Trash2, Check, X, Eye, EyeOff } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
@@ -7,7 +7,7 @@ import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal'
 import { CONDITIONS, RARITIES } from '../../utils/constants'
 import { motion } from 'framer-motion'
 
-export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inventory', folders = [] }) {
+export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inventory', folders = [] }) {
   const [editing, setEditing]   = useState(false)
   const [qty, setQty]           = useState(card.quantity)
   const [cond, setCond]         = useState(card.condition || 'new')
@@ -294,4 +294,4 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
       />
     </>
   )
-}
+})

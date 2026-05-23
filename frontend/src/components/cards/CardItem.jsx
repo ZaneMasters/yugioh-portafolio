@@ -1,9 +1,10 @@
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import { FRAME_TYPE_COLORS } from '../../utils/constants'
 import { Sword, Shield, Star, Layers, Eye } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 
-export function CardItem({ card, onSelect, viewMode }) {
+export const CardItem = memo(function CardItem({ card, onSelect, viewMode }) {
   const frameGradient = FRAME_TYPE_COLORS[card.frameType] ?? FRAME_TYPE_COLORS.normal
   const isList = viewMode === 'list'
   const isGrid1 = viewMode === '1' || !viewMode  // 1 columna o desktop
@@ -136,4 +137,4 @@ export function CardItem({ card, onSelect, viewMode }) {
       </div>
     </motion.div>
   )
-}
+})
