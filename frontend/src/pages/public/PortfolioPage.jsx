@@ -7,6 +7,7 @@ import { CardGrid } from '../../components/cards/CardGrid'
 import { FiltersPanel } from '../../components/filters/FiltersPanel'
 import { usePortfolio } from '../../hooks/usePortfolio'
 import { useDebounce } from '../../hooks/useDebounce'
+import { usePublicFolders } from '../../hooks/usePublicFolders'
 
 /**
  * Página de portafolio público de un usuario.
@@ -22,7 +23,8 @@ export default function PortfolioPage() {
     fetchPortfolio, fetchMorePortfolio,
     fetchPublicWishlist, fetchMoreWishlist,
   } = usePortfolio(slug)
-  const [filters, setFilters] = useState({ name: '', type: '', archetype: '' })
+  const [filters, setFilters] = useState({ name: '', type: '', archetype: '', folderId: '' })
+  const { folders, fetchPublicFolders } = usePublicFolders(slug)
 
   const currentTab = searchParams.get('tab') === 'wishlist' ? 'wishlist' : 'inventory'
 
@@ -59,13 +61,18 @@ export default function PortfolioPage() {
       name:      debouncedName,
       type:      filters.type,
       archetype: debouncedArchetype,
+      folderId:  filters.folderId,
     }
     if (currentTab === 'inventory') {
       fetchPortfolio(params)
     } else {
       fetchPublicWishlist(params)
     }
-  }, [debouncedName, filters.type, debouncedArchetype, currentTab, fetchPortfolio, fetchPublicWishlist])
+  }, [debouncedName, filters.type, debouncedArchetype, filters.folderId, currentTab, fetchPortfolio, fetchPublicWishlist])
+
+  useEffect(() => {
+    fetchPublicFolders()
+  }, [fetchPublicFolders])
 
   // IntersectionObserver — carga más cartas cuando el usuario llega al final
   useEffect(() => {
@@ -76,6 +83,7 @@ export default function PortfolioPage() {
             name:      debouncedName,
             type:      filters.type,
             archetype: debouncedArchetype,
+            folderId:  filters.folderId,
           }
           if (currentTab === 'inventory') {
             fetchMorePortfolio(params)
@@ -92,7 +100,7 @@ export default function PortfolioPage() {
     }
 
     return () => observer.disconnect()
-  }, [hasMore, loadingMore, debouncedName, filters.type, debouncedArchetype, currentTab, fetchMorePortfolio, fetchMoreWishlist])
+  }, [hasMore, loadingMore, debouncedName, filters.type, debouncedArchetype, filters.folderId, currentTab, fetchMorePortfolio, fetchMoreWishlist])
 
   // ── Estado: usuario no encontrado ──────────────────────────────────────────
   if (notFound) {
@@ -185,7 +193,11 @@ export default function PortfolioPage() {
           transition={{ delay: 0.15 }}
           className="mb-8 p-4 rounded-xl glass"
         >
-          <FiltersPanel filters={filters} onChange={setFilters} />
+          <FiltersPanel 
+            filters={filters} 
+            onChange={setFilters} 
+            folders={currentTab === 'inventory' ? folders : []} 
+          />
         </motion.div>
 
         {/* Grid de cartas */}

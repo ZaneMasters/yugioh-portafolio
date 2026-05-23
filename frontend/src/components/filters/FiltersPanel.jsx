@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Filter, Search, X, Sword, Zap, Star, Layers, Link2, Scroll, GitMerge, Sparkles, ShieldAlert } from 'lucide-react'
+import { Filter, Search, X, Sword, Zap, Star, Layers, Link2, Scroll, GitMerge, Sparkles, ShieldAlert, ChevronDown, Folder } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CARD_TYPES } from '../../utils/constants'
 
@@ -17,13 +17,13 @@ const TYPE_META = {
   'Trap Card':       { color: 'from-pink-800/40 to-pink-600/20',   border: 'border-pink-700/40',   active: 'bg-pink-500/20 border-pink-400/60 text-pink-300',    icon: ShieldAlert },
 }
 
-export function FiltersPanel({ filters, onChange }) {
+export function FiltersPanel({ filters, onChange, folders = [] }) {
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const hasAdvancedFilters = filters.type || filters.archetype
+  const hasAdvancedFilters = filters.type || filters.archetype || filters.folderId
   const hasAnyFilter = filters.name || hasAdvancedFilters
 
   function clearAll() {
-    onChange({ name: '', type: '', archetype: '' })
+    onChange({ name: '', type: '', archetype: '', folderId: '' })
     setShowAdvanced(false)
   }
 
@@ -31,8 +31,8 @@ export function FiltersPanel({ filters, onChange }) {
     <div className="flex flex-col gap-4">
 
       {/* Row 1: Buscador principal + botón filtros mobile */}
-      <div className="flex gap-2 items-center">
-        <div className="relative flex-1 group">
+      <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[150px] group">
           <Search
             className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-amber-400 transition-colors pointer-events-none"
           />
@@ -58,8 +58,31 @@ export function FiltersPanel({ filters, onChange }) {
           )}
         </div>
 
+        {/* Folder / Colección */}
+        {folders.length > 0 && (
+          <div className="relative group flex-1 min-w-[140px] sm:flex-none sm:w-48 order-3 sm:order-none">
+            <Folder className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-amber-400 transition-colors pointer-events-none" />
+            <select
+              value={filters.folderId || ''}
+              onChange={(e) => onChange({ ...filters, folderId: e.target.value })}
+              className="
+                w-full bg-black/30 border border-white/8 rounded-xl text-slate-100 text-sm
+                pl-10 pr-10 py-2.5 outline-none transition-all appearance-none cursor-pointer
+                hover:border-white/20 hover:bg-black/40
+                focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 focus:bg-black/50
+              "
+            >
+              <option value="" className="bg-slate-900 text-slate-200">Todas las colecciones</option>
+              {folders.map(f => (
+                <option key={f.id} value={f.id} className="bg-slate-900 text-slate-200" title={f.name}>{f.name}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none group-hover:text-slate-300 transition-colors" />
+          </div>
+        )}
+
         {/* Botón arquetipo inline — solo desktop */}
-        <div className="relative hidden sm:block group">
+        <div className="relative hidden sm:block group order-2 sm:order-none">
           <input
             type="text"
             placeholder="Arquetipo…"
@@ -138,6 +161,8 @@ export function FiltersPanel({ filters, onChange }) {
             </button>
           )}
         </div>
+
+
 
         {/* Type chips */}
         <div className="flex flex-wrap gap-2">

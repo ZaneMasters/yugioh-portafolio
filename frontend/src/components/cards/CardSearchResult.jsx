@@ -16,14 +16,15 @@ import { CONDITIONS, RARITIES } from '../../utils/constants'
  *  - onAdd       {fn}       — callback (card, qty, cond|rarity)
  *  - adding      {boolean}  — si esta carta está siendo agregada ahora
  */
-export function CardSearchResult({ card, destination = 'inventory', onAdd, adding }) {
+export function CardSearchResult({ card, destination = 'inventory', onAdd, adding, folders = [] }) {
   const [qty,    setQty]    = useState(1)
   const [cond,   setCond]   = useState('new')
   const [rarity, setRarity] = useState('Any')
+  const [folderId, setFolderId] = useState('')
 
   function handleAdd() {
     if (destination === 'inventory') {
-      onAdd(card, qty, cond)
+      onAdd(card, qty, cond, folderId)
     } else {
       onAdd(card, qty, rarity)
     }
@@ -106,14 +107,24 @@ export function CardSearchResult({ card, destination = 'inventory', onAdd, addin
         </div>
 
         {/* Condición o Rareza según destino */}
-        <div className="flex-1 min-w-[160px]">
+        <div className="flex-1 min-w-[160px] flex gap-2">
           {destination === 'inventory' ? (
-            <Select
-              options={CONDITIONS}
-              value={cond}
-              onChange={(e) => setCond(e.target.value)}
-              placeholder="Condición"
-            />
+            <>
+              <Select
+                options={CONDITIONS}
+                value={cond}
+                onChange={(e) => setCond(e.target.value)}
+                placeholder="Condición"
+              />
+              {folders.length > 0 && (
+                <Select
+                  options={[{ value: '', label: 'Sin carpeta' }, ...folders.map(f => ({ value: f.id, label: f.name }))]}
+                  value={folderId}
+                  onChange={(e) => setFolderId(e.target.value)}
+                  placeholder="Carpeta"
+                />
+              )}
+            </>
           ) : (
             <Select
               options={RARITIES}

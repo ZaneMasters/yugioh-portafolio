@@ -7,13 +7,15 @@ const { z } = require('zod');
  *
  * Solo permite actualizar quantity y condition.
  * Al menos uno de los dos campos debe estar presente.
+ * Solo permite actualizar quantity, condition y folderId.
+ * Al menos uno de los campos debe estar presente.
  */
 const updateCardSchema = z
   .object({
     quantity: z
       .number({ invalid_type_error: 'quantity debe ser un número.' })
       .int('quantity debe ser un entero.')
-      .nonnegative('quantity debe ser 0 o mayor.')
+      .positive('quantity debe ser mayor a 0.')
       .optional(),
 
     condition: z
@@ -24,11 +26,19 @@ const updateCardSchema = z
         }),
       })
       .optional(),
+
+    folderId: z.string().nullable().optional(),
   })
-  .refine((data) => data.quantity !== undefined || data.condition !== undefined, {
-    message: 'Debes proporcionar al menos quantity o condition para actualizar.',
-    path: ['quantity'],
-  });
+  .refine(
+    (data) =>
+      data.quantity !== undefined ||
+      data.condition !== undefined ||
+      data.folderId !== undefined,
+    {
+      message: 'Debes proporcionar al menos quantity, condition o folderId para actualizar.',
+      path: ['quantity'],
+    }
+  );
 
 /**
  * Schema para validar el parámetro :id de la ruta.

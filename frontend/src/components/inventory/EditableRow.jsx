@@ -7,10 +7,11 @@ import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal'
 import { CONDITIONS, RARITIES } from '../../utils/constants'
 import { motion } from 'framer-motion'
 
-export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inventory' }) {
+export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inventory', folders = [] }) {
   const [editing, setEditing]   = useState(false)
   const [qty, setQty]           = useState(card.quantity)
   const [cond, setCond]         = useState(card.condition || 'new')
+  const [folderId, setFolderId] = useState(card.folderId || '')
   const [rarity, setRarity]     = useState(card.rarity || 'Common')
   const [deleting, setDeleting] = useState(false)
   const [toggling, setToggling] = useState(false)
@@ -18,7 +19,7 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
 
   const handleSave = async () => {
     const payload = mode === 'inventory'
-      ? { quantity: Number(qty), condition: cond }
+      ? { quantity: Number(qty), condition: cond, folderId: folderId || null }
       : { quantity: Number(qty), rarity: rarity }
     const ok = await onEdit(card.id, payload)
     if (ok) setEditing(false)
@@ -28,6 +29,7 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
     setEditing(false)
     setQty(card.quantity)
     setCond(card.condition || 'new')
+    setFolderId(card.folderId || '')
     setRarity(card.rarity || 'Common')
   }
 
@@ -96,27 +98,39 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
 
         {/* Condición / Rareza */}
         <td className="px-4 py-3">
-          {editing ? (
-            mode === 'inventory' ? (
-              <Select
-                options={CONDITIONS}
-                value={cond}
-                onChange={(e) => setCond(e.target.value)}
-                className="min-w-[160px]"
-              />
+          <div className="flex items-center gap-2">
+            {editing ? (
+              mode === 'inventory' ? (
+                <>
+                  <Select
+                    options={CONDITIONS}
+                    value={cond}
+                    onChange={(e) => setCond(e.target.value)}
+                    className="min-w-[120px]"
+                  />
+                  {folders.length > 0 && (
+                    <Select
+                      options={[{ value: '', label: 'Sin carpeta' }, ...folders.map(f => ({ value: f.id, label: f.name }))]}
+                      value={folderId}
+                      onChange={(e) => setFolderId(e.target.value)}
+                      className="min-w-[120px]"
+                    />
+                  )}
+                </>
+              ) : (
+                <Select
+                  options={RARITIES}
+                  value={rarity}
+                  onChange={(e) => setRarity(e.target.value)}
+                  className="min-w-[160px]"
+                />
+              )
             ) : (
-              <Select
-                options={RARITIES}
-                value={rarity}
-                onChange={(e) => setRarity(e.target.value)}
-                className="min-w-[160px]"
-              />
-            )
-          ) : (
-            mode === 'inventory'
-              ? <Badge condition={card.condition} />
-              : <Badge rarity={card.rarity} />
-          )}
+              mode === 'inventory'
+                ? <Badge condition={card.condition} />
+                : <Badge rarity={card.rarity} />
+            )}
+          </div>
         </td>
 
         {/* Acciones */}
@@ -220,12 +234,22 @@ export function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inv
 
                 {editing ? (
                   mode === 'inventory' ? (
-                    <Select
-                      options={CONDITIONS}
-                      value={cond}
-                      onChange={(e) => setCond(e.target.value)}
-                      className="flex-1 min-w-[130px]"
-                    />
+                    <>
+                      <Select
+                        options={CONDITIONS}
+                        value={cond}
+                        onChange={(e) => setCond(e.target.value)}
+                        className="flex-1 min-w-[100px]"
+                      />
+                      {folders.length > 0 && (
+                        <Select
+                          options={[{ value: '', label: 'Sin carpeta' }, ...folders.map(f => ({ value: f.id, label: f.name }))]}
+                          value={folderId}
+                          onChange={(e) => setFolderId(e.target.value)}
+                          className="flex-1 min-w-[100px]"
+                        />
+                      )}
+                    </>
                   ) : (
                     <Select
                       options={RARITIES}

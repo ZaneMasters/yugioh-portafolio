@@ -85,6 +85,7 @@ async function registerCard(dto, userId) {
     frameType: externalCard.frameType,
     condition: condition || 'new',
     quantity:  quantity  || 1,
+    folderId:  dto.folderId || null,
   });
 
   invalidateInventoryCache(userId);
@@ -157,6 +158,10 @@ async function updateCard(id, dto, userId) {
 
   if (dto.condition !== undefined) {
     updates.condition = dto.condition;
+  }
+
+  if (dto.folderId !== undefined) {
+    updates.folderId = dto.folderId;
   }
 
   const card = await cardRepository.update(id, updates, userId);

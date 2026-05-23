@@ -8,6 +8,7 @@ import { useSearchCards } from '../../hooks/useSearchCards'
 import { useCards } from '../../hooks/useCards'
 import { useWishlist } from '../../hooks/useWishlist'
 import { useDebounce } from '../../hooks/useDebounce'
+import { useFolders } from '../../hooks/useFolders'
 
 const PAGE_SIZE = 10 // resultados por página
 
@@ -22,6 +23,12 @@ export default function SearchPage() {
   const { results, searching, search } = useSearchCards()
   const { addCard: addCardInventory }  = useCards()
   const { addCard: addCardWishlist }   = useWishlist()
+  
+  const { folders, fetchFolders } = useFolders()
+
+  useEffect(() => {
+    fetchFolders()
+  }, [])
 
   // Reiniciar paginación cuando cambia la búsqueda o el destino
   useEffect(() => { setPage(1) }, [debouncedQuery, destination])
@@ -30,10 +37,12 @@ export default function SearchPage() {
     startTransition(() => { search(debouncedQuery) })
   }, [debouncedQuery])
 
-  const handleAdd = async (card, qty, condOrRarity) => {
+  const handleAdd = async (card, qty, condOrRarity, folderId) => {
     setAddingId(card.cardId)
     if (destination === 'inventory') {
-      await addCardInventory({ cardId: card.cardId, condition: condOrRarity, quantity: qty })
+      const payload = { cardId: card.cardId, condition: condOrRarity, quantity: qty }
+      if (folderId) payload.folderId = folderId;
+      await addCardInventory(payload)
     } else {
       await addCardWishlist({ cardId: card.cardId, rarity: condOrRarity, quantity: qty })
     }
@@ -142,6 +151,7 @@ export default function SearchPage() {
                   destination={destination}
                   onAdd={handleAdd}
                   adding={addingId === card.cardId}
+                  folders={folders}
                 />
               ))}
             </motion.div>
