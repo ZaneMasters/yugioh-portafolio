@@ -1,16 +1,20 @@
 'use strict';
 
 const { Router } = require('express');
-const cardRoutes = require('./cardRoutes');
-const externalRoutes = require('./externalRoutes');
-const wishlistRoutes = require('./wishlistRoutes');
 const authRoutes = require('./authRoutes');
+const cardRoutes = require('./cardRoutes');
+const wishlistRoutes = require('./wishlistRoutes');
+const externalRoutes = require('./externalRoutes');
+const folderRoutes = require('./folderRoutes');
 
 const router = Router();
 
+router.use('/auth', authRoutes);
 router.use('/cards', cardRoutes);
+router.use('/folders', folderRoutes);
 router.use('/wishlist', wishlistRoutes);
 router.use('/external', externalRoutes);
-router.use('/auth', authRoutes);
+// Nota: cardRoutes maneja /portfolio/:slug/cards
+// folderRoutes maneja /folders/portfolio/:slug);
 
 module.exports = router;

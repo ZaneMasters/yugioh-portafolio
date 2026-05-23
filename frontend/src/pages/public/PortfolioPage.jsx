@@ -7,41 +7,43 @@ import { CardGrid } from '../../components/cards/CardGrid'
 import { FiltersPanel } from '../../components/filters/FiltersPanel'
 import { usePortfolio } from '../../hooks/usePortfolio'
 import { useDebounce } from '../../hooks/useDebounce'
+import { usePublicFolders } from '../../hooks/usePublicFolders'
 
 /**
  * Página de portafolio público de un usuario.
  * Accesible en: /portfolio/:slug
- * Usa paginación cursor-based del backend: carga 20 cartas iniciales y
- * obtiene más automáticamente cuando el usuario hace scroll al final.
+ * Usa useInfiniteQuery via usePortfolio para paginación cursor-based.
  */
 export default function PortfolioPage() {
   const { slug } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
-  const {
-    cards, loading, loadingMore, notFound, hasMore, totalCount,
-    fetchPortfolio, fetchMorePortfolio,
-    fetchPublicWishlist, fetchMoreWishlist,
-  } = usePortfolio(slug)
-  const [filters, setFilters] = useState({ name: '', type: '', archetype: '' })
+  const [filters, setFilters] = useState({ name: '', type: '', archetype: '', folderId: '' })
+  const { folders } = usePublicFolders(slug)
 
   const currentTab = searchParams.get('tab') === 'wishlist' ? 'wishlist' : 'inventory'
 
   const handleTabChange = (tab) => {
-    setSearchParams((prev) => {
-      prev.set('tab', tab)
-      return prev
-    })
+    setSearchParams((prev) => { prev.set('tab', tab); return prev })
+    // Limpiar filtros al cambiar de tab
+    setFilters({ name: '', type: '', archetype: '', folderId: '' })
   }
 
-  const debouncedName = useDebounce(filters.name, 400)
+  const debouncedName      = useDebounce(filters.name, 400)
   const debouncedArchetype = useDebounce(filters.archetype, 400)
 
-  // Nombre para mostrar — capitaliza la primera letra del slug
-  const displayName = slug
-    ? slug.charAt(0).toUpperCase() + slug.slice(1)
-    : ''
+  const activeFilters = {
+    name:      debouncedName,
+    type:      filters.type,
+    archetype: debouncedArchetype,
+    folderId:  filters.folderId,
+  }
 
-  // ── Todos los hooks deben declararse antes de cualquier return condicional ──
+  const {
+    cards, loading, loadingMore, notFound, hasMore, totalCount, fetchNextPage,
+  } = usePortfolio(slug, currentTab, activeFilters)
+
+  const displayName = slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : ''
+
   const observerTarget = useRef(null)
 
   // Actualizar título de la pestaña dinámicamente
@@ -53,46 +55,19 @@ export default function PortfolioPage() {
     return () => { document.title = 'Yu-Gi-Oh! Inventory — Gestiona tu colección' }
   }, [displayName, currentTab])
 
-  // Refetch cuando cambian los filtros o la pestaña (reset de cursor)
-  useEffect(() => {
-    const params = {
-      name:      debouncedName,
-      type:      filters.type,
-      archetype: debouncedArchetype,
-    }
-    if (currentTab === 'inventory') {
-      fetchPortfolio(params)
-    } else {
-      fetchPublicWishlist(params)
-    }
-  }, [debouncedName, filters.type, debouncedArchetype, currentTab, fetchPortfolio, fetchPublicWishlist])
-
-  // IntersectionObserver — carga más cartas cuando el usuario llega al final
+  // IntersectionObserver — carga más cartas con scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          const params = {
-            name:      debouncedName,
-            type:      filters.type,
-            archetype: debouncedArchetype,
-          }
-          if (currentTab === 'inventory') {
-            fetchMorePortfolio(params)
-          } else {
-            fetchMoreWishlist(params)
-          }
+          fetchNextPage()
         }
       },
       { rootMargin: '300px' }
     )
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current)
-    }
-
+    if (observerTarget.current) observer.observe(observerTarget.current)
     return () => observer.disconnect()
-  }, [hasMore, loadingMore, debouncedName, filters.type, debouncedArchetype, currentTab, fetchMorePortfolio, fetchMoreWishlist])
+  }, [hasMore, loadingMore, fetchNextPage])
 
   // ── Estado: usuario no encontrado ──────────────────────────────────────────
   if (notFound) {
@@ -123,7 +98,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="min-h-screen ">
+    <div className="min-h-screen">
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
@@ -156,26 +131,19 @@ export default function PortfolioPage() {
 
         {/* Pestañas (Tabs) */}
         <div className="flex justify-center border-b border-white/10 mb-8 max-w-lg mx-auto">
-          <button
-            onClick={() => handleTabChange('inventory')}
-            className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-              currentTab === 'inventory'
-                ? 'border-amber-400 text-amber-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-white/20'
-            }`}
-          >
-            Colección
-          </button>
-          <button
-            onClick={() => handleTabChange('wishlist')}
-            className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-              currentTab === 'wishlist'
-                ? 'border-amber-400 text-amber-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-white/20'
-            }`}
-          >
-            Wishlist
-          </button>
+          {['inventory', 'wishlist'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => handleTabChange(tab)}
+              className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+                currentTab === tab
+                  ? 'border-amber-400 text-amber-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-white/20'
+              }`}
+            >
+              {tab === 'inventory' ? 'Colección' : 'Wishlist'}
+            </button>
+          ))}
         </div>
 
         {/* Filtros */}
@@ -185,13 +153,17 @@ export default function PortfolioPage() {
           transition={{ delay: 0.15 }}
           className="mb-8 p-4 rounded-xl glass"
         >
-          <FiltersPanel filters={filters} onChange={setFilters} />
+          <FiltersPanel
+            filters={filters}
+            onChange={setFilters}
+            folders={currentTab === 'inventory' ? folders : []}
+          />
         </motion.div>
 
         {/* Grid de cartas */}
         <CardGrid cards={cards} loading={loading} />
 
-        {/* Intersection Observer Target — trigger de carga incremental */}
+        {/* Intersection Observer Target */}
         <div ref={observerTarget} className="h-10 mt-10 flex justify-center">
           {loadingMore && (
             <div className="w-8 h-8 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />

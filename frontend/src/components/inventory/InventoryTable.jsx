@@ -4,7 +4,7 @@ import { TableRowSkeleton } from '../ui/Skeleton'
 import { EmptyState } from '../ui/EmptyState'
 import { Package } from 'lucide-react'
 
-export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading, mode = 'inventory' }) {
+export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading, mode = 'inventory', folders = [] }) {
   const HEADERS = ['Carta', 'Arquetipo', 'Cantidad', mode === 'inventory' ? 'Condición' : 'Rareza', 'Acciones']
 
   return (
@@ -42,6 +42,7 @@ export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading
                   onDelete={onDelete}
                   actionLoading={actionLoading}
                   mode={mode}
+                  folders={folders}
                 />
               ))}
             </AnimatePresence>

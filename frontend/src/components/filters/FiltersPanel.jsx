@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Filter, Search, X, Sword, Zap, Star, Layers, Link2, Scroll, GitMerge, Sparkles, ShieldAlert } from 'lucide-react'
+import { Filter, Search, X, Sword, Zap, Star, Layers, Link2, Scroll, GitMerge, Sparkles, ShieldAlert, ChevronDown, Folder } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CARD_TYPES } from '../../utils/constants'
+import { Select } from '../ui/Select'
 
 // Cada tipo con su acento de color e icono temático
 const TYPE_META = {
@@ -17,13 +18,13 @@ const TYPE_META = {
   'Trap Card':       { color: 'from-pink-800/40 to-pink-600/20',   border: 'border-pink-700/40',   active: 'bg-pink-500/20 border-pink-400/60 text-pink-300',    icon: ShieldAlert },
 }
 
-export function FiltersPanel({ filters, onChange }) {
+export function FiltersPanel({ filters, onChange, folders = [] }) {
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const hasAdvancedFilters = filters.type || filters.archetype
+  const hasAdvancedFilters = filters.type || filters.archetype || filters.folderId
   const hasAnyFilter = filters.name || hasAdvancedFilters
 
   function clearAll() {
-    onChange({ name: '', type: '', archetype: '' })
+    onChange({ name: '', type: '', archetype: '', folderId: '' })
     setShowAdvanced(false)
   }
 
@@ -31,8 +32,8 @@ export function FiltersPanel({ filters, onChange }) {
     <div className="flex flex-col gap-4">
 
       {/* Row 1: Buscador principal + botón filtros mobile */}
-      <div className="flex gap-2 items-center">
-        <div className="relative flex-1 group">
+      <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[150px] group">
           <Search
             className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-amber-400 transition-colors pointer-events-none"
           />
@@ -58,8 +59,22 @@ export function FiltersPanel({ filters, onChange }) {
           )}
         </div>
 
+        {/* Folder / Colección */}
+        {folders.length > 0 && (
+          <div className="relative group flex-1 min-w-[140px] sm:flex-none sm:w-48 order-3 sm:order-none z-[100]">
+            <Select
+              options={folders.map(f => ({ value: f.id, label: f.name }))}
+              value={filters.folderId || ''}
+              onChange={(e) => onChange({ ...filters, folderId: e.target.value })}
+              placeholder="Todas las colecciones"
+              icon={Folder}
+              triggerClassName="bg-black/30 border-white/8 hover:border-white/20 hover:bg-black/40 rounded-xl"
+            />
+          </div>
+        )}
+
         {/* Botón arquetipo inline — solo desktop */}
-        <div className="relative hidden sm:block group">
+        <div className="relative hidden sm:block group order-2 sm:order-none">
           <input
             type="text"
             placeholder="Arquetipo…"
@@ -82,15 +97,15 @@ export function FiltersPanel({ filters, onChange }) {
           )}
         </div>
 
-        {/* Botón de filtros avanzados — mobile */}
+        {/* Botón de filtros avanzados — mobile y desktop */}
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`sm:hidden p-2.5 rounded-xl border transition-all flex items-center justify-center relative ${
+          className={`p-2.5 rounded-xl border transition-all flex items-center justify-center relative ${
             showAdvanced || hasAdvancedFilters
               ? 'bg-amber-500/20 border-amber-500/30 text-amber-400'
               : 'bg-black/20 text-slate-400 border-white/5 hover:bg-white/5'
           }`}
-          title="Filtros avanzados"
+          title={showAdvanced ? 'Ocultar filtros de tipo' : 'Mostrar filtros de tipo'}
         >
           <Filter size={18} />
           {hasAdvancedFilters && (
@@ -113,8 +128,8 @@ export function FiltersPanel({ filters, onChange }) {
         )}
       </div>
 
-      {/* Row 2: Chips de tipo — desktop siempre visible, mobile colapsable */}
-      <div className={`${showAdvanced ? 'flex' : 'hidden'} sm:flex flex-col gap-3`}>
+      {/* Row 2: Chips de tipo — colapsable en todas las pantallas */}
+      <div className={`${showAdvanced ? 'flex' : 'hidden'} flex-col gap-3`}>
         {/* Arquetipo — solo mobile */}
         <div className="relative sm:hidden">
           <input
@@ -138,6 +153,8 @@ export function FiltersPanel({ filters, onChange }) {
             </button>
           )}
         </div>
+
+
 
         {/* Type chips */}
         <div className="flex flex-wrap gap-2">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Search, Loader2, PackagePlus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { SearchInput } from '../../components/ui/Input'
@@ -8,32 +8,31 @@ import { useSearchCards } from '../../hooks/useSearchCards'
 import { useCards } from '../../hooks/useCards'
 import { useWishlist } from '../../hooks/useWishlist'
 import { useDebounce } from '../../hooks/useDebounce'
+import { useFolders } from '../../hooks/useFolders'
 
 const PAGE_SIZE = 10 // resultados por página
 
 export default function SearchPage() {
   const [query, setQuery]       = useState('')
   const [addingId, setAddingId] = useState(null)
-  const [isPending, startTransition] = useTransition()
   const [destination, setDestination] = useState('inventory') // 'inventory' | 'wishlist'
   const [page, setPage]         = useState(1)
 
-  const debouncedQuery          = useDebounce(query, 650)
-  const { results, searching, search } = useSearchCards()
-  const { addCard: addCardInventory }  = useCards()
-  const { addCard: addCardWishlist }   = useWishlist()
+  const debouncedQuery         = useDebounce(query, 650)
+  const { results, searching } = useSearchCards(debouncedQuery)
+  const { addCard: addCardInventory } = useCards()
+  const { addCard: addCardWishlist }  = useWishlist()
+  const { folders } = useFolders()
 
   // Reiniciar paginación cuando cambia la búsqueda o el destino
   useEffect(() => { setPage(1) }, [debouncedQuery, destination])
 
-  useEffect(() => {
-    startTransition(() => { search(debouncedQuery) })
-  }, [debouncedQuery])
-
-  const handleAdd = async (card, qty, condOrRarity) => {
+  const handleAdd = async (card, qty, condOrRarity, folderId) => {
     setAddingId(card.cardId)
     if (destination === 'inventory') {
-      await addCardInventory({ cardId: card.cardId, condition: condOrRarity, quantity: qty })
+      const payload = { cardId: card.cardId, condition: condOrRarity, quantity: qty }
+      if (folderId) payload.folderId = folderId;
+      await addCardInventory(payload)
     } else {
       await addCardWishlist({ cardId: card.cardId, rarity: condOrRarity, quantity: qty })
     }
@@ -100,7 +99,7 @@ export default function SearchPage() {
       </div>
 
       {/* Resultados */}
-      {searching || isPending ? (
+      {searching ? (
         <div className="flex flex-col items-center py-16 gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
           <p className="text-slate-500 text-sm">Buscando en YGOProdeck...</p>
@@ -142,6 +141,7 @@ export default function SearchPage() {
                   destination={destination}
                   onAdd={handleAdd}
                   adding={addingId === card.cardId}
+                  folders={folders}
                 />
               ))}
             </motion.div>

@@ -39,11 +39,12 @@ const createCard = async (req, res, next) => {
 // Devuelve las cartas del inventario del administrador autenticado
 const getAllCards = async (req, res, next) => {
   try {
-    const { name, type, archetype } = req.query;
+    const { name, type, archetype, folderId } = req.query;
     const filters = {};
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
     if (archetype) filters.archetype = archetype;
+    if (folderId)  filters.folderId  = folderId;
 
     const userId = req.user.uid;
     const { cards } = await cardService.listCards(filters, userId);
@@ -68,7 +69,7 @@ const getAllCards = async (req, res, next) => {
 const getPortfolioBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const { name, type, archetype, cursor, limit } = req.query;
+    const { name, type, archetype, folderId, cursor, limit } = req.query;
 
     const uid = await slugToUid(slug);
     if (!uid) {
@@ -79,6 +80,7 @@ const getPortfolioBySlug = async (req, res, next) => {
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
     if (archetype) filters.archetype = archetype;
+    if (folderId)  filters.folderId  = folderId;
 
     const pagination = {
       paginate: true,

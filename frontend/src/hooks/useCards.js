@@ -1,74 +1,65 @@
-import { useState, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import * as cardService from '../services/cardService'
-import { useInventoryStore } from '../store/useInventoryStore'
+import { queryKeys } from '../lib/queryKeys'
 
 /**
  * Hook para operaciones CRUD del inventario.
- * Lee del store Zustand y dispara los side-effects con el servicio.
+ * Usa TanStack Query para caché automática e invalidación tras mutaciones.
  */
-export function useCards() {
-  const { cards, setCards, setLoading, loading, updateCardLocally } = useInventoryStore()
-  const [actionLoading, setActionLoading] = useState(false)
+export function useCards(filters = {}) {
+  const queryClient = useQueryClient()
+  const enabled = filters !== null
+  const safeFilters = filters ?? {}
 
-  /** Cargar todas las cartas con filtros opcionales */
-  const fetchCards = useCallback(async (filters = {}) => {
-    setLoading(true)
-    try {
-      const res = await cardService.getCards(filters)
-      setCards(res.data)
-    } catch (err) {
-      toast.error(err.message || 'Error al cargar el inventario')
-    } finally {
-      setLoading(false)
-    }
-  }, [setCards, setLoading])
+  // ── Query ───────────────────────────────────────────────────────────────────────
+  const { data, isLoading: loading, isFetching } = useQuery({
+    queryKey: queryKeys.cards(safeFilters),
+    queryFn: () => cardService.getCards(safeFilters),
+    select: (res) => res.data ?? [],
+    enabled,
+  })
 
-  /** Agregar carta al inventario */
-  const addCard = useCallback(async (payload) => {
-    setActionLoading(true)
-    try {
-      const res = await cardService.createCard(payload)
+  const cards = data ?? []
+
+  // ── Mutaciones ─────────────────────────────────────────────────────────────
+  const addMutation = useMutation({
+    mutationFn: (payload) => cardService.createCard(payload),
+    onSuccess: (res) => {
       toast.success(res.message || 'Carta agregada al inventario')
-      await fetchCards()
-      return true
-    } catch (err) {
-      toast.error(err.message || 'Error al agregar la carta')
-      return false
-    } finally {
-      setActionLoading(false)
-    }
-  }, [fetchCards])
+      queryClient.invalidateQueries({ queryKey: ['cards'] })
+    },
+    onError: (err) => toast.error(err.message || 'Error al agregar la carta'),
+  })
 
-  /** Actualizar quantity o condition de una carta */
-  const editCard = useCallback(async (id, payload) => {
-    setActionLoading(true)
-    try {
-      await cardService.updateCard(id, payload)
-      updateCardLocally(id, payload)
+  const editMutation = useMutation({
+    mutationFn: ({ id, payload }) => cardService.updateCard(id, payload),
+    onSuccess: (_, { id, payload }) => {
+      // Optimistic update en caché
+      queryClient.setQueriesData({ queryKey: ['cards'] }, (old) =>
+        old ? old.map((c) => (c.id === id ? { ...c, ...payload } : c)) : old
+      )
       toast.success('Carta actualizada')
-      return true
-    } catch (err) {
-      toast.error(err.message || 'Error al actualizar')
-      return false
-    } finally {
-      setActionLoading(false)
-    }
-  }, [updateCardLocally])
+    },
+    onError: (err) => toast.error(err.message || 'Error al actualizar'),
+  })
 
-  /** Eliminar carta */
-  const removeCard = useCallback(async (id) => {
-    setActionLoading(true)
-    try {
-      await cardService.deleteCard(id)
+  const removeMutation = useMutation({
+    mutationFn: (id) => cardService.deleteCard(id),
+    onSuccess: () => {
       toast.success('Carta eliminada del inventario')
-      await fetchCards()
-    } catch (err) {
-      toast.error(err.message || 'Error al eliminar')
-    } finally {
-      setActionLoading(false)
-    }
-  }, [fetchCards])
+      queryClient.invalidateQueries({ queryKey: ['cards'] })
+    },
+    onError: (err) => toast.error(err.message || 'Error al eliminar'),
+  })
 
-  return { cards, loading, actionLoading, fetchCards, addCard, editCard, removeCard }
+  return {
+    cards,
+    loading,
+    isFetching,
+    actionLoading: addMutation.isPending || editMutation.isPending || removeMutation.isPending,
+    addCard:    (payload)        => addMutation.mutateAsync(payload),
+    editCard:   (id, payload)    => editMutation.mutateAsync({ id, payload }),
+    removeCard: (id)             => removeMutation.mutateAsync(id),
+  }
 }

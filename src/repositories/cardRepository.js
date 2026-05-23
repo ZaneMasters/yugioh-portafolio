@@ -37,7 +37,7 @@ class CardRepository {
     const { limit = 20, cursor = null, paginate = false } = pagination;
 
     // Si hay filtros de texto → fetch all y filtrar en memoria (no se puede paginar por substring)
-    const hasTextFilter = !!(filters.name || filters.type || filters.archetype);
+    const hasTextFilter = !!(filters.name || filters.type || filters.archetype || filters.folderId);
 
     if (!paginate || hasTextFilter) {
       // ── Comportamiento original: fetch all ──────────────────────────────────
@@ -47,6 +47,9 @@ class CardRepository {
       const snapshot = await query.get();
       let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
+      if (filters.folderId) {
+        cards = cards.filter((c) => c.folderId === filters.folderId);
+      }
       if (filters.archetype) {
         const archLower = filters.archetype.toLowerCase();
         cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
