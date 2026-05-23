@@ -27,6 +27,7 @@ export function useWishlist(filters = {}) {
     onSuccess: (res) => {
       toast.success(res.message || 'Carta agregada a la wishlist')
       queryClient.invalidateQueries({ queryKey: ['wishlist'] })
+      queryClient.invalidateQueries({ queryKey: ['publicWishlist'] })
     },
     onError: (err) => toast.error(err.message || 'Error al agregar la carta'),
   })
@@ -34,9 +35,11 @@ export function useWishlist(filters = {}) {
   const editMutation = useMutation({
     mutationFn: ({ id, payload }) => wishlistService.updateWishlistCard(id, payload),
     onSuccess: (_, { id, payload }) => {
-      queryClient.setQueriesData({ queryKey: ['wishlist'] }, (old) =>
-        old ? old.map((c) => (c.id === id ? { ...c, ...payload } : c)) : old
-      )
+      queryClient.setQueriesData({ queryKey: ['wishlist'] }, (old) => {
+        if (!old || !old.data) return old
+        return { ...old, data: old.data.map((c) => (c.id === id ? { ...c, ...payload } : c)) }
+      })
+      queryClient.invalidateQueries({ queryKey: ['publicWishlist'] })
       toast.success('Carta actualizada')
     },
     onError: (err) => toast.error(err.message || 'Error al actualizar'),
@@ -47,6 +50,7 @@ export function useWishlist(filters = {}) {
     onSuccess: () => {
       toast.success('Carta eliminada de la wishlist')
       queryClient.invalidateQueries({ queryKey: ['wishlist'] })
+      queryClient.invalidateQueries({ queryKey: ['publicWishlist'] })
     },
     onError: (err) => toast.error(err.message || 'Error al eliminar'),
   })

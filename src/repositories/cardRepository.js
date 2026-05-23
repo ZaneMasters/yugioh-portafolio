@@ -59,6 +59,7 @@ class CardRepository {
         const nameLower = filters.name.toLowerCase();
         cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
       }
+
       cards.sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -97,6 +98,7 @@ class CardRepository {
     const pageDocs = hasMore ? docs.slice(0, limit) : docs;
 
     const cards = pageDocs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    
     const nextCursor = hasMore ? pageDocs[pageDocs.length - 1].data().createdAt : null;
 
     return { cards, nextCursor, hasMore, totalCount };
