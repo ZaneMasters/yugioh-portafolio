@@ -76,8 +76,8 @@ export default function ProfilePage() {
         animate={{ opacity: 1, y: 0 }}
       >
         <h1 className="text-2xl font-black text-white font-display flex items-center gap-2">
-          <User className="w-6 h-6 text-amber-500" />
-          Configuración del <span className="text-gradient">Perfil</span>
+          <User className="w-6 h-6 text-amber-500 shrink-0" />
+          <span>Configuración del <span className="text-gradient">Perfil</span></span>
         </h1>
         <p className="text-slate-400 mt-2 text-sm">
           Personaliza tu URL pública y gestiona tu seguridad.

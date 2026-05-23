@@ -1,76 +1,64 @@
-import { useState, useCallback } from 'react'
-import { folderService } from '../services/folderService'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+import { folderService } from '../services/folderService'
+import { queryKeys } from '../lib/queryKeys'
 
+/**
+ * Hook para CRUD de colecciones (folders) del usuario autenticado.
+ */
 export function useFolders() {
-  const [folders, setFolders] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [actionLoading, setActionLoading] = useState(false)
+  const queryClient = useQueryClient()
 
-  const fetchFolders = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await folderService.getFolders()
-      setFolders(data || [])
-    } catch (err) {
-      toast.error('Error al cargar carpetas.')
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // ── Query ──────────────────────────────────────────────────────────────────
+  const { data: folders = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.folders(),
+    queryFn: () => folderService.getFolders(),
+    select: (res) => res.data ?? res ?? [],
+  })
 
-  const createFolder = async (folderData) => {
-    setActionLoading(true)
-    try {
-      const newFolder = await folderService.createFolder(folderData)
-      setFolders(prev => [newFolder, ...prev])
+  // ── Mutaciones ─────────────────────────────────────────────────────────────
+  const createMutation = useMutation({
+    mutationFn: (folderData) => folderService.createFolder(folderData),
+    onSuccess: (res) => {
+      const newFolder = res.data ?? res
+      // Actualización optimista: insertar al inicio sin re-fetch
+      queryClient.setQueryData(queryKeys.folders(), (old = []) => [newFolder, ...old])
       toast.success('Carpeta creada exitosamente.')
-      return newFolder
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al crear carpeta.')
-      throw err
-    } finally {
-      setActionLoading(false)
-    }
-  }
+    },
+    onError: (err) => toast.error(err.message || 'Error al crear carpeta.'),
+  })
 
-  const updateFolder = async (id, folderData) => {
-    setActionLoading(true)
-    try {
-      const updated = await folderService.updateFolder(id, folderData)
-      setFolders(prev => prev.map(f => f.id === id ? updated : f))
+  const updateMutation = useMutation({
+    mutationFn: ({ id, folderData }) => folderService.updateFolder(id, folderData),
+    onSuccess: (res, { id }) => {
+      const updated = res.data ?? res
+      queryClient.setQueryData(queryKeys.folders(), (old = []) =>
+        old.map((f) => (f.id === id ? updated : f))
+      )
       toast.success('Carpeta actualizada.')
-      return updated
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al actualizar carpeta.')
-      throw err
-    } finally {
-      setActionLoading(false)
-    }
-  }
+    },
+    onError: (err) => toast.error(err.message || 'Error al actualizar carpeta.'),
+  })
 
-  const deleteFolder = async (id) => {
-    setActionLoading(true)
-    try {
-      await folderService.deleteFolder(id)
-      setFolders(prev => prev.filter(f => f.id !== id))
+  const deleteMutation = useMutation({
+    mutationFn: (id) => folderService.deleteFolder(id),
+    onSuccess: (_, id) => {
+      queryClient.setQueryData(queryKeys.folders(), (old = []) =>
+        old.filter((f) => f.id !== id)
+      )
       toast.success('Carpeta eliminada.')
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al eliminar carpeta.')
-      throw err
-    } finally {
-      setActionLoading(false)
-    }
-  }
+    },
+    onError: (err) => toast.error(err.message || 'Error al eliminar carpeta.'),
+  })
 
   return {
     folders,
     loading,
-    actionLoading,
-    fetchFolders,
-    createFolder,
-    updateFolder,
-    deleteFolder,
+    actionLoading: createMutation.isPending || updateMutation.isPending || deleteMutation.isPending,
+    createFolder: (folderData)         => createMutation.mutateAsync(folderData),
+    updateFolder: (id, folderData)     => updateMutation.mutateAsync({ id, folderData }),
+    deleteFolder: (id)                 => deleteMutation.mutateAsync(id),
+    // Compatibilidad: permite forzar refetch desde el exterior si es necesario
+    fetchFolders: () => queryClient.invalidateQueries({ queryKey: queryKeys.folders() }),
   }
 }

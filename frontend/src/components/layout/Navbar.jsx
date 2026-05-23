@@ -14,7 +14,7 @@ export function Navbar() {
   // Si estamos viendo un portafolio específico, mantenernos en ese portafolio.
   // Si estamos en el admin, ir al portafolio del usuario actual (mySlug).
   const match = location.pathname.match(/^\/portfolio\/([^/]+)/)
-  const currentPortfolioSlug = match ? match[1] : (mySlug || 'angel')
+  const currentPortfolioSlug = match ? match[1] : (mySlug ?? '')
   
   const galleryLink = `/portfolio/${currentPortfolioSlug}`
 

@@ -1,78 +1,63 @@
-import { useState, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import * as wishlistService from '../services/wishlistService'
-import { useWishlistStore } from '../store/useWishlistStore'
+import { queryKeys } from '../lib/queryKeys'
 
-export function useWishlist() {
-  const { cards, setCards, setLoading, loading, updateCardLocally } = useWishlistStore()
-  const [actionLoading, setActionLoading] = useState(false)
+/**
+ * Hook para operaciones CRUD de la wishlist privada.
+ */
+export function useWishlist(filters = {}) {
+  const queryClient = useQueryClient()
+  const enabled = filters !== null
+  const safeFilters = filters ?? {}
 
-  const fetchCards = useCallback(async (filters = {}) => {
-    setLoading(true)
-    try {
-      const res = await wishlistService.getWishlist(filters)
-      setCards(res.data)
-    } catch (err) {
-      toast.error(err.message || 'Error al cargar la wishlist')
-    } finally {
-      setLoading(false)
-    }
-  }, [setCards, setLoading])
+  // ── Query ──────────────────────────────────────────────────────────────────
+  const { data, isLoading: loading, isFetching } = useQuery({
+    queryKey: queryKeys.wishlist(safeFilters),
+    queryFn: () => wishlistService.getWishlist(safeFilters),
+    select: (res) => res.data ?? [],
+    enabled,
+  })
 
-  const fetchPublicCards = useCallback(async (slug, filters = {}) => {
-    setLoading(true)
-    try {
-      const res = await wishlistService.getPublicWishlist(slug, filters)
-      setCards(res.data)
-    } catch (err) {
-      toast.error(err.message || 'Error al cargar la wishlist pública')
-    } finally {
-      setLoading(false)
-    }
-  }, [setCards, setLoading])
+  const cards = data ?? []
 
-  const addCard = useCallback(async (payload) => {
-    setActionLoading(true)
-    try {
-      const res = await wishlistService.createWishlistCard(payload)
+  // ── Mutaciones ─────────────────────────────────────────────────────────────
+  const addMutation = useMutation({
+    mutationFn: (payload) => wishlistService.createWishlistCard(payload),
+    onSuccess: (res) => {
       toast.success(res.message || 'Carta agregada a la wishlist')
-      await fetchCards()
-      return true
-    } catch (err) {
-      toast.error(err.message || 'Error al agregar la carta')
-      return false
-    } finally {
-      setActionLoading(false)
-    }
-  }, [fetchCards])
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] })
+    },
+    onError: (err) => toast.error(err.message || 'Error al agregar la carta'),
+  })
 
-  const editCard = useCallback(async (id, payload) => {
-    setActionLoading(true)
-    try {
-      await wishlistService.updateWishlistCard(id, payload)
-      updateCardLocally(id, payload)
+  const editMutation = useMutation({
+    mutationFn: ({ id, payload }) => wishlistService.updateWishlistCard(id, payload),
+    onSuccess: (_, { id, payload }) => {
+      queryClient.setQueriesData({ queryKey: ['wishlist'] }, (old) =>
+        old ? old.map((c) => (c.id === id ? { ...c, ...payload } : c)) : old
+      )
       toast.success('Carta actualizada')
-      return true
-    } catch (err) {
-      toast.error(err.message || 'Error al actualizar')
-      return false
-    } finally {
-      setActionLoading(false)
-    }
-  }, [updateCardLocally])
+    },
+    onError: (err) => toast.error(err.message || 'Error al actualizar'),
+  })
 
-  const removeCard = useCallback(async (id) => {
-    setActionLoading(true)
-    try {
-      await wishlistService.deleteWishlistCard(id)
+  const removeMutation = useMutation({
+    mutationFn: (id) => wishlistService.deleteWishlistCard(id),
+    onSuccess: () => {
       toast.success('Carta eliminada de la wishlist')
-      await fetchCards()
-    } catch (err) {
-      toast.error(err.message || 'Error al eliminar')
-    } finally {
-      setActionLoading(false)
-    }
-  }, [fetchCards])
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] })
+    },
+    onError: (err) => toast.error(err.message || 'Error al eliminar'),
+  })
 
-  return { cards, loading, actionLoading, fetchCards, fetchPublicCards, addCard, editCard, removeCard }
+  return {
+    cards,
+    loading,
+    isFetching,
+    actionLoading: addMutation.isPending || editMutation.isPending || removeMutation.isPending,
+    addCard:    (payload)     => addMutation.mutateAsync(payload),
+    editCard:   (id, payload) => editMutation.mutateAsync({ id, payload }),
+    removeCard: (id)          => removeMutation.mutateAsync(id),
+  }
 }

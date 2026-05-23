@@ -1,26 +1,19 @@
-import { useState, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { folderService } from '../services/folderService'
+import { queryKeys } from '../lib/queryKeys'
 
+/**
+ * Hook para cargar las colecciones públicas de un usuario por su slug.
+ * Los datos públicos se cachean 5 minutos (raramente cambian).
+ */
 export function usePublicFolders(slug) {
-  const [folders, setFolders] = useState([])
-  const [loading, setLoading] = useState(false)
+  const { data: folders = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.publicFolders(slug),
+    queryFn: () => folderService.getPublicFolders(slug),
+    select: (res) => res.data ?? res ?? [],
+    enabled: !!slug,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  })
 
-  const fetchPublicFolders = useCallback(async () => {
-    if (!slug) return
-    setLoading(true)
-    try {
-      const data = await folderService.getPublicFolders(slug)
-      setFolders(data || [])
-    } catch (err) {
-      console.error('Error fetching public folders:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [slug])
-
-  return {
-    folders,
-    loading,
-    fetchPublicFolders,
-  }
+  return { folders, loading }
 }

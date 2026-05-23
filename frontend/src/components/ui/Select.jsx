@@ -17,6 +17,8 @@ export function Select({
   value = '',
   onChange,
   className = '',
+  triggerClassName = 'bg-[#1f2937] border-[#374151] hover:border-slate-500/60 rounded-lg',
+  icon: Icon,
 }) {
   const [open, setOpen]       = useState(false)
   const [rect, setRect]       = useState(null)
@@ -97,22 +99,26 @@ export function Select({
         type="button"
         onClick={toggle}
         className={`
-          w-full flex items-center justify-between gap-2
-          px-4 py-2.5 rounded-lg text-sm text-left
-          bg-[#1f2937] border transition-all outline-none
+          relative w-full flex items-center justify-between gap-2
+          ${Icon ? 'pl-10 pr-4' : 'px-4'} py-2.5 text-sm text-left
+          border transition-all outline-none
+          ${triggerClassName}
           ${open
-            ? 'border-amber-500/60 ring-2 ring-amber-500/10'
-            : 'border-[#374151] hover:border-slate-500/60'
+            ? '!border-amber-500/60 ring-2 ring-amber-500/10'
+            : ''
           }
         `}
       >
+        {Icon && (
+          <Icon className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors pointer-events-none ${open ? 'text-amber-400' : 'text-slate-500'}`} />
+        )}
         <span className={`truncate ${selected ? 'text-slate-100' : 'text-slate-500'}`}>
           {selected ? selected.label : placeholder}
         </span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2, ease: 'easeInOut' }}
-          className="shrink-0 text-slate-500"
+          className={`shrink-0 ${open ? 'text-amber-400' : 'text-slate-500'}`}
         >
           <ChevronDown className="w-4 h-4" />
         </motion.span>
