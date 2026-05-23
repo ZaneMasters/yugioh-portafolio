@@ -2,6 +2,7 @@
 
 const express = require('express');
 const cors    = require('cors');
+const compression = require('compression');
 const requestLogger = require('./middlewares/requestLogger');
 const errorHandler  = require('./middlewares/errorHandler');
 const router        = require('./routes');
@@ -28,7 +29,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }))
 
-// ── Body parsing ──────────────────────────────────────────────────────────────
+// ── Compresión y Body parsing ──────────────────────────────────────────────────
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

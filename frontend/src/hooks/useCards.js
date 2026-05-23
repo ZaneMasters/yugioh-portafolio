@@ -28,6 +28,7 @@ export function useCards(filters = {}) {
     onSuccess: (res) => {
       toast.success(res.message || 'Carta agregada al inventario')
       queryClient.invalidateQueries({ queryKey: ['cards'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
     },
     onError: (err) => toast.error(err.message || 'Error al agregar la carta'),
   })
@@ -36,9 +37,11 @@ export function useCards(filters = {}) {
     mutationFn: ({ id, payload }) => cardService.updateCard(id, payload),
     onSuccess: (_, { id, payload }) => {
       // Optimistic update en caché
-      queryClient.setQueriesData({ queryKey: ['cards'] }, (old) =>
-        old ? old.map((c) => (c.id === id ? { ...c, ...payload } : c)) : old
-      )
+      queryClient.setQueriesData({ queryKey: ['cards'] }, (old) => {
+        if (!old || !old.data) return old
+        return { ...old, data: old.data.map((c) => (c.id === id ? { ...c, ...payload } : c)) }
+      })
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
       toast.success('Carta actualizada')
     },
     onError: (err) => toast.error(err.message || 'Error al actualizar'),
@@ -49,6 +52,7 @@ export function useCards(filters = {}) {
     onSuccess: () => {
       toast.success('Carta eliminada del inventario')
       queryClient.invalidateQueries({ queryKey: ['cards'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
     },
     onError: (err) => toast.error(err.message || 'Error al eliminar'),
   })
