@@ -1,6 +1,7 @@
 'use strict';
 
 const cardService  = require('../services/cardService');
+const folderService = require('../services/folderService');
 const { slugToUid } = require('../utils/slugToUid');
 const AppError     = require('../utils/AppError');
 const logger       = require('../utils/logger');
@@ -81,6 +82,18 @@ const getPortfolioBySlug = async (req, res, next) => {
     if (type)      filters.type      = type;
     if (archetype) filters.archetype = archetype;
     if (folderId)  filters.folderId  = folderId;
+
+    // Obtener las carpetas privadas del usuario
+    const allFolders = await folderService.listFolders(uid);
+    const privateFolderIds = allFolders.filter(f => !f.isPublic).map(f => f.id);
+
+    // Si el usuario pide explícitamente una carpeta que es privada, no devolver nada.
+    // Si no pide carpeta, se devuelven todas las cartas del inventario por defecto.
+    if (folderId && privateFolderIds.includes(folderId)) {
+      return res.status(200).json({
+        success: true, slug, count: 0, totalCount: 0, hasMore: false, nextCursor: null, data: []
+      });
+    }
 
     const pagination = {
       paginate: true,

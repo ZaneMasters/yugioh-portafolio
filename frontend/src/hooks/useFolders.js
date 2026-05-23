@@ -23,6 +23,8 @@ export function useFolders() {
       const newFolder = res.data ?? res
       // Actualización optimista: insertar al inicio sin re-fetch
       queryClient.setQueryData(queryKeys.folders(), (old = []) => [newFolder, ...old])
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+      queryClient.invalidateQueries({ queryKey: ['publicFolders'] })
       toast.success('Carpeta creada exitosamente.')
     },
     onError: (err) => toast.error(err.message || 'Error al crear carpeta.'),
@@ -35,6 +37,8 @@ export function useFolders() {
       queryClient.setQueryData(queryKeys.folders(), (old = []) =>
         old.map((f) => (f.id === id ? updated : f))
       )
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+      queryClient.invalidateQueries({ queryKey: ['publicFolders'] })
       toast.success('Carpeta actualizada.')
     },
     onError: (err) => toast.error(err.message || 'Error al actualizar carpeta.'),
@@ -46,6 +50,8 @@ export function useFolders() {
       queryClient.setQueryData(queryKeys.folders(), (old = []) =>
         old.filter((f) => f.id !== id)
       )
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+      queryClient.invalidateQueries({ queryKey: ['publicFolders'] })
       toast.success('Carpeta eliminada.')
     },
     onError: (err) => toast.error(err.message || 'Error al eliminar carpeta.'),

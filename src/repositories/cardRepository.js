@@ -36,32 +36,30 @@ class CardRepository {
   async findAll(filters = {}, userId = null, pagination = {}) {
     const { limit = 20, cursor = null, paginate = false } = pagination;
 
-    // Si hay filtros de texto → fetch all y filtrar en memoria (no se puede paginar por substring)
-    const hasTextFilter = !!(filters.name || filters.type || filters.archetype || filters.folderId);
+    // Solo hacemos fetch all si hay filtros que Firestore no soporta nativamente (substring de name o archetype)
+    const hasTextFilter = !!(filters.name || filters.archetype);
 
     if (!paginate || hasTextFilter) {
-      // ── Comportamiento original: fetch all ──────────────────────────────────
+      // ── Comportamiento con filtrado en memoria ────────────────────────────────
       let query = this.collection;
       if (userId) query = query.where('userId', '==', userId);
+      
+      // Aplicar filtros nativos primero para traer menos documentos a memoria
+      if (filters.folderId) query = query.where('folderId', '==', filters.folderId);
+      if (filters.type) query = query.where('type', '==', filters.type);
 
       const snapshot = await query.get();
       let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-      if (filters.folderId) {
-        cards = cards.filter((c) => c.folderId === filters.folderId);
-      }
       if (filters.archetype) {
         const archLower = filters.archetype.toLowerCase();
         cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
-      }
-      if (filters.type) {
-        const typeLower = filters.type.toLowerCase();
-        cards = cards.filter((c) => c.type && c.type.toLowerCase().includes(typeLower));
       }
       if (filters.name) {
         const nameLower = filters.name.toLowerCase();
         cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
       }
+
       cards.sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -72,9 +70,12 @@ class CardRepository {
     }
 
     // ── Paginación real con cursor ───────────────────────────────────────────
-    // Usa el índice compuesto userId + createdAt (ya existe en Firestore ✅)
     let query = this.collection;
     if (userId) query = query.where('userId', '==', userId);
+    
+    // Filtros Nativos
+    if (filters.folderId) query = query.where('folderId', '==', filters.folderId);
+    if (filters.type) query = query.where('type', '==', filters.type);
 
     // Obtener total sin descargar documentos
     const countSnapshot = await query.count().get();
@@ -97,6 +98,7 @@ class CardRepository {
     const pageDocs = hasMore ? docs.slice(0, limit) : docs;
 
     const cards = pageDocs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    
     const nextCursor = hasMore ? pageDocs[pageDocs.length - 1].data().createdAt : null;
 
     return { cards, nextCursor, hasMore, totalCount };

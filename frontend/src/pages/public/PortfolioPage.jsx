@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { Sparkles, Ghost } from 'lucide-react'
 import { Navbar } from '../../components/layout/Navbar'
@@ -44,16 +45,9 @@ export default function PortfolioPage() {
 
   const displayName = slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : ''
 
-  const observerTarget = useRef(null)
 
-  // Actualizar título de la pestaña dinámicamente
-  useEffect(() => {
-    if (displayName) {
-      const tabLabel = currentTab === 'inventory' ? 'Colección' : 'Wishlist'
-      document.title = `${tabLabel} de ${displayName} — Yu-Gi-Oh! Inventory`
-    }
-    return () => { document.title = 'Yu-Gi-Oh! Inventory — Gestiona tu colección' }
-  }, [displayName, currentTab])
+
+  const observerTarget = useRef(null)
 
   // IntersectionObserver — carga más cartas con scroll
   useEffect(() => {
@@ -97,8 +91,20 @@ export default function PortfolioPage() {
     )
   }
 
+  const pageTitle = `${currentTab === 'inventory' ? 'Colección' : 'Wishlist'} de ${displayName} — Yu-Gi-Oh! Inventory`
+  const pageDescription = `Explora la ${currentTab === 'inventory' ? 'colección de cartas' : 'lista de deseos'} de ${displayName}. Descubre sus cartas favoritas de Yu-Gi-Oh!`
+
   return (
     <div className="min-h-screen">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:type" content="profile" />
+        <meta name="twitter:card" content="summary" />
+      </Helmet>
+
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
