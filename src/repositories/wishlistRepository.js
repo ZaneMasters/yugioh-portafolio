@@ -31,11 +31,14 @@ class WishlistRepository {
    */
   async findAll(filters = {}, userId = null, pagination = {}) {
     const { limit = 20, cursor = null, paginate = false } = pagination;
-    const hasTextFilter = !!(filters.name || filters.type || filters.archetype);
+    const hasTextFilter = !!(filters.name || filters.archetype);
 
     if (!paginate || hasTextFilter) {
       let query = this.collection;
       if (userId) query = query.where('userId', '==', userId);
+
+      // Aplicar filtros nativos primero para traer menos documentos a memoria
+      if (filters.type) query = query.where('type', '==', filters.type);
 
       const snapshot = await query.get();
       let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -43,10 +46,6 @@ class WishlistRepository {
       if (filters.archetype) {
         const archLower = filters.archetype.toLowerCase();
         cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
-      }
-      if (filters.type) {
-        const typeLower = filters.type.toLowerCase();
-        cards = cards.filter((c) => c.type && c.type.toLowerCase().includes(typeLower));
       }
       if (filters.name) {
         const nameLower = filters.name.toLowerCase();
@@ -64,6 +63,9 @@ class WishlistRepository {
     // ── Paginación real ──────────────────────────────────────────────────────
     let query = this.collection;
     if (userId) query = query.where('userId', '==', userId);
+
+    // Filtros Nativos
+    if (filters.type) query = query.where('type', '==', filters.type);
 
     const countSnapshot = await query.count().get();
     const totalCount = countSnapshot.data().count;
