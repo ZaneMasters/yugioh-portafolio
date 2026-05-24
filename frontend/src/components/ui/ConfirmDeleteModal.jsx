@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Trash2, AlertTriangle, X } from 'lucide-react'
 import { Button } from './Button'
+import { lockScroll, unlockScroll } from '../../utils/scrollLock'
 
 /**
  * Modal de confirmación de eliminación.
@@ -23,11 +24,11 @@ export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfi
     return () => document.removeEventListener('keydown', handleKey)
   }, [open, loading, onCancel])
 
-  // Bloquear scroll mientras el modal está abierto
+  // Bloquear scroll mientras el modal está abierto (contador compartido)
   useEffect(() => {
-    if (open) document.body.style.overflow = 'hidden'
-    else document.body.style.overflow = ''
-    return () => { document.body.style.overflow = '' }
+    if (open) lockScroll()
+    else unlockScroll()
+    return () => unlockScroll()
   }, [open])
 
   return createPortal(

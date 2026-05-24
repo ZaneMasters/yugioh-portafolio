@@ -6,6 +6,8 @@ import {
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { CONDITIONS, RARITIES } from '../../utils/constants'
+import { lockScroll, unlockScroll } from '../../utils/scrollLock'
+
 
 // ─── Tipo meta ────────────────────────────────────────────────────────────────
 const TYPE_META_LIST = [
@@ -240,9 +242,9 @@ export function CardDetailModal({ card, onClose }) {
   }, [open, onClose])
 
   useEffect(() => {
-    if (open) document.body.style.overflow = 'hidden'
-    else document.body.style.overflow = ''
-    return () => { document.body.style.overflow = '' }
+    if (open) lockScroll()
+    else unlockScroll()
+    return () => unlockScroll()
   }, [open])
 
   const frameType  = card?.frameType ?? 'normal'
