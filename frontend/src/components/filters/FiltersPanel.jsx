@@ -61,7 +61,7 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
 
         {/* Folder / Colección */}
         {folders.length > 0 && (
-          <div className="relative group flex-1 min-w-[140px] sm:flex-none sm:w-48 order-3 sm:order-none z-[100]">
+          <div className="relative group flex-1 min-w-[140px] sm:flex-none sm:w-48 order-3 sm:order-none z-20">
             <Select
               options={folders.map(f => ({ value: f.id, label: f.name }))}
               value={filters.folderId || ''}
