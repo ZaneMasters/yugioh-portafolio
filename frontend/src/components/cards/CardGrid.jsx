@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { AnimatePresence } from 'framer-motion'
+import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import { CardItem } from './CardItem'
 import { CardDetailModal } from './CardDetailModal'
 import { CardSkeleton } from '../ui/Skeleton'
@@ -9,6 +10,50 @@ import { LayoutGrid, Square, Columns2, List } from 'lucide-react'
 export function CardGrid({ cards, loading }) {
   const [selectedCard, setSelectedCard] = useState(null)
   const [mobileCols, setMobileCols] = useState('1')
+  
+  // ─── Virtualización: Determinar columnas ─────────────────────────────────────
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024)
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const colCount = useMemo(() => {
+    if (windowWidth >= 1280) return 4
+    if (windowWidth >= 1024) return 3
+    if (windowWidth >= 640) return 2
+    return mobileCols === 'list' ? 1 : (parseInt(mobileCols, 10) || 1)
+  }, [windowWidth, mobileCols])
+
+  // Agrupar cartas en filas
+  const rows = useMemo(() => {
+    const r = []
+    for (let i = 0; i < cards.length; i += colCount) {
+      r.push(cards.slice(i, i + colCount))
+    }
+    return r
+  }, [cards, colCount])
+
+  // Ref del contenedor para saber a qué altura empieza el grid en la página
+  const listRef = useRef(null)
+  const [scrollMargin, setScrollMargin] = useState(0)
+
+  useEffect(() => {
+    if (listRef.current) {
+      // Calculamos la posición real desde el top absoluto de la página
+      const rect = listRef.current.getBoundingClientRect()
+      setScrollMargin(rect.top + window.scrollY)
+    }
+  }, [cards.length, colCount]) // Recalcular si cambia el layout superior
+
+  const virtualizer = useWindowVirtualizer({
+    count: rows.length,
+    estimateSize: () => mobileCols === 'list' ? 140 : 400,
+    overscan: 3, // Cargar 3 filas extra fuera de pantalla para que el scroll sea fluido
+    scrollMargin,
+  })
 
   if (loading) {
     return (
@@ -65,16 +110,53 @@ export function CardGrid({ cards, loading }) {
         </div>
       </div>
 
-      <div className={`grid ${
-        mobileCols === '1' ? 'grid-cols-1' : 
-        mobileCols === '2' ? 'grid-cols-2' : 
-        'grid-cols-1'
-      } sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5`}>
-        <AnimatePresence>
-          {cards.map((card) => (
-            <CardItem key={card.id} card={card} onSelect={setSelectedCard} viewMode={mobileCols} />
-          ))}
-        </AnimatePresence>
+      {/* Grid Virtualizado */}
+      <div 
+        ref={listRef} 
+        style={{ 
+          height: `${virtualizer.getTotalSize()}px`, 
+          width: '100%', 
+          position: 'relative',
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const rowCards = rows[virtualRow.index]
+          
+          return (
+            <div
+              key={virtualRow.index}
+              ref={virtualizer.measureElement}
+              data-index={virtualRow.index}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
+              }}
+            >
+              <div className={`grid ${
+                colCount === 1 ? 'grid-cols-1' : 
+                colCount === 2 ? 'grid-cols-2' : 
+                colCount === 3 ? 'grid-cols-3' : 
+                'grid-cols-4'
+              } gap-4 sm:gap-5 pb-4 sm:pb-5`}>
+                <AnimatePresence>
+                  {rowCards.map((card) => (
+                    <CardItem 
+                      key={card.id} 
+                      card={card} 
+                      onSelect={setSelectedCard} 
+                      viewMode={mobileCols} 
+                      // Desactivar animaciones pesadas durante scroll rápido
+                      disableAnimation={virtualizer.isScrolling || virtualRow.index > 0} 
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
