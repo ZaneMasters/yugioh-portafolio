@@ -2,12 +2,25 @@
 
 const express = require('express');
 const cors    = require('cors');
+const helmet  = require('helmet');
+const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const requestLogger = require('./middlewares/requestLogger');
 const errorHandler  = require('./middlewares/errorHandler');
 const router        = require('./routes');
 
 const app = express();
+
+// ── Seguridad de Cabeceras (Helmet) ───────────────────────────────────────────
+app.use(helmet());
+
+// ── Rate Limiting (Prevenir DDoS y Spam) ──────────────────────────────────────
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 1000, // Límite de 1000 peticiones por IP cada 15 minutos para permitir gestión fluida del inventario
+  message: { success: false, message: 'Demasiadas peticiones desde esta IP, por favor intenta de nuevo más tarde.' }
+});
+app.use(limiter);
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 // En producción, ALLOWED_ORIGINS debe ser la URL de tu frontend en Vercel o Firebase
