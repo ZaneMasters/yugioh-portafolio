@@ -99,10 +99,26 @@ export default function PortfolioPage() {
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
-        <meta property="og:title" content={pageTitle} />
+
+        {/* Open Graph */}
+        <meta property="og:type"        content="profile" />
+        <meta property="og:site_name"   content="Yu-Gi-Oh! Inventory" />
+        <meta property="og:title"       content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:type" content="profile" />
-        <meta name="twitter:card" content="summary" />
+        <meta property="og:url"         content={`https://yugioh-8fc03.web.app/portfolio/${slug}`} />
+        <meta property="og:image"       content="https://yugioh-8fc03.web.app/og-image.png" />
+        <meta property="og:image:type"  content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt"   content={`Portafolio de ${displayName} — Yu-Gi-Oh! Inventory`} />
+        <meta property="og:locale"      content="es_ES" />
+
+        {/* Twitter / X */}
+        <meta name="twitter:card"        content="summary_large_image" />
+        <meta name="twitter:title"       content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image"       content="https://yugioh-8fc03.web.app/og-image.png" />
+        <meta name="twitter:image:alt"   content={`Portafolio de ${displayName} — Yu-Gi-Oh! Inventory`} />
       </Helmet>
 
       <Navbar />

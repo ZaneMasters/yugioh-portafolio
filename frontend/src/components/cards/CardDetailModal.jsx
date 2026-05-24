@@ -1,49 +1,237 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Sword, Shield, Star, Layers, Zap, Scroll, GitMerge, Link2 } from 'lucide-react'
+import {
+  X, Sword, Shield, Star, Layers, Link2, Sparkles,
+} from 'lucide-react'
 import { Badge } from '../ui/Badge'
-import { FRAME_TYPE_COLORS, CONDITION_COLORS, CONDITIONS, RARITIES } from '../../utils/constants'
+import { CONDITIONS, RARITIES } from '../../utils/constants'
 
-// Metadatos de tipo. El orden importa: los más específicos van primero.
-// La resolución usa includes() para cubrir todos los subtipos de YGOProdeck
-// (ej: 'Pendulum Normal Monster', 'Ritual Effect Monster', etc.)
+// ─── Tipo meta ────────────────────────────────────────────────────────────────
 const TYPE_META_LIST = [
-  { key: 'pendulum',        label: 'Monstruo Péndulo',      color: 'text-teal-400',    bg: 'bg-teal-500/10'   },
-  { key: 'ritual',          label: 'Monstruo Ritual',       color: 'text-blue-400',    bg: 'bg-blue-500/10'   },
-  { key: 'fusion',          label: 'Monstruo de Fusión',    color: 'text-purple-400',  bg: 'bg-purple-500/10' },
-  { key: 'synchro',         label: 'Monstruo Sincronía',    color: 'text-slate-300',   bg: 'bg-slate-500/10'  },
-  { key: 'xyz',             label: 'Monstruo XYZ',          color: 'text-gray-300',    bg: 'bg-gray-500/10'   },
-  { key: 'link',            label: 'Monstruo Enlace',       color: 'text-sky-400',     bg: 'bg-sky-500/10'    },
-  { key: 'normal monster',  label: 'Monstruo Normal',       color: 'text-yellow-400',  bg: 'bg-yellow-500/10' },
-  { key: 'effect monster',  label: 'Monstruo de Efecto',    color: 'text-orange-400',  bg: 'bg-orange-500/10' },
-  { key: 'spell card',      label: 'Carta Mágica',          color: 'text-emerald-400', bg: 'bg-emerald-500/10'},
-  { key: 'trap card',       label: 'Carta de Trampa',       color: 'text-rose-400',    bg: 'bg-rose-500/10'   },
+  { key: 'pendulum',        label: 'Péndulo',   icon: '♦', accent: '#2dd4bf' },
+  { key: 'ritual',          label: 'Ritual',    icon: '🌙', accent: '#60a5fa' },
+  { key: 'fusion',          label: 'Fusión',    icon: '✦', accent: '#c084fc' },
+  { key: 'synchro',         label: 'Sincronía', icon: '⚡', accent: '#cbd5e1' },
+  { key: 'xyz',             label: 'XYZ',       icon: '✧', accent: '#94a3b8' },
+  { key: 'link',            label: 'Enlace',    icon: '⬡', accent: '#38bdf8' },
+  { key: 'normal monster',  label: 'Normal',    icon: '◈', accent: '#fbbf24' },
+  { key: 'effect monster',  label: 'Efecto',    icon: '◉', accent: '#fb923c' },
+  { key: 'spell card',      label: 'Mágica',    icon: '♠', accent: '#34d399' },
+  { key: 'trap card',       label: 'Trampa',    icon: '◆', accent: '#fb7185' },
 ]
 
-/** Resuelve metadatos de tipo usando includes() para cubrir todos los subtipos */
 function resolveTypeMeta(type) {
-  if (!type) return { label: '—', color: 'text-slate-400', bg: 'bg-slate-500/10' }
+  if (!type) return { label: '—', icon: '?', accent: '#64748b' }
   const lower = type.toLowerCase()
   return (
     TYPE_META_LIST.find((m) => lower.includes(m.key)) ??
-    { label: type, color: 'text-slate-400', bg: 'bg-slate-500/10' }
+    { label: type, icon: '?', accent: '#64748b' }
   )
 }
 
+// ─── Atributo a color ─────────────────────────────────────────────────────────
+const ATTR_COLORS = {
+  DARK:   { bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.4)',  text: '#a78bfa' },
+  LIGHT:  { bg: 'rgba(253,224,71,0.12)', border: 'rgba(253,224,71,0.4)', text: '#fde047' },
+  EARTH:  { bg: 'rgba(120,90,50,0.18)',  border: 'rgba(180,140,80,0.4)', text: '#d4a76a' },
+  WATER:  { bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.4)', text: '#38bdf8' },
+  FIRE:   { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.4)',  text: '#f87171' },
+  WIND:   { bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.4)', text: '#34d399' },
+  DIVINE: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.4)', text: '#fbbf24' },
+}
 
-const conditionLabel = (value) =>
-  CONDITIONS.find((c) => c.value === value)?.label ?? value
+const conditionLabel = (v) => CONDITIONS.find((c) => c.value === v)?.label ?? v
+const rarityLabel    = (v) => RARITIES.find((r)  => r.value === v)?.label ?? v
 
-const rarityLabel = (value) =>
-  RARITIES.find((r) => r.value === value)?.label ?? value
+// ─── Colores de glow por frameType ───────────────────────────────────────────
+const FRAME_GLOW = {
+  normal:  '#ca8a04',
+  effect:  '#ea580c',
+  ritual:  '#3b82f6',
+  fusion:  '#a855f7',
+  synchro: '#94a3b8',
+  xyz:     '#6b7280',
+  link:    '#0ea5e9',
+  spell:   '#10b981',
+  trap:    '#f43f5e',
+}
+
+const FRAME_LABEL = {
+  normal:  'Normal Monster',
+  effect:  'Effect Monster',
+  ritual:  'Ritual Monster',
+  fusion:  'Fusion Monster',
+  synchro: 'Synchro Monster',
+  xyz:     'XYZ Monster',
+  link:    'Link Monster',
+  spell:   'Spell Card',
+  trap:    'Trap Card',
+}
+
+// ─── CSS responsivo inyectado una vez ────────────────────────────────────────
+const MODAL_STYLES = `
+  .cdm-panel {
+    pointer-events: auto;
+    width: 100%;
+    max-width: 780px;
+    max-height: 92vh;
+    overflow-y: auto;
+    border-radius: 20px;
+    background: linear-gradient(145deg, #0f1117 0%, #13161f 60%, #0b0e15 100%);
+    scrollbar-width: thin;
+    scrollbar-color: #ffffff18 transparent;
+  }
+
+  /* Header: columnas en desktop, apilado en mobile */
+  .cdm-header {
+    display: flex;
+    flex-direction: row;
+    position: relative;
+  }
+
+  .cdm-img-col {
+    flex-shrink: 0;
+    width: 180px;
+    min-height: 240px;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+  }
+
+  .cdm-img-wrap img {
+    display: block;
+    width: 148px;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .cdm-info-col {
+    flex: 1;
+    padding: 20px 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .cdm-card-name {
+    margin: 0;
+    font-size: clamp(1rem, 4vw, 1.45rem);
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .cdm-body {
+    padding: 0 20px 24px;
+  }
+
+  .cdm-close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    z-index: 1;
+  }
+  .cdm-close-btn:hover {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+  }
+
+  .cdm-pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .cdm-stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cdm-inventory-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+  }
+
+  /* ── Mobile (< 520px) ───────────────────────────────────── */
+  @media (max-width: 520px) {
+    .cdm-header {
+      flex-direction: column;
+      align-items: center;
+      padding-top: 12px;
+      padding-bottom: 0;
+    }
+
+    .cdm-img-col {
+      width: 100%;
+      min-height: unset;
+      border-right: none !important;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 16px 16px 12px;
+    }
+
+    .cdm-img-wrap img {
+      width: 110px;
+    }
+
+    .cdm-info-col {
+      width: 100%;
+      padding: 14px 16px 14px;
+      gap: 8px;
+    }
+
+    .cdm-card-name {
+      font-size: 1.05rem;
+      padding-right: 36px; /* espacio para el botón cerrar */
+    }
+
+    .cdm-body {
+      padding: 0 14px 20px;
+    }
+
+    .cdm-close-btn {
+      top: 10px;
+      right: 10px;
+    }
+  }
+`
+
+function injectStyles() {
+  if (document.getElementById('cdm-styles')) return
+  const tag = document.createElement('style')
+  tag.id = 'cdm-styles'
+  tag.textContent = MODAL_STYLES
+  document.head.appendChild(tag)
+}
 
 /**
- * Modal de detalles de carta con toda la información del inventario.
- * Se monta en document.body mediante portal.
+ * Modal de detalles de carta – diseño premium, totalmente responsivo
  */
 export function CardDetailModal({ card, onClose }) {
   const open = !!card
+
+  // Inyectar estilos responsivos una sola vez
+  useEffect(() => { injectStyles() }, [])
 
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose() }
@@ -57,154 +245,245 @@ export function CardDetailModal({ card, onClose }) {
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-  const frameGradient = card ? (FRAME_TYPE_COLORS[card.frameType] ?? FRAME_TYPE_COLORS.normal) : ''
-  const typeMeta = card ? resolveTypeMeta(card.type) : {}
+  const frameType  = card?.frameType ?? 'normal'
+  const glowColor  = FRAME_GLOW[frameType] ?? '#64748b'
+  const typeMeta   = card ? resolveTypeMeta(card.type) : {}
+  const attrStyle  = card?.attribute ? (ATTR_COLORS[card.attribute.toUpperCase()] ?? null) : null
+  const isMonster  = card && card.atk !== null && card.atk !== undefined
+  const frameLabel = FRAME_LABEL[frameType] ?? frameType
 
   return createPortal(
     <AnimatePresence>
       {open && card && (
         <>
-          {/* Backdrop */}
+          {/* ── Backdrop ───────────────────────────────────────── */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.22 }}
-            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md"
+            transition={{ duration: 0.25 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 50,
+              background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(12px)',
+            }}
             onClick={onClose}
           />
 
-          {/* Panel */}
+          {/* ── Panel wrapper ──────────────────────────────────── */}
           <motion.div
             key="panel"
-            initial={{ opacity: 0, scale: 0.9, y: 24 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 24 }}
-            transition={{ type: 'spring', stiffness: 340, damping: 28 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            initial={{ opacity: 0, scale: 0.88, y: 32 }}
+            animate={{ opacity: 1, scale: 1,    y: 0  }}
+            exit={{ opacity: 0, scale: 0.88, y: 32 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 50,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '12px', pointerEvents: 'none',
+            }}
           >
             <div
-              className={`
-                pointer-events-auto w-full max-w-2xl max-h-[90vh] overflow-y-auto
-                rounded-2xl border border-white/10 shadow-2xl shadow-black/60
-                bg-gradient-to-br ${frameGradient} bg-[#111827]
-                scrollbar-thin scrollbar-thumb-white/10
-              `}
+              className="cdm-panel"
               onClick={(e) => e.stopPropagation()}
+              style={{
+                border: `1px solid ${glowColor}40`,
+                boxShadow: `0 0 0 1px ${glowColor}20, 0 32px 64px rgba(0,0,0,0.7), 0 0 80px ${glowColor}18`,
+              }}
             >
-              {/* Header: imagen + nombre */}
-              <div className="relative flex gap-0 overflow-hidden rounded-t-2xl">
-                {/* Imagen grande */}
-                <div className="shrink-0 w-36 sm:w-44 bg-black/40">
-                  <img
-                    src={card.image}
-                    alt={card.name}
-                    loading="lazy"
-                    className="w-full h-full object-contain"
-                    onError={(e) => { e.target.src = '/card-placeholder.png' }}
-                  />
+              {/* Top accent bar */}
+              <div style={{
+                height: '3px',
+                background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
+                borderRadius: '20px 20px 0 0',
+              }} />
+
+              {/* ── HEADER ─────────────────────────────────────── */}
+              <div className="cdm-header">
+
+                {/* Columna imagen */}
+                <div
+                  className="cdm-img-col"
+                  style={{ borderRight: `1px solid ${glowColor}22` }}
+                >
+                  <div
+                    className="cdm-img-wrap"
+                    style={{
+                      position: 'relative', borderRadius: '10px', overflow: 'hidden',
+                      boxShadow: `0 0 32px ${glowColor}40, 0 8px 24px rgba(0,0,0,0.6)`,
+                      border: `1px solid ${glowColor}50`,
+                    }}
+                  >
+                    <img
+                      src={card.image}
+                      alt={card.name}
+                      loading="lazy"
+                      onError={(e) => { e.target.src = '/card-placeholder.png' }}
+                    />
+                    {/* Shimmer */}
+                    <div style={{
+                      position: 'absolute', inset: 0, pointerEvents: 'none',
+                      background: `linear-gradient(135deg, ${glowColor}10 0%, transparent 60%)`,
+                    }} />
+                  </div>
                 </div>
 
-                {/* Info rápida */}
-                <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
-                  <div>
-                    {/* Tipo badge */}
-                    <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full mb-2 ${typeMeta.color} ${typeMeta.bg}`}>
+                {/* Columna info */}
+                <div className="cdm-info-col">
+
+                  {/* Tipo + Arquetipo */}
+                  <div className="cdm-pills-row">
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+                      textTransform: 'uppercase', padding: '3px 10px', borderRadius: '99px',
+                      background: `${typeMeta.accent}18`,
+                      border: `1px solid ${typeMeta.accent}45`,
+                      color: typeMeta.accent,
+                    }}>
+                      <span>{typeMeta.icon}</span>
                       {typeMeta.label}
                     </span>
-                    <h2 className="text-lg sm:text-xl font-bold text-white leading-tight mb-1">
-                      {card.name}
-                    </h2>
                     {card.archetype && (
-                      <p className="text-xs text-purple-400/80 mb-3">
-                        <span className="text-slate-500">Arquetipo:</span> {card.archetype}
-                      </p>
+                      <span style={{
+                        fontSize: '11px', color: '#a78bfa',
+                        background: 'rgba(167,139,250,0.08)',
+                        border: '1px solid rgba(167,139,250,0.2)',
+                        padding: '3px 10px', borderRadius: '99px',
+                      }}>
+                        {card.archetype}
+                      </span>
                     )}
                   </div>
 
-                  {/* Stats */}
-                  <div className="space-y-2">
-                    {/* ATK / DEF / Nivel */}
-                    {(card.atk !== null || card.def !== null || card.level) && (
-                      <div className="flex flex-wrap gap-3 text-sm">
-                        {card.atk !== null && (
-                          <span className="flex items-center gap-1.5 text-red-400 font-bold">
-                            <Sword className="w-4 h-4" /> ATK {card.atk}
-                          </span>
-                        )}
-                        {card.def !== null && (
-                          <span className="flex items-center gap-1.5 text-sky-400 font-bold">
-                            <Shield className="w-4 h-4" /> DEF {card.def}
-                          </span>
-                        )}
-                        {card.level && (
-                          <span className="flex items-center gap-1.5 text-amber-400 font-bold">
-                            <Star className="w-4 h-4" /> Nivel {card.level}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                  {/* Nombre */}
+                  <h2 className="cdm-card-name">{card.name}</h2>
 
-                    {/* Inventario: cantidad + condición/rareza */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 border border-white/10 text-xs text-white font-bold">
-                        <Layers className="w-3 h-3" /> ×{card.quantity}
+                  {/* Atributo + Frame + Raza */}
+                  <div className="cdm-pills-row">
+                    {attrStyle && (
+                      <span style={{
+                        fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+                        textTransform: 'uppercase', padding: '3px 10px', borderRadius: '99px',
+                        background: attrStyle.bg,
+                        border: `1px solid ${attrStyle.border}`,
+                        color: attrStyle.text,
+                      }}>
+                        {card.attribute}
                       </span>
-                      {card.rarity ? (
-                        <Badge rarity={card.rarity} />
-                      ) : (
-                        <Badge condition={card.condition} />
+                    )}
+                    <span style={{
+                      fontSize: '11px', color: '#94a3b8',
+                      background: 'rgba(148,163,184,0.08)',
+                      border: '1px solid rgba(148,163,184,0.15)',
+                      padding: '3px 10px', borderRadius: '99px',
+                    }}>
+                      {frameLabel}
+                    </span>
+                    {card.race && (
+                      <span style={{
+                        fontSize: '11px', color: '#cbd5e1',
+                        background: 'rgba(203,213,225,0.06)',
+                        border: '1px solid rgba(203,213,225,0.15)',
+                        padding: '3px 10px', borderRadius: '99px',
+                      }}>
+                        {card.race}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ height: '1px', background: `linear-gradient(90deg, ${glowColor}40, transparent)` }} />
+
+                  {/* Stats de monstruo */}
+                  {isMonster && (
+                    <div className="cdm-stats-row">
+                      {card.atk !== null && (
+                        <StatPill icon={<Sword style={{ width: 13, height: 13 }} />} label="ATK" value={card.atk} color="#f87171" />
+                      )}
+                      {card.def !== null && card.def !== undefined && (
+                        <StatPill icon={<Shield style={{ width: 13, height: 13 }} />} label="DEF" value={card.def} color="#60a5fa" />
+                      )}
+                      {card.level && (
+                        <StatPill icon={<Star style={{ width: 13, height: 13 }} />} label="Level" value={card.level} color="#fbbf24" />
+                      )}
+                      {card.linkval && (
+                        <StatPill icon={<Link2 style={{ width: 13, height: 13 }} />} label="Link" value={card.linkval} color="#38bdf8" />
                       )}
                     </div>
+                  )}
+
+                  {/* Inventario */}
+                  <div className="cdm-inventory-row">
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: '8px', padding: '5px 12px',
+                      fontSize: '13px', fontWeight: 700, color: '#e2e8f0',
+                    }}>
+                      <Layers style={{ width: 14, height: 14, color: '#94a3b8' }} />
+                      ×{card.quantity} en inventario
+                    </span>
+                    {card.rarity ? (
+                      <Badge rarity={card.rarity} />
+                    ) : (
+                      <Badge condition={card.condition} />
+                    )}
                   </div>
                 </div>
 
                 {/* Botón cerrar */}
                 <button
+                  className="cdm-close-btn"
                   onClick={onClose}
-                  className="absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-full bg-black/40 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                  aria-label="Cerrar"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X style={{ width: 15, height: 15 }} />
                 </button>
               </div>
 
-              {/* Descripción / Body */}
-              <div className="p-5 space-y-4 border-t border-white/5">
-
-                {/* Descripción */}
+              {/* ── BODY ───────────────────────────────────────── */}
+              <div
+                className="cdm-body"
+                style={{ borderTop: `1px solid ${glowColor}18` }}
+              >
                 {card.desc && (
-                  <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Descripción</p>
-                    <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">
-                      {card.desc}
-                    </p>
+                  <div style={{ marginTop: '20px' }}>
+                    <SectionLabel
+                      icon={<Sparkles style={{ width: 12, height: 12 }} />}
+                      text="Descripción"
+                    />
+                    <div style={{
+                      marginTop: '10px',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                        background: `linear-gradient(90deg, ${glowColor}60, transparent)`,
+                      }} />
+                      <p style={{
+                        margin: 0, fontSize: '13px', lineHeight: 1.75,
+                        color: '#cbd5e1', whiteSpace: 'pre-line',
+                      }}>
+                        {card.desc}
+                      </p>
+                    </div>
                   </div>
                 )}
-
-                {/* Detalles extra en grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-                  {card.race && (
-                    <DetailChip label="Tipo / Raza" value={card.race} />
-                  )}
-                  {card.attribute && (
-                    <DetailChip label="Atributo" value={card.attribute} />
-                  )}
-                  {card.frameType && (
-                    <DetailChip label="Tipo" value={card.frameType.charAt(0).toUpperCase() + card.frameType.slice(1)} />
-                  )}
-                  {card.rarity ? (
-                    <DetailChip label="Rareza" value={rarityLabel(card.rarity)} />
-                  ) : (
-                    <DetailChip label="Condición" value={conditionLabel(card.condition)} />
-                  )}
-                  <DetailChip label="Cantidad" value={`×${card.quantity}`} />
-                  {card.archetype && (
-                    <DetailChip label="Arquetipo" value={card.archetype} />
-                  )}
-                </div>
-
               </div>
+
+              {/* Bottom accent */}
+              <div style={{
+                height: '2px',
+                background: `linear-gradient(90deg, transparent, ${glowColor}50, transparent)`,
+                borderRadius: '0 0 20px 20px',
+              }} />
             </div>
           </motion.div>
         </>
@@ -214,11 +493,33 @@ export function CardDetailModal({ card, onClose }) {
   )
 }
 
-function DetailChip({ label, value }) {
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function SectionLabel({ icon, text }) {
   return (
-    <div className="bg-white/[0.04] border border-white/5 rounded-lg px-3 py-2">
-      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">{label}</p>
-      <p className="text-xs text-slate-200 font-medium truncate">{value}</p>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}>
+      {icon}
+      <span style={{
+        fontSize: '11px', fontWeight: 700,
+        letterSpacing: '0.1em', textTransform: 'uppercase',
+      }}>
+        {text}
+      </span>
+      <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.05)' }} />
+    </div>
+  )
+}
+
+function StatPill({ icon, label, value, color }) {
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: '6px',
+      background: `${color}10`, border: `1px solid ${color}35`,
+      borderRadius: '10px', padding: '5px 11px',
+    }}>
+      <span style={{ color }}>{icon}</span>
+      <span style={{ fontSize: '11px', color: `${color}cc`, fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: '14px', fontWeight: 800, color, letterSpacing: '0.02em' }}>{value}</span>
     </div>
   )
 }
