@@ -15,8 +15,9 @@ const logger = require('./logger');
  */
 
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
+const MAX_CACHE_SIZE = 1000;
 
-/** @type {Map<string, { uid: string, expiresAt: number } | 'NOT_FOUND'>} */
+/** @type {Map<string, { uid: string|null, expiresAt: number }>} */
 const cache = new Map();
 
 const admin = require('firebase-admin');
@@ -29,12 +30,22 @@ const userRepository = require('../repositories/userRepository');
 async function slugToUid(slug) {
   const slugLower = slug.toLowerCase();
 
-  // 1. Cache hit
+  // 1. Evitar Memory Leaks limitando el tamaño del caché
+  if (cache.size >= MAX_CACHE_SIZE) {
+    logger.warn('⚠️ slugToUid cache lleno, limpiando...');
+    const iterator = cache.keys();
+    // Borramos el 20% más antiguo para liberar espacio
+    for (let i = 0; i < MAX_CACHE_SIZE * 0.2; i++) {
+      cache.delete(iterator.next().value);
+    }
+  }
+
+  // 2. Cache hit
   const cached = cache.get(slugLower);
   if (cached !== undefined) {
-    if (cached === 'NOT_FOUND' || cached.expiresAt > Date.now()) {
+    if (cached.expiresAt > Date.now()) {
       logger.debug(`⚡ slugToUid cache HIT → ${slugLower}`);
-      return cached === 'NOT_FOUND' ? null : cached.uid;
+      return cached.uid; // Retorna null si es NOT_FOUND cacheado
     }
     cache.delete(slugLower); // expirado
   }
@@ -75,7 +86,7 @@ async function slugToUid(slug) {
     } while (pageToken);
 
     // No se encontró
-    cache.set(slugLower, 'NOT_FOUND');
+    cache.set(slugLower, { uid: null, expiresAt: Date.now() + CACHE_TTL_MS });
     logger.warn(`⚠️  slugToUid NOT FOUND → no existe usuario con prefijo de email "${slugLower}"`);
     return null;
   } catch (err) {

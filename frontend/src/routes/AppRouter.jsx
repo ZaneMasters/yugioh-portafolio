@@ -5,6 +5,7 @@ import { ProtectedRoute } from '../components/layout/ProtectedRoute'
 
 // Carga perezosa (Lazy Loading) para optimizar el peso del bundle inicial
 const GalleryPage = lazy(() => import('../pages/public/GalleryPage'))
+const HomePage = lazy(() => import('../pages/public/HomePage'))
 const PortfolioPage = lazy(() => import('../pages/public/PortfolioPage'))
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'))
 const AdminLayout = lazy(() => import('../pages/admin/AdminLayout'))
@@ -13,8 +14,6 @@ const InventoryPage = lazy(() => import('../pages/admin/InventoryPage'))
 const RecoverPasswordPage = lazy(() => import('../pages/auth/RecoverPasswordPage'))
 const ProfilePage = lazy(() => import('../pages/admin/ProfilePage'))
 
-// Slug del admin principal — usuarios acceden a / y son redirigidos aquí
-const DEFAULT_PORTFOLIO_SLUG = 'angel'
 
 // Fallback visual mientras se descargan los chunks de las páginas
 const PageLoader = () => (
@@ -29,11 +28,8 @@ export default function AppRouter() {
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* Raíz → portafolio del admin principal */}
-            <Route
-              path="/"
-              element={<Navigate to={`/portfolio/${DEFAULT_PORTFOLIO_SLUG}`} replace />}
-            />
+            {/* Raíz → landing page */}
+            <Route path="/" element={<HomePage />} />
 
             {/* Portafolio público de cualquier usuario por slug */}
             <Route path="/portfolio/:slug" element={<PortfolioPage />} />

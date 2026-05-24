@@ -53,9 +53,11 @@ export function Select({
     }
   }, [open])
 
-  // Cerrar al hacer clic fuera (trigger o panel)
+  // Cerrar al hacer clic fuera, al presionar Escape, al cambiar el foco
+  // (cubre el caso donde un modal/portal captura el foco antes del mousedown)
   useEffect(() => {
     if (!open) return
+
     function handleOutside(e) {
       if (
         triggerRef.current && !triggerRef.current.contains(e.target) &&
@@ -64,8 +66,38 @@ export function Select({
         setOpen(false)
       }
     }
+
+    // Cerrar si el foco va a un elemento fuera del trigger/panel
+    // Esto cubre el caso del CardDetailModal que atrapa el foco via portal
+    function handleFocusIn(e) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        panelRef.current  && !panelRef.current.contains(e.target)
+      ) {
+        setOpen(false)
+      }
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+
+    // Cerrar si la pestaña pierde visibilidad (navegación, alt-tab)
+    function handleVisibility() {
+      if (document.hidden) setOpen(false)
+    }
+
     document.addEventListener('mousedown', handleOutside)
-    return () => document.removeEventListener('mousedown', handleOutside)
+    document.addEventListener('focusin',   handleFocusIn)
+    document.addEventListener('keydown',   handleKeyDown)
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutside)
+      document.removeEventListener('focusin',   handleFocusIn)
+      document.removeEventListener('keydown',   handleKeyDown)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [open])
 
   function pick(optValue) {

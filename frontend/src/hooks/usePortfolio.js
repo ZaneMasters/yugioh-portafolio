@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import * as cardService from '../services/cardService'
@@ -41,16 +42,19 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
       pageParams: data.pageParams,
     }),
     retry: 1,
-    meta: {
-      onError: (err) => {
-        if (err.message?.includes('404') || err.message?.toLowerCase().includes('no existe')) {
-          // Manejado via error state
-        } else {
-          toast.error(err.message || 'Error al cargar el portafolio')
-        }
-      },
-    },
   })
+
+  // meta.onError fue eliminado en TanStack Query v5.
+  // Mostramos el toast aqui con un effect que observa el error.
+  useEffect(() => {
+    if (!error) return
+    const is404 =
+      error.message?.includes('404') ||
+      error.message?.toLowerCase().includes('no existe')
+    if (!is404) {
+      toast.error(error.message || 'Error al cargar el portafolio')
+    }
+  }, [error])
 
   // Aplanar todas las páginas en un solo array
   const cards = data?.pages.flatMap((page) => page.data ?? []) ?? []
