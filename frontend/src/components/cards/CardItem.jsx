@@ -4,7 +4,7 @@ import { FRAME_TYPE_COLORS } from '../../utils/constants'
 import { Sword, Shield, Star, Layers, Eye } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 
-export const CardItem = memo(function CardItem({ card, onSelect, viewMode }) {
+export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disableAnimation }) {
   const frameGradient = FRAME_TYPE_COLORS[card.frameType] ?? FRAME_TYPE_COLORS.normal
   const isList = viewMode === 'list'
   const isGrid1 = viewMode === '1' || !viewMode  // 1 columna o desktop
@@ -25,10 +25,10 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode }) {
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 16 }}
+      layout={!disableAnimation}
+      initial={disableAnimation ? false : { opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      exit={disableAnimation ? false : { opacity: 0, scale: 0.95 }}
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
       onClick={() => onSelect?.(card)}
