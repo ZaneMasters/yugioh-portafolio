@@ -130,10 +130,7 @@ export default function PortfolioPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-10 text-center"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium mb-4">
-            <Sparkles className="w-3.5 h-3.5" />
-            Portafolio de {displayName}
-          </div>
+          <div className="mb-4" />
 
           <h1 className="text-4xl sm:text-5xl font-black text-white mb-3 font-display">
             {currentTab === 'inventory' ? 'Colección de ' : 'Cartas Buscadas por '}

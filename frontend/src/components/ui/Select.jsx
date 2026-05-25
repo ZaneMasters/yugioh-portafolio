@@ -19,6 +19,7 @@ export function Select({
   className = '',
   triggerClassName = 'bg-[#1f2937] border-[#374151] hover:border-slate-500/60 rounded-lg',
   icon: Icon,
+  hidePlaceholderOption = false,
 }) {
   const [open, setOpen]       = useState(false)
   const [rect, setRect]       = useState(null)
@@ -174,35 +175,39 @@ export function Select({
               "
             >
               {/* Opción "todos" / placeholder */}
-              <li>
-                <motion.button
-                  type="button"
-                  role="option"
-                  aria-selected={value === ''}
-                  onClick={() => pick('')}
-                  whileHover={{ x: 6 }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  className={`
-                    group w-full flex items-center justify-between px-4 py-2.5 text-sm transition-all
-                    ${value === ''
-                      ? 'text-amber-400 bg-amber-500/10 shadow-[inset_2px_0_0_#f59e0b]'
-                      : 'text-slate-400'
-                    }
-                  `}
-                >
-                  <span className={`
-                    transition-all duration-300 font-medium tracking-wide
-                    ${value === '' ? '' : 'group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-yellow-200 group-hover:via-amber-400 group-hover:to-yellow-500 group-hover:drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]'}
-                  `}>
-                    {placeholder}
-                  </span>
-                  {value === '' && <Check className="w-3.5 h-3.5 shrink-0 text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.8)]" />}
-                </motion.button>
-              </li>
+              {!hidePlaceholderOption && (
+                <>
+                  <li>
+                    <motion.button
+                      type="button"
+                      role="option"
+                      aria-selected={value === ''}
+                      onClick={() => pick('')}
+                      whileHover={{ x: 6 }}
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      className={`
+                        group w-full flex items-center justify-between px-4 py-2.5 text-sm transition-all
+                        ${value === ''
+                          ? 'text-amber-400 bg-amber-500/10 shadow-[inset_2px_0_0_#f59e0b]'
+                          : 'text-slate-400'
+                        }
+                      `}
+                    >
+                      <span className={`
+                        transition-all duration-300 font-medium tracking-wide
+                        ${value === '' ? '' : 'group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-yellow-200 group-hover:via-amber-400 group-hover:to-yellow-500 group-hover:drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]'}
+                      `}>
+                        {placeholder}
+                      </span>
+                      {value === '' && <Check className="w-3.5 h-3.5 shrink-0 text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.8)]" />}
+                    </motion.button>
+                  </li>
 
-              {/* Separador */}
-              <li className="my-1 border-t border-white/5" aria-hidden />
+                  {/* Separador */}
+                  <li className="my-1 border-t border-white/5" aria-hidden />
+                </>
+              )}
 
               {options.map((opt) => (
                 <li key={opt.value}>

@@ -18,9 +18,29 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
   const [showConfirm, setShowConfirm] = useState(false)
 
   const handleSave = async () => {
-    const payload = mode === 'inventory'
-      ? { quantity: Number(qty), condition: cond, folderId: folderId || null }
-      : { quantity: Number(qty), rarity: rarity }
+    const numQty = Number(qty)
+    const qtyChanged = numQty !== card.quantity
+    let changed = false
+    let payload = {}
+
+    if (mode === 'inventory') {
+      const origCond = card.condition || 'new'
+      const origFolder = card.folderId || ''
+      const currentFolder = folderId || ''
+      
+      changed = qtyChanged || cond !== origCond || currentFolder !== origFolder
+      payload = { quantity: numQty, condition: cond, folderId: folderId || null }
+    } else {
+      const origRarity = card.rarity || 'Common'
+      changed = qtyChanged || rarity !== origRarity
+      payload = { quantity: numQty, rarity }
+    }
+
+    if (!changed) {
+      setEditing(false)
+      return
+    }
+
     const ok = await onEdit(card.id, payload)
     if (ok) setEditing(false)
   }
@@ -107,6 +127,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                     value={cond}
                     onChange={(e) => setCond(e.target.value)}
                     className="min-w-[120px]"
+                    hidePlaceholderOption
                   />
                   {folders.length > 0 && (
                     <Select
@@ -114,6 +135,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                       value={folderId}
                       onChange={(e) => setFolderId(e.target.value)}
                       className="min-w-[120px]"
+                      hidePlaceholderOption
                     />
                   )}
                 </>
@@ -123,6 +145,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                   value={rarity}
                   onChange={(e) => setRarity(e.target.value)}
                   className="min-w-[160px]"
+                  hidePlaceholderOption
                 />
               )
             ) : (
@@ -240,6 +263,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                         value={cond}
                         onChange={(e) => setCond(e.target.value)}
                         className="flex-1 min-w-[100px]"
+                        hidePlaceholderOption
                       />
                       {folders.length > 0 && (
                         <Select
@@ -247,6 +271,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                           value={folderId}
                           onChange={(e) => setFolderId(e.target.value)}
                           className="flex-1 min-w-[100px]"
+                          hidePlaceholderOption
                         />
                       )}
                     </>
@@ -256,6 +281,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                       value={rarity}
                       onChange={(e) => setRarity(e.target.value)}
                       className="flex-1 min-w-[130px]"
+                      hidePlaceholderOption
                     />
                   )
                 ) : (
