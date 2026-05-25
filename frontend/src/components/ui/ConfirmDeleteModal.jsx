@@ -16,7 +16,7 @@ import { lockScroll, unlockScroll } from '../../utils/scrollLock'
  * @param {Function} onConfirm — Callback al confirmar
  * @param {Function} onCancel  — Callback al cancelar
  */
-export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfirm, onCancel }) {
+export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfirm, onCancel, title, description }) {
   // Cerrar con Escape
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape' && !loading) onCancel() }
@@ -63,7 +63,7 @@ export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfi
                   <span className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/15">
                     <AlertTriangle className="w-4 h-4 text-red-400" />
                   </span>
-                  <h2 className="text-sm font-semibold text-white">Eliminar carta</h2>
+                  <h2 className="text-sm font-semibold text-white">{title || 'Eliminar carta'}</h2>
                 </div>
                 <button
                   onClick={() => !loading && onCancel()}
@@ -89,9 +89,11 @@ export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfi
                   <p className="text-sm text-slate-300 leading-relaxed">
                     ¿Seguro que quieres eliminar{' '}
                     <span className="text-white font-semibold break-words">&ldquo;{cardName}&rdquo;</span>
-                    {' '}de tu inventario?
+                    {title ? '?' : ' de tu inventario?'}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">Esta acción no se puede deshacer.</p>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    {description || 'Esta acción no se puede deshacer.'}
+                  </p>
                 </div>
               </div>
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Pencil, Trash2, Globe, Lock, Loader2, Check, X } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Button } from '../ui/Button'
 import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal'
 
@@ -16,16 +17,32 @@ export function FoldersPanel({ folders = [], loading, actionLoading, createFolde
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
 
   const handleCreate = async () => {
-    if (!addName.trim()) return
-    await createFolder({ name: addName, isPublic: addPublic })
+    const trimmedName = addName.trim()
+    if (!trimmedName) return
+
+    const exists = folders.some(f => f.name.toLowerCase() === trimmedName.toLowerCase())
+    if (exists) {
+      toast.error('Ya existe una colección con ese nombre.')
+      return
+    }
+
+    await createFolder({ name: trimmedName, isPublic: addPublic })
     setIsAdding(false)
     setAddName('')
     setAddPublic(true)
   }
 
   const handleUpdate = async (id) => {
-    if (!editName.trim()) return
-    await updateFolder(id, { name: editName, isPublic: editPublic })
+    const trimmedName = editName.trim()
+    if (!trimmedName) return
+
+    const exists = folders.some(f => f.id !== id && f.name.toLowerCase() === trimmedName.toLowerCase())
+    if (exists) {
+      toast.error('Ya existe otra colección con ese nombre.')
+      return
+    }
+
+    await updateFolder(id, { name: trimmedName, isPublic: editPublic })
     setEditingId(null)
   }
 

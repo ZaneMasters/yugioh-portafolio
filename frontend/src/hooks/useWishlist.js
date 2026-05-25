@@ -39,6 +39,7 @@ export function useWishlist(filters = {}) {
         if (!old || !old.data) return old
         return { ...old, data: old.data.map((c) => (c.id === id ? { ...c, ...payload } : c)) }
       })
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] })
       queryClient.invalidateQueries({ queryKey: ['publicWishlist'] })
       toast.success('Carta actualizada')
     },

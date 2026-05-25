@@ -41,6 +41,7 @@ export function useCards(filters = {}) {
         if (!old || !old.data) return old
         return { ...old, data: old.data.map((c) => (c.id === id ? { ...c, ...payload } : c)) }
       })
+      queryClient.invalidateQueries({ queryKey: ['cards'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
       toast.success('Carta actualizada')
     },
