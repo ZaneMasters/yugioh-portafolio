@@ -14,7 +14,7 @@ const CARD_CACHE_TTL   = 60 * 60;  // 1 hora — una carta no cambia frecuenteme
 // ── GET /external/cards?name=xxx&lang=en ──────────────────────────────────────────
 const searchCards = async (req, res, next) => {
   try {
-    const { name, lang = 'en' } = req.query;
+    const { name, type = 'name', lang = 'en' } = req.query;
 
     if (!name || name.trim().length === 0) {
       return res.status(400).json({
@@ -23,7 +23,7 @@ const searchCards = async (req, res, next) => {
       });
     }
 
-    const cards = await ygoService.searchByName(name.trim(), lang);
+    const cards = await ygoService.searchCards(name.trim(), type, lang);
 
     // Permite que el browser y CDN cacheen la búsqueda por 5 min
     res.set('Cache-Control', `public, max-age=${SEARCH_CACHE_TTL}, stale-while-revalidate=60`);

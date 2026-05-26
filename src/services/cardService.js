@@ -62,7 +62,17 @@ async function registerCard(dto, userId) {
 
   if (existing) {
     const updatedQuantity = existing.quantity + (quantity || 1);
-    const updated = await cardRepository.update(existing.id, { quantity: updatedQuantity }, userId);
+    
+    // Si la carta ya existe, y mandan folderIds, nos aseguramos de no perder los que ya tenía
+    const existingFolderIds = Array.isArray(existing.folderIds) ? existing.folderIds : [];
+    const newFolderIds = Array.isArray(dto.folderIds) ? dto.folderIds : [];
+    const mergedFolderIds = [...new Set([...existingFolderIds, ...newFolderIds])];
+    
+    const updated = await cardRepository.update(
+      existing.id, 
+      { quantity: updatedQuantity, folderIds: mergedFolderIds }, 
+      userId
+    );
     logger.info(`♻️  Carta duplicada. Cantidad actualizada: ${existing.name} → ${updatedQuantity}`);
     invalidateInventoryCache(userId);
     return { card: updated, created: false };
@@ -85,7 +95,7 @@ async function registerCard(dto, userId) {
     frameType: externalCard.frameType,
     condition: condition || 'new',
     quantity:  quantity  || 1,
-    folderId:  dto.folderId || null,
+    folderIds: Array.isArray(dto.folderIds) ? dto.folderIds : [],
   });
 
   invalidateInventoryCache(userId);
@@ -160,8 +170,8 @@ async function updateCard(id, dto, userId) {
     updates.condition = dto.condition;
   }
 
-  if (dto.folderId !== undefined) {
-    updates.folderId = dto.folderId;
+  if (dto.folderIds !== undefined) {
+    updates.folderIds = dto.folderIds;
   }
 
   const card = await cardRepository.update(id, updates, userId);

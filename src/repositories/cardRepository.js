@@ -45,7 +45,7 @@ class CardRepository {
       if (userId) query = query.where('userId', '==', userId);
       
       // Aplicar filtros nativos primero para traer menos documentos a memoria
-      if (filters.folderId) query = query.where('folderId', '==', filters.folderId);
+      if (filters.folderId) query = query.where('folderIds', 'array-contains', filters.folderId);
       if (filters.type) query = query.where('type', '==', filters.type);
 
       const snapshot = await query.get();
@@ -74,7 +74,7 @@ class CardRepository {
     if (userId) query = query.where('userId', '==', userId);
     
     // Filtros Nativos
-    if (filters.folderId) query = query.where('folderId', '==', filters.folderId);
+    if (filters.folderId) query = query.where('folderIds', 'array-contains', filters.folderId);
     if (filters.type) query = query.where('type', '==', filters.type);
 
     // Obtener total sin descargar documentos

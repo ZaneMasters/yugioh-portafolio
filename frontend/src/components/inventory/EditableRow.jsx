@@ -11,7 +11,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
   const [editing, setEditing]   = useState(false)
   const [qty, setQty]           = useState(card.quantity)
   const [cond, setCond]         = useState(card.condition || 'new')
-  const [folderId, setFolderId] = useState(card.folderId || '')
+  const [folderIds, setFolderIds] = useState(card.folderIds || [])
   const [rarity, setRarity]     = useState(card.rarity || 'Common')
   const [deleting, setDeleting] = useState(false)
   const [toggling, setToggling] = useState(false)
@@ -25,11 +25,12 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
 
     if (mode === 'inventory') {
       const origCond = card.condition || 'new'
-      const origFolder = card.folderId || ''
-      const currentFolder = folderId || ''
+      const origFolders = card.folderIds || []
+      const currentFolders = folderIds || []
       
-      changed = qtyChanged || cond !== origCond || currentFolder !== origFolder
-      payload = { quantity: numQty, condition: cond, folderId: folderId || null }
+      const foldersChanged = origFolders.length !== currentFolders.length || !origFolders.every(f => currentFolders.includes(f))
+      changed = qtyChanged || cond !== origCond || foldersChanged
+      payload = { quantity: numQty, condition: cond, folderIds: currentFolders }
     } else {
       const origRarity = card.rarity || 'Common'
       changed = qtyChanged || rarity !== origRarity
@@ -49,7 +50,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
     setEditing(false)
     setQty(card.quantity)
     setCond(card.condition || 'new')
-    setFolderId(card.folderId || '')
+    setFolderIds(card.folderIds || [])
     setRarity(card.rarity || 'Common')
   }
 
@@ -130,13 +131,26 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                     hidePlaceholderOption
                   />
                   {folders.length > 0 && (
-                    <Select
-                      options={[{ value: '', label: 'Sin carpeta' }, ...folders.map(f => ({ value: f.id, label: f.name }))]}
-                      value={folderId}
-                      onChange={(e) => setFolderId(e.target.value)}
-                      className="min-w-[120px]"
-                      hidePlaceholderOption
-                    />
+                    <div className="flex flex-wrap items-center gap-1.5 ml-2 border-l border-white/10 pl-2">
+                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Carpetas:</span>
+                      {folders.map(f => {
+                        const isSelected = folderIds.includes(f.id)
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => setFolderIds(prev => isSelected ? prev.filter(id => id !== f.id) : [...prev, f.id])}
+                            className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors ${
+                              isSelected 
+                                ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' 
+                                : 'bg-black/20 border-white/5 text-slate-400 hover:bg-white/5 hover:text-slate-300'
+                            }`}
+                          >
+                            {f.name}
+                          </button>
+                        )
+                      })}
+                    </div>
                   )}
                 </>
               ) : (
@@ -266,13 +280,26 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                         hidePlaceholderOption
                       />
                       {folders.length > 0 && (
-                        <Select
-                          options={[{ value: '', label: 'Sin carpeta' }, ...folders.map(f => ({ value: f.id, label: f.name }))]}
-                          value={folderId}
-                          onChange={(e) => setFolderId(e.target.value)}
-                          className="flex-1 min-w-[100px]"
-                          hidePlaceholderOption
-                        />
+                        <div className="flex flex-wrap gap-1.5 w-full mt-1">
+                          <span className="text-xs text-slate-500 w-full mb-0.5">Carpetas:</span>
+                          {folders.map(f => {
+                            const isSelected = folderIds.includes(f.id)
+                            return (
+                              <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => setFolderIds(prev => isSelected ? prev.filter(id => id !== f.id) : [...prev, f.id])}
+                                className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors ${
+                                  isSelected 
+                                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' 
+                                    : 'bg-black/20 border-white/5 text-slate-400 hover:bg-white/5 hover:text-slate-300'
+                                }`}
+                              >
+                                {f.name}
+                              </button>
+                            )
+                          })}
+                        </div>
                       )}
                     </>
                   ) : (

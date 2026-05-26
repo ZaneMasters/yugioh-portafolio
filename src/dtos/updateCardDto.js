@@ -7,7 +7,7 @@ const { z } = require('zod');
  *
  * Solo permite actualizar quantity y condition.
  * Al menos uno de los dos campos debe estar presente.
- * Solo permite actualizar quantity, condition y folderId.
+ * Solo permite actualizar quantity, condition y folderIds.
  * Al menos uno de los campos debe estar presente.
  */
 const updateCardSchema = z
@@ -27,15 +27,15 @@ const updateCardSchema = z
       })
       .optional(),
 
-    folderId: z.string().nullable().optional(),
+    folderIds: z.array(z.string()).optional(),
   })
   .refine(
     (data) =>
       data.quantity !== undefined ||
       data.condition !== undefined ||
-      data.folderId !== undefined,
+      data.folderIds !== undefined,
     {
-      message: 'Debes proporcionar al menos quantity, condition o folderId para actualizar.',
+      message: 'Debes proporcionar al menos quantity, condition o folderIds para actualizar.',
       path: ['quantity'],
     }
   );

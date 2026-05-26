@@ -118,15 +118,19 @@ export const CardSearchResult = memo(function CardSearchResult({ card, destinati
                 value={cond}
                 onChange={(e) => setCond(e.target.value)}
                 placeholder="Condición"
+                hidePlaceholderOption={true}
+                title="Selecciona la condición física de la carta"
               />
             </div>
             {folders.length > 0 && (
               <div className="flex-1 min-w-[100px]">
                 <Select
-                  options={[{ value: '', label: 'Sin carpeta' }, ...folders.map(f => ({ value: f.id, label: f.name }))]}
+                  options={[{ value: '', label: 'Ninguna' }, ...folders.map(f => ({ value: f.id, label: f.name }))]}
                   value={folderId}
                   onChange={(e) => setFolderId(e.target.value)}
                   placeholder="Carpeta"
+                  hidePlaceholderOption={true}
+                  title="Selecciona a qué carpeta agregar esta carta (Opcional)"
                 />
               </div>
             )}
@@ -138,6 +142,8 @@ export const CardSearchResult = memo(function CardSearchResult({ card, destinati
               value={rarity}
               onChange={(e) => setRarity(e.target.value)}
               placeholder="Rareza deseada"
+              hidePlaceholderOption={true}
+              title="Selecciona en qué rareza estás buscando esta carta"
             />
           </div>
         )}

@@ -20,6 +20,7 @@ export function Select({
   triggerClassName = 'bg-[#1f2937] border-[#374151] hover:border-slate-500/60 rounded-lg',
   icon: Icon,
   hidePlaceholderOption = false,
+  title,
 }) {
   const [open, setOpen]       = useState(false)
   const [rect, setRect]       = useState(null)
@@ -131,6 +132,7 @@ export function Select({
         id={id}
         type="button"
         onClick={toggle}
+        title={title}
         className={`
           relative w-full flex items-center justify-between gap-2
           ${Icon ? 'pl-10 pr-4' : 'px-4'} py-2.5 text-sm text-left
