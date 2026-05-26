@@ -13,14 +13,16 @@ import { queryKeys } from '../lib/queryKeys'
  * staleTime: 10 min → resultados de YGOProdeck cambian muy raramente.
  * gcTime: 30 min   → los resultados se mantienen en memoria sin refetch.
  */
-export function useSearchCards(query = '', lang = 'en') {
-  const trimmed = query.trim()
+export function useSearchCards(query = '', type = 'name', lang = 'en') {
+  // Normalizar: trim + lowercase → "Dark Magician" y "dark magician"
+  // comparten el mismo cache entry y generan una sola petición
+  const normalized = query.trim().toLowerCase()
 
-  const { data: results = [], isFetching: searching } = useQuery({
-    queryKey: queryKeys.search(trimmed, lang),
-    queryFn: ({ signal }) => searchExternalCards(trimmed, lang, signal),
+  const { data: results = [], isFetching: searching, error: searchError } = useQuery({
+    queryKey: queryKeys.search(normalized, type, lang),
+    queryFn: ({ signal }) => searchExternalCards(normalized, type, lang, signal),
     select: (res) => res.data ?? [],
-    enabled: trimmed.length >= 2,
+    enabled: normalized.length >= 3,
     staleTime: 10 * 60 * 1000,  // 10 minutos
     gcTime:    30 * 60 * 1000,  // 30 minutos en memoria
     retry: false,
@@ -34,5 +36,5 @@ export function useSearchCards(query = '', lang = 'en') {
     },
   })
 
-  return { results, searching }
+  return { results, searching, searchError }
 }

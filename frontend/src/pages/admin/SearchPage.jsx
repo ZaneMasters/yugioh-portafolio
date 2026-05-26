@@ -1,37 +1,71 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Search, Loader2, PackagePlus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Loader2, PackagePlus, ChevronLeft, ChevronRight, ServerCrash, RefreshCw, AlertCircle, Filter, ChevronDown, Info } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { SearchInput } from '../../components/ui/Input'
+import { Select } from '../../components/ui/Select'
 import { CardSearchResult } from '../../components/cards/CardSearchResult'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useSearchCards } from '../../hooks/useSearchCards'
 import { useCards } from '../../hooks/useCards'
 import { useWishlist } from '../../hooks/useWishlist'
-import { useDebounce } from '../../hooks/useDebounce'
 import { useFolders } from '../../hooks/useFolders'
+import { useDebounce } from '../../hooks/useDebounce'
 
 const PAGE_SIZE = 10 // resultados por página
 
 export default function SearchPage() {
-  const [query, setQuery]       = useState('')
+  const [queryInput, setQueryInput] = useState('')
+  const [activeQuery, setActiveQuery] = useState('')
+  const [searchType, setSearchType] = useState('name') // 'name' | 'archetype'
+  const [filterType, setFilterType] = useState('all') // 'all' | 'monster' | 'spell' | 'trap'
+  
   const [addingId, setAddingId] = useState(null)
   const [destination, setDestination] = useState('inventory') // 'inventory' | 'wishlist'
   const [page, setPage]         = useState(1)
 
-  const debouncedQuery         = useDebounce(query, 650)
-  const { results, searching } = useSearchCards(debouncedQuery)
-  const { addCard: addCardInventory } = useCards()
-  const { addCard: addCardWishlist }  = useWishlist()
-  const { folders } = useFolders()
+  const debouncedQueryInput = useDebounce(queryInput, 650)
 
-  // Reiniciar paginación cuando cambia la búsqueda o el destino
-  useEffect(() => { setPage(1) }, [debouncedQuery, destination])
+  // Si estamos en modo "nombre", la búsqueda es automática
+  useEffect(() => {
+    if (searchType === 'name') {
+      setActiveQuery(debouncedQueryInput.trim())
+    }
+  }, [debouncedQueryInput, searchType])
+
+  const { results: rawResults, searching, searchError } = useSearchCards(activeQuery, searchType)
+  const { addCard: addCardInventory }         = useCards()
+  const { addCard: addCardWishlist }          = useWishlist()
+  const { folders }                           = useFolders()
+  const queryClient                           = useQueryClient()
+
+  // Filtrado local por tipo de carta (muy útil para arquetipos que traen todo mezclado)
+  const results = useMemo(() => {
+    if (filterType === 'all') return rawResults;
+    return rawResults.filter((card) => {
+      const typeStr = (card.type || '').toLowerCase();
+      if (filterType === 'monster') return typeStr.includes('monster');
+      if (filterType === 'spell') return typeStr.includes('spell');
+      if (filterType === 'trap') return typeStr.includes('trap');
+      return true;
+    });
+  }, [rawResults, filterType]);
+
+  // Reiniciar paginación cuando cambia la búsqueda, tipo, filtro o el destino
+  useEffect(() => { setPage(1) }, [activeQuery, searchType, filterType, destination])
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (queryInput.trim().length >= 2) {
+      setActiveQuery(queryInput.trim());
+    }
+  }
 
   const handleAdd = async (card, qty, condOrRarity, folderId) => {
     setAddingId(card.cardId)
     if (destination === 'inventory') {
       const payload = { cardId: card.cardId, condition: condOrRarity, quantity: qty }
-      if (folderId) payload.folderId = folderId;
+      if (folderId) payload.folderIds = [folderId];
       await addCardInventory(payload)
     } else {
       await addCardWishlist({ cardId: card.cardId, rarity: condOrRarity, quantity: qty })
@@ -59,43 +93,131 @@ export default function SearchPage() {
         </p>
       </div>
 
-      {/* Barra de búsqueda + Toggle destino */}
-      <div className="glass rounded-xl p-4 mb-6 space-y-4">
-        <SearchInput
-          placeholder="Escribe el nombre en inglés... (ej: Dark Magician)"
-          value={query}
-          onChange={(e) => { setQuery(e.target.value) }}
-          autoFocus
-        />
-
-        {/* Toggle Inventario / Wishlist */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 shrink-0">Agregar a:</span>
-          <div className="flex bg-[#111827] rounded-lg p-1 border border-white/10">
+      {/* Caja Principal Unificada */}
+      <div className="glass rounded-2xl p-5 mb-8 flex flex-col gap-5 shadow-xl shadow-black/20">
+        
+        {/* Fila Superior: Modos y Destino */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          
+          {/* Tabs Minimalistas (Nombre vs Arquetipo) */}
+          <div className="flex items-center gap-6 border-b border-white/5 px-2">
             <button
               type="button"
-              onClick={() => setDestination('inventory')}
-              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                destination === 'inventory'
-                  ? 'bg-amber-500/20 text-amber-400'
-                  : 'text-slate-400 hover:text-slate-200'
+              onClick={() => { setSearchType('name'); setQueryInput(''); setActiveQuery(''); }}
+              className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] ${
+                searchType === 'name' 
+                  ? 'border-amber-500 text-amber-400' 
+                  : 'border-transparent text-slate-500 hover:text-slate-300'
               }`}
             >
-              Inventario
+              Por Nombre
             </button>
             <button
               type="button"
-              onClick={() => setDestination('wishlist')}
-              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                destination === 'wishlist'
-                  ? 'bg-amber-500/20 text-amber-400'
-                  : 'text-slate-400 hover:text-slate-200'
+              onClick={() => { setSearchType('archetype'); setQueryInput(''); setActiveQuery(''); }}
+              className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] ${
+                searchType === 'archetype' 
+                  ? 'border-amber-500 text-amber-400' 
+                  : 'border-transparent text-slate-500 hover:text-slate-300'
               }`}
             >
-              Wishlist
+              Por Arquetipo
             </button>
           </div>
+
+          {/* Toggle Inventario / Wishlist */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Destino:</span>
+            <div className="flex bg-black/40 rounded-lg p-1 border border-white/5">
+              <button
+                type="button"
+                onClick={() => setDestination('inventory')}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                  destination === 'inventory'
+                    ? 'bg-amber-500/20 text-amber-400 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+              >
+                Inventario
+              </button>
+              <button
+                type="button"
+                onClick={() => setDestination('wishlist')}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                  destination === 'wishlist'
+                    ? 'bg-amber-500/20 text-amber-400 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+              >
+                Wishlist
+              </button>
+            </div>
+          </div>
         </div>
+
+        {/* Fila Inferior: Input y Búsqueda */}
+        <form 
+          onSubmit={handleSearchSubmit} 
+          className="flex flex-col md:flex-row items-stretch md:items-center bg-black/20 rounded-xl border border-white/5 p-1 gap-2 focus-within:bg-black/40 focus-within:border-amber-500/30 transition-all"
+        >
+          {/* Input Integrado */}
+          <div className="flex-1 relative flex items-center px-4 py-3 md:py-0 md:h-[44px]">
+            <Search className={`w-4 h-4 mr-3 shrink-0 transition-colors ${searchType === 'archetype' && activeQuery.trim().length === 0 ? 'text-amber-500/50' : 'text-slate-500'}`} />
+            <input
+              placeholder={searchType === 'name' ? "Escribe el nombre en inglés... (ej: Dark Magician)" : "Escribe el arquetipo en inglés... (ej: Salamangreat)"}
+              value={queryInput}
+              onChange={(e) => setQueryInput(e.target.value)}
+              className="w-full bg-transparent border-none outline-none text-slate-100 text-sm placeholder:text-slate-600 font-medium"
+              autoFocus
+            />
+          </div>
+
+          {/* Filtros y Botón Buscar (solo para Arquetipo) */}
+          {searchType === 'archetype' && (
+            <motion.div 
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 pr-1 pb-1 px-1 md:px-0 md:pb-0 w-full md:w-auto"
+            >
+              <div className="relative flex-1 sm:flex-none sm:w-[160px]">
+                <Select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  options={[
+                    { value: 'all', label: 'Todas' },
+                    { value: 'monster', label: 'Monstruos' },
+                    { value: 'spell', label: 'Magias' },
+                    { value: 'trap', label: 'Trampas' },
+                  ]}
+                  placeholder="Todas las cartas"
+                  hidePlaceholderOption={true}
+                  icon={Filter}
+                  triggerClassName="bg-amber-500/10 border-amber-500/20 text-amber-100 hover:bg-amber-500/20 focus:ring-1 focus:ring-amber-500/50"
+                  className="w-full md:h-[38px] [&>button]:h-full [&>button]:py-2.5 md:[&>button]:py-0 [&>button]:pl-10"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={queryInput.trim().length < 3 || searching}
+                className="flex-1 sm:flex-none px-6 py-2.5 md:h-[38px] bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs uppercase tracking-wider rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_10px_rgba(245,158,11,0.2)] hover:shadow-[0_0_15px_rgba(245,158,11,0.4)]"
+              >
+                Buscar
+              </button>
+            </motion.div>
+          )}
+        </form>
+
+        {/* Aviso informativo de la API */}
+        {results.length === 0 && (
+          <div className="mt-3 flex items-start gap-2 px-1">
+            <Info className="w-4 h-4 text-amber-500/70 shrink-0 mt-0.5" />
+            <p className="text-xs text-slate-400">
+              <strong className="text-amber-500/80 font-medium">Aviso de búsqueda:</strong> La base de datos externa a veces falla con búsquedas parciales. 
+              Si no encuentras una carta, intenta buscar usando el <strong>nombre exacto completo</strong> en inglés o utilizando la búsqueda <strong>Por Arquetipo</strong>.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Resultados */}
@@ -104,17 +226,58 @@ export default function SearchPage() {
           <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
           <p className="text-slate-500 text-sm">Buscando en YGOProdeck...</p>
         </div>
-      ) : query.trim().length > 0 && results.length === 0 ? (
+      ) : searchError ? (
+        /* ── Error de la API externa ── */
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center py-14 gap-4 text-center"
+        >
+          {searchError.status === 400 ? (
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <AlertCircle className="w-8 h-8 text-amber-400" />
+            </div>
+          ) : (
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+              <ServerCrash className="w-8 h-8 text-red-400" />
+            </div>
+          )}
+          <div>
+            <p className="text-white font-semibold mb-1">
+              {searchError.status === 400 ? 'Búsqueda muy genérica' : 'La API de YGOProdeck está caída'}
+            </p>
+            <p className="text-slate-400 text-sm max-w-sm">
+              {searchError.message || 'El servicio externo no responde. Intenta de nuevo en unos minutos.'}
+            </p>
+          </div>
+          {searchError.status !== 400 && (
+            <button
+              type="button"
+              onClick={() => queryClient.resetQueries({ queryKey: ['search', activeQuery, searchType, 'en'] })}
+              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg
+                         bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-500/30
+                         text-slate-300 hover:text-white transition-all"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Intentar de nuevo
+            </button>
+          )}
+        </motion.div>
+      ) : activeQuery.trim().length > 0 && results.length === 0 ? (
         <EmptyState
           icon={Search}
           title="Sin resultados"
-          description={`No se encontraron cartas con "${query}". Intenta con otro nombre.`}
+          description={
+            rawResults.length > 0 
+              ? `No se encontraron cartas del tipo seleccionado para "${activeQuery}".`
+              : `No se encontraron cartas con "${activeQuery}". Intenta con otro nombre.`
+          }
         />
-      ) : results.length === 0 ? (
+      ) : activeQuery.trim().length === 0 ? (
         <EmptyState
           icon={PackagePlus}
           title="Escribe para buscar"
-          description="Ingresa al menos 2 caracteres para empezar a buscar cartas."
+          description="Ingresa al menos 3 caracteres para empezar a buscar cartas."
         />
       ) : (
         <div className="space-y-2">

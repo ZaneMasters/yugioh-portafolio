@@ -14,7 +14,7 @@ export const queryKeys = {
   folders: () => ['folders'],
 
   // Búsqueda externa (YGOProdeck)
-  search: (query, lang = 'en') => ['search', query, lang],
+  search: (query, type = 'name', lang = 'en') => ['search', query, type, lang],
 
   // Portafolio público
   portfolio: (slug, filters = {}) => ['portfolio', slug, filters],

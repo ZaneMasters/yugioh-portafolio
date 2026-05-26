@@ -4,7 +4,7 @@ import { auth } from '../config/firebase'
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 10000,
+  timeout: 60000,
 })
 
 // ── Inyectar Firebase ID Token en cada request ────────────────────────────────
@@ -27,7 +27,9 @@ api.interceptors.response.use(
       error.response?.data?.errors?.[0]?.message ||
       error.message ||
       'Error inesperado'
-    return Promise.reject(new Error(message))
+    const enhancedError = new Error(message)
+    enhancedError.status = error.response?.status
+    return Promise.reject(enhancedError)
   },
 )
 

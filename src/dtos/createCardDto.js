@@ -41,7 +41,7 @@ const createCardSchema = z
       .positive('quantity debe ser mayor a 0.')
       .default(1),
       
-    folderId: z.string().nullable().optional(),
+    folderIds: z.array(z.string()).optional(),
   })
   .refine((data) => data.name || data.cardId, {
     message: 'Debes proporcionar al menos name o cardId.',
