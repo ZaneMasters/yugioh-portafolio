@@ -6,6 +6,13 @@ const externalController = require('../controllers/externalController');
 const router = Router();
 
 /**
+ * @route   GET /api/v1/external/catalog-status
+ * @desc    Obtener el estado actual del catálogo en memoria
+ * @access  Public
+ */
+router.get('/catalog-status', externalController.getCatalogStatus);
+
+/**
  * @route   GET /api/v1/external/cards?name=xxx
  * @desc    Buscar cartas en la API externa de YGOProdeck por nombre parcial
  * @access  Public

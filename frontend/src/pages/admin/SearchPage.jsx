@@ -11,6 +11,7 @@ import { useCards } from '../../hooks/useCards'
 import { useWishlist } from '../../hooks/useWishlist'
 import { useFolders } from '../../hooks/useFolders'
 import { useDebounce } from '../../hooks/useDebounce'
+import { getCatalogStatus } from '../../services/externalService'
 
 const PAGE_SIZE = 10 // resultados por página
 
@@ -19,19 +20,30 @@ export default function SearchPage() {
   const [activeQuery, setActiveQuery] = useState('')
   const [searchType, setSearchType] = useState('name') // 'name' | 'archetype'
   const [filterType, setFilterType] = useState('all') // 'all' | 'monster' | 'spell' | 'trap'
+  const [showFilter, setShowFilter] = useState(false)
   
   const [addingId, setAddingId] = useState(null)
   const [destination, setDestination] = useState('inventory') // 'inventory' | 'wishlist'
   const [page, setPage]         = useState(1)
+  const [catalogStatus, setCatalogStatus] = useState(null)
 
   const debouncedQueryInput = useDebounce(queryInput, 650)
 
-  // Si estamos en modo "nombre", la búsqueda es automática
+  // Cargar estado del catálogo al montar
   useEffect(() => {
-    if (searchType === 'name') {
-      setActiveQuery(debouncedQueryInput.trim())
-    }
-  }, [debouncedQueryInput, searchType])
+    let mounted = true
+    getCatalogStatus()
+      .then(res => {
+        if (mounted && res.data) setCatalogStatus(res.data)
+      })
+      .catch(err => console.error('Error fetching catalog status', err))
+    return () => { mounted = false }
+  }, [])
+
+  // Búsqueda automática basada en debouncedQueryInput
+  useEffect(() => {
+    setActiveQuery(debouncedQueryInput.trim());
+  }, [debouncedQueryInput])
 
   const { results: rawResults, searching, searchError } = useSearchCards(activeQuery, searchType)
   const { addCard: addCardInventory }         = useCards()
@@ -50,6 +62,16 @@ export default function SearchPage() {
       return true;
     });
   }, [rawResults, filterType]);
+
+  // Extraer arquetipos únicos de los resultados actuales
+  const matchedArchetypes = useMemo(() => {
+    if (searchType !== 'archetype' || results.length === 0) return [];
+    const archs = new Set();
+    results.forEach(card => {
+      if (card.archetype) archs.add(card.archetype);
+    });
+    return Array.from(archs).sort();
+  }, [results, searchType]);
 
   // Reiniciar paginación cuando cambia la búsqueda, tipo, filtro o el destino
   useEffect(() => { setPage(1) }, [activeQuery, searchType, filterType, destination])
@@ -84,13 +106,26 @@ export default function SearchPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-1">Buscar Cartas</h1>
-        <p className="text-slate-400 text-sm">
-          Busca cartas en la base de datos de YGOProdeck y agrégalas a tu inventario.
-          <br />
-          <span className="text-amber-500/90 text-xs font-medium">
+        <div className="text-slate-400 text-sm flex flex-col gap-1">
+          {catalogStatus ? (
+            <div className="flex flex-col gap-0.5 mt-1">
+              <span className="text-emerald-500/80 font-medium flex items-center gap-1.5">
+                <Info className="w-4 h-4" />
+                Motor de Búsqueda Local Activo
+              </span>
+              <span className="text-xs text-slate-400">
+                Última actualización: {new Date(catalogStatus.lastUpdated).toLocaleString()} 
+                {' '}• Origen: {catalogStatus.source} 
+                {' '}• Cartas: {catalogStatus.totalCards.toLocaleString()}
+              </span>
+            </div>
+          ) : (
+            <span>Conectando con el catálogo local...</span>
+          )}
+          <span className="text-amber-500/90 text-xs font-medium mt-1">
             Nota: Las búsquedas deben realizarse con el nombre de la carta en Inglés.
           </span>
-        </p>
+        </div>
       </div>
 
       {/* Caja Principal Unificada */}
@@ -158,7 +193,7 @@ export default function SearchPage() {
         {/* Fila Inferior: Input y Búsqueda */}
         <form 
           onSubmit={handleSearchSubmit} 
-          className="flex flex-col md:flex-row items-stretch md:items-center bg-black/20 rounded-xl border border-white/5 p-1 gap-2 focus-within:bg-black/40 focus-within:border-amber-500/30 transition-all"
+          className="flex flex-row items-center bg-black/20 rounded-xl border border-white/5 p-1 gap-2 focus-within:bg-black/40 focus-within:border-amber-500/30 transition-all"
         >
           {/* Input Integrado */}
           <div className="flex-1 relative flex items-center px-4 py-3 md:py-0 md:h-[44px]">
@@ -172,51 +207,78 @@ export default function SearchPage() {
             />
           </div>
 
-          {/* Filtros y Botón Buscar (solo para Arquetipo) */}
+          {/* Botón Filtro (ahora dentro de la barra de búsqueda, solo en arquetipo) */}
           {searchType === 'archetype' && (
-            <motion.div 
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 pr-1 pb-1 px-1 md:px-0 md:pb-0 w-full md:w-auto"
+            <button
+              type="button"
+              onClick={() => setShowFilter(!showFilter)}
+              className={`flex-shrink-0 relative w-9 h-9 md:w-[36px] md:h-[36px] flex items-center justify-center rounded-lg transition-colors border ${
+                showFilter || filterType !== 'all'
+                  ? 'bg-amber-500/20 border-amber-500/30 text-amber-400'
+                  : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-slate-200'
+              }`}
+              title="Filtrar resultados"
             >
-              <div className="relative flex-1 sm:flex-none sm:w-[160px]">
-                <Select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                  options={[
-                    { value: 'all', label: 'Todas' },
-                    { value: 'monster', label: 'Monstruos' },
-                    { value: 'spell', label: 'Magias' },
-                    { value: 'trap', label: 'Trampas' },
-                  ]}
-                  placeholder="Todas las cartas"
-                  hidePlaceholderOption={true}
-                  icon={Filter}
-                  triggerClassName="bg-amber-500/10 border-amber-500/20 text-amber-100 hover:bg-amber-500/20 focus:ring-1 focus:ring-amber-500/50"
-                  className="w-full md:h-[38px] [&>button]:h-full [&>button]:py-2.5 md:[&>button]:py-0 [&>button]:pl-10"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={queryInput.trim().length < 3 || searching}
-                className="flex-1 sm:flex-none px-6 py-2.5 md:h-[38px] bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs uppercase tracking-wider rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_10px_rgba(245,158,11,0.2)] hover:shadow-[0_0_15px_rgba(245,158,11,0.4)]"
-              >
-                Buscar
-              </button>
-            </motion.div>
+              <Filter className="w-4 h-4" />
+              {filterType !== 'all' && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full" />
+              )}
+            </button>
           )}
         </form>
 
-        {/* Aviso informativo de la API */}
-        {results.length === 0 && (
-          <div className="mt-3 flex items-start gap-2 px-1">
-            <Info className="w-4 h-4 text-amber-500/70 shrink-0 mt-0.5" />
-            <p className="text-xs text-slate-400">
-              <strong className="text-amber-500/80 font-medium">Aviso de búsqueda:</strong> La base de datos externa a veces falla con búsquedas parciales. 
-              Si no encuentras una carta, intenta buscar usando el <strong>nombre exacto completo</strong> en inglés o utilizando la búsqueda <strong>Por Arquetipo</strong>.
-            </p>
-          </div>
+        {/* Dropdown de Filtros (se despliega abajo de la barra) */}
+        {showFilter && (
+          <motion.div 
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 flex justify-end"
+          >
+            <div className="w-full sm:w-[160px]">
+              <Select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                options={[
+                  { value: 'all', label: 'Todas' },
+                  { value: 'monster', label: 'Monstruos' },
+                  { value: 'spell', label: 'Magias' },
+                  { value: 'trap', label: 'Trampas' },
+                ]}
+                placeholder="Todas las cartas"
+                hidePlaceholderOption={true}
+                triggerClassName="bg-black/30 border-white/10 hover:border-white/20 text-slate-300 focus:ring-1 focus:ring-amber-500/50"
+                className="w-full h-[36px] [&>button]:h-full [&>button]:py-0 text-sm"
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {/* Tags de Arquetipos y Filtros */}
+        {searchType === 'archetype' && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-1 pt-2 border-t border-white/5 mt-2 gap-3"
+          >
+            <div className="flex flex-wrap gap-2 flex-1">
+              {matchedArchetypes.length > 0 ? (
+                <>
+                  <span className="text-xs text-slate-500 flex items-center h-6 font-medium mr-1">
+                    Encontrados:
+                  </span>
+                  {matchedArchetypes.map(arch => (
+                    <span key={arch} className="px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md">
+                      {arch}
+                    </span>
+                  ))}
+                </>
+              ) : (
+                <span className="text-xs text-slate-500 h-6 flex items-center">
+                  {queryInput.length >= 3 ? 'Buscando arquetipos...' : 'Escribe para buscar'}
+                </span>
+              )}
+            </div>
+          </motion.div>
         )}
       </div>
 

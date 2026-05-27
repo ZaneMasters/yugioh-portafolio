@@ -6,6 +6,7 @@ const memCache     = require('../utils/cache');          // Nivel 1: LRU en memo
 const firestoreCache = require('../repositories/cacheRepository'); // Nivel 2: Firestore
 const AppError = require('../utils/AppError');
 const logger   = require('../utils/logger');
+const catalogService = require('./catalogService');
 
 /**
  * Servicio de integración con la API externa de YGOProdeck.
@@ -27,12 +28,14 @@ const ygoAxios = axios.create({
   baseURL: YGO_API_BASE_URL,
   timeout: 12000,
   headers: { 'Accept': 'application/json' },
-  // YGOProdeck devuelve 500 si los espacios se envían como '+'
-  // Axios por defecto usa '+' para espacios en URLSearchParams.
-  // Forzamos que se envíe como '%20' para evitar que su API colapse.
+  // YGOProdeck devuelve 500 si los espacios se envían como '+' o si las comas se envían como '%2C'
+  // Axios por defecto usa '+' para espacios y codifica comas en URLSearchParams.
+  // Forzamos que se envíe como '%20' y preservamos las comas para evitar que su API colapse.
   paramsSerializer: {
     serialize: (params) => {
-      return new URLSearchParams(params).toString().replace(/\+/g, '%20');
+      return new URLSearchParams(params).toString()
+        .replace(/\+/g, '%20')
+        .replace(/%2C/gi, ',');
     }
   }
 });
@@ -146,72 +149,41 @@ async function withCache(key, ttl, fetch) {
 // ── Funciones públicas ─────────────────────────────────────────────────────────
 
 /**
- * Busca cartas en YGOProdeck por nombre o arquetipo.
+ * Busca cartas en el catálogo local en memoria por nombre o arquetipo.
+ * Si lang no es 'en', hace fallback a la API de YGOProdeck (ya que nuestro catálogo en memoria es en inglés).
  */
 async function searchCards(query, type = 'name', lang = 'en') {
-  // Cache key en minúsculas → "Dark Magician", "dark magician" y "DARK MAGICIAN"
-  // comparten la misma entrada de caché.
   const normalized = query.toLowerCase();
   const key = `search:${type}:${normalized}:lang:${lang}`;
 
-  // YGOProdeck es case-sensitive en fname y archetype: "Cyber" devuelve resultados pero
-  // "cyber" devuelve 500. Enviamos en Title Case para máxima compatibilidad.
-  // Usamos una regex que ignora los apóstrofes (ej. Vanity's) pero detecta guiones, dos puntos, barras, etc.
-  // Además, mantenemos las palabras de conexión (stop words) en minúscula si no son la primera palabra
-  // para que cartas como "Beatrice, Lady of the Eternal" mantengan la exactitud.
-  const stopWords = ['of', 'the', 'and', 'in', 'on', 'for', 'to', 'with', 'a', 'an'];
-  const titleCased = query.trim()
-    .replace(/(^\w|[^a-zA-Z0-9_']\w)/g, (c) => c.toUpperCase())
-    .split(' ')
-    .map((word, index) => (index > 0 && stopWords.includes(word.toLowerCase())) ? word.toLowerCase() : word)
-    .join(' ');
-
   return withCache(key, SEARCH_TTL, async () => {
-    const params = type === 'archetype' ? { archetype: titleCased } : { fname: titleCased };
-    if (lang !== 'en') params.language = lang;
+    // Si la búsqueda es en español, la delegamos a la antigua API externa,
+    // ya que nuestro motor de búsqueda local en RAM solo descarga el catálogo en inglés.
+    if (lang !== 'en') {
+      const params = type === 'archetype' ? { archetype: query } : { fname: query };
+      params.language = lang;
+      try {
+        const response = await withRetry(() => ygoAxios.get('/cardinfo.php', { params }));
+        return response.data.data.map(mapExternalCard);
+      } catch (err) {
+        if (err.response?.status === 400) return [];
+        throw new AppError('Error al buscar en YGOProdeck en español.', 500);
+      }
+    }
 
+    // Búsqueda en el catálogo local (Inglés) - Súper rápida y robusta
     try {
-      // withRetry maneja los 5xx intermitentes de YGOProdeck con backoff
-      const response = await withRetry(() => ygoAxios.get('/cardinfo.php', { params }));
-      return response.data.data.map(mapExternalCard);
+      let rawResults = [];
+      if (type === 'archetype') {
+        rawResults = await catalogService.searchArchetype(query);
+      } else {
+        rawResults = await catalogService.searchCardsFuzzy(query);
+      }
+      
+      return rawResults.map(mapExternalCard);
     } catch (err) {
-      if (err.response?.status === 400) {
-        // 400 = no hay resultados para este nombre
-        return [];
-      }
-      if (err.response?.status >= 500) {
-        // Fallback a búsqueda exacta si la búsqueda difusa (fname) colapsa
-        if (type === 'name') {
-          try {
-            logger.info(`🔄 Fallback a búsqueda exacta para: "${query}" tras error >=500 en fname`);
-            const exactParams = { name: titleCased };
-            if (lang !== 'en') exactParams.language = lang;
-            const exactResponse = await withRetry(() => ygoAxios.get('/cardinfo.php', { params: exactParams }), 0);
-            return exactResponse.data.data.map(mapExternalCard);
-          } catch (exactErr) {
-            // Si la búsqueda exacta tampoco existe (400) o falla, ignoramos
-            // y continuamos para arrojar el error original de la búsqueda genérica.
-            logger.debug(`❌ Fallback de búsqueda exacta falló para: "${query}"`);
-          }
-        }
-
-        const ygoError = err.response?.data?.error;
-        if (ygoError === 'Database query parameter mismatch.') {
-          // Error 500 específico de YGOProdeck cuando la búsqueda es muy ambigua o parcial corta
-          throw new AppError(
-            'Búsqueda demasiado genérica. Por favor, intenta escribiendo el nombre de la carta más completo, verifica que esté escrito en inglés correctamente o intenta realizar la búsqueda "Por Arquetipo".',
-            400,
-          );
-        }
-
-        // 5xx persistente incluso tras reintentos — YGOProdeck está caído
-        logger.warn(`⚠️  YGOProdeck 5xx persistente para ${type}="${query}" tras ${MAX_RETRIES} reintentos.`);
-        throw new AppError(
-          'La API de Yu-Gi-Oh! (YGOProdeck) está experimentando problemas. Por favor, intenta de nuevo en unos minutos.',
-          503,
-        );
-      }
-      throw err;
+      logger.error(`Error en búsqueda local (${type}): ${query} - ${err.message}`);
+      throw new AppError('El motor de búsqueda aún se está iniciando, por favor intenta en unos segundos.', 503);
     }
   });
 }

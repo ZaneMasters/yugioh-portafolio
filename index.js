@@ -7,7 +7,11 @@ if (!process.env.K_SERVICE && !process.env.FUNCTION_NAME) {
 
 const app    = require('./src/app');
 const logger = require('./src/utils/logger');
+const catalogService = require('./src/services/catalogService');
 const { PORT } = require('./src/config/env');
+
+// Inicializar el motor de búsqueda en memoria (descarga de YGOProdeck)
+catalogService.startCron();
 
 // Exporta la app Express como una Cloud Function HTTP llamada "api"
 // Firebase Hosting redirige /api/** a esta función
