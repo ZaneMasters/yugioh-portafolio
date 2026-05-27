@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { FRAME_TYPE_COLORS } from '../../utils/constants'
 import { Sword, Shield, Star, Layers, Eye } from 'lucide-react'
@@ -8,6 +8,8 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
   const frameGradient = FRAME_TYPE_COLORS[card.frameType] ?? FRAME_TYPE_COLORS.normal
   const isList = viewMode === 'list'
   const isGrid1 = viewMode === '1' || !viewMode  // 1 columna o desktop
+
+  const [imgLoaded, setImgLoaded] = useState(false)
 
   // Pill de cantidad
   const quantityPill = (
@@ -47,12 +49,22 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
         isList ? 'w-24 sm:w-auto sm:h-56' : 'h-56'
       }`}>
         <img
-          src={card.image}
+          src={card.imageSmall || card.image}
           alt={card.name}
           loading="lazy"
-          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-          onError={(e) => { e.target.src = '/card-placeholder.png' }}
+          onLoad={() => setImgLoaded(true)}
+          className={`w-full h-full object-contain transition-all duration-500 group-hover:scale-105 ${
+            imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'
+          }`}
+          onError={(e) => { e.target.src = '/card-placeholder.png'; setImgLoaded(true); }}
         />
+        
+        {/* Skeleton de carga mientras la imagen no esté lista */}
+        {!imgLoaded && (
+          <div className="absolute inset-0 bg-white/5 animate-pulse flex items-center justify-center">
+            <div className="w-8 h-12 bg-white/10 rounded-sm" />
+          </div>
+        )}
 
         {/* Overlay "Ver detalles" */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">

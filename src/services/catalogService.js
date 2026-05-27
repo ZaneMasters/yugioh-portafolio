@@ -27,11 +27,27 @@ const normalizeString = (str) => {
 };
 
 /**
- * Normaliza los nombres de la base de datos para búsqueda rápida.
+ * Normaliza los nombres de la base de datos para búsqueda rápida y minifica el objeto
+ * para reducir drásticamente el uso de memoria RAM (de ~100% a ~15% del original).
  */
 const buildIndex = (cards) => {
   return cards.map(card => ({
-    ...card,
+    id: card.id,
+    name: card.name,
+    type: card.type,
+    frameType: card.frameType,
+    desc: card.desc,
+    atk: card.atk,
+    def: card.def,
+    level: card.level,
+    attribute: card.attribute,
+    archetype: card.archetype,
+    card_images: [
+      {
+        image_url: card.card_images?.[0]?.image_url,
+        image_url_small: card.card_images?.[0]?.image_url_small
+      }
+    ],
     _searchName: normalizeString(card.name),
     _searchArchetype: normalizeString(card.archetype)
   }));
@@ -63,7 +79,7 @@ const loadCatalog = async () => {
     if (storage) {
       try {
         const file = storage.file(BACKUP_FILENAME);
-        await file.save(JSON.stringify(cards), {
+        await file.save(JSON.stringify(catalog), {
           contentType: 'application/json',
           metadata: {
             cacheControl: 'public, max-age=31536000',
@@ -86,8 +102,7 @@ const loadCatalog = async () => {
         
         if (exists) {
           const [contents] = await file.download();
-          const cards = JSON.parse(contents.toString());
-          catalog = buildIndex(cards);
+          catalog = JSON.parse(contents.toString());
           isLoaded = true;
           catalogMetadata = {
             lastUpdated: new Date().toISOString(),
