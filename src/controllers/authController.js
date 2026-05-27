@@ -26,14 +26,14 @@ const changePassword = async (req, res, next) => {
       password: newPassword,
     });
 
-    logger.info(`Contraseña actualizada exitosamente para el usuario: ${uid}`);
+    logger.info(`Contrasena actualizada exitosamente para el usuario: ${uid}`);
 
     res.status(200).json({
       success: true,
       message: 'Contraseña actualizada exitosamente.',
     });
   } catch (error) {
-    logger.error(`Error al cambiar contraseña: ${error.message}`);
+    logger.error(`Error al cambiar contrasena: ${error.message}`);
     next(error);
   }
 };
@@ -58,8 +58,7 @@ const recoverPassword = async (req, res, next) => {
       userRecord = await admin.auth().getUserByEmail(email);
     } catch (err) {
       if (err.code === 'auth/user-not-found') {
-        // Para no revelar qué correos están registrados, solemos devolver 200 de todas formas
-        logger.warn(`Intento de recuperar contraseña para email inexistente: ${email}`);
+        logger.warn(`Intento de recuperar contrasena para email inexistente: ${email}`);
         return res.status(200).json({
           success: true,
           message: 'Si el correo está registrado, se enviarán las instrucciones para recuperar la contraseña.',
@@ -76,25 +75,23 @@ const recoverPassword = async (req, res, next) => {
           requestType: 'PASSWORD_RESET',
           email: userRecord.email,
         });
-        
-        logger.info(`Correo de recuperación enviado exitosamente a: ${email} usando REST API`);
-        
+
+        logger.info(`Correo de recuperacion enviado exitosamente a: ${email} usando REST API`);
+
         return res.status(200).json({
           success: true,
           message: 'Si el correo está registrado, se enviarán las instrucciones para recuperar la contraseña.',
         });
       } catch (restError) {
-        logger.error(`Error al enviar correo vía Firebase REST API: ${restError.response?.data?.error?.message || restError.message}`);
+        logger.error(`Error al enviar correo via Firebase REST API: ${restError.response?.data?.error?.message || restError.message}`);
         return res.status(500).json({
           success: false,
           message: 'Hubo un error al intentar enviar el correo de recuperación. Revisa la configuración del API Key.',
         });
       }
     } else {
-      // Si no hay API Key, generamos el enlace y lo devolvemos en la respuesta
-      // (Útil para pruebas en desarrollo, o si el front enviará el email)
       const link = await admin.auth().generatePasswordResetLink(email);
-      logger.info(`Enlace de recuperación generado para: ${email} (No se envió correo automático)`);
+      logger.info(`Enlace de recuperacion generado para: ${email} (No se envio correo automatico)`);
 
       return res.status(200).json({
         success: true,
@@ -103,25 +100,38 @@ const recoverPassword = async (req, res, next) => {
       });
     }
   } catch (error) {
-    logger.error(`Error al recuperar contraseña: ${error.message}`);
+    logger.error(`Error al recuperar contrasena: ${error.message}`);
     next(error);
   }
 };
 
 /**
- * Obtener perfil del usuario (slug y email)
+ * Obtener perfil del usuario (slug y email).
+ *
+ * Si el usuario no tiene perfil guardado en Firestore (primer login),
+ * lo crea automaticamente usando el prefijo del email como slug por defecto.
+ *
+ * Esto garantiza que slugToUid() siempre encuentre al usuario en la
+ * coleccion 'users' sin tener que recurrir al fallback lento de listUsers().
  */
 const getProfile = async (req, res, next) => {
   try {
     const { uid, email } = req.user;
     let profile = await userRepository.getProfile(uid);
-    
-    // Si no tiene perfil en BD, generar el virtual a partir del email
+
+    // Primer login: no existe perfil -> persistirlo ahora
     if (!profile) {
-      profile = {
-        slug: email.split('@')[0].toLowerCase(),
-        email
-      };
+      const defaultSlug = email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '');
+      const isTaken     = await userRepository.isSlugTaken(defaultSlug, uid);
+      // Si el slug ya esta tomado, agregar los primeros 4 chars del uid para hacerlo unico
+      const slug = isTaken ? `${defaultSlug}-${uid.slice(0, 4)}` : defaultSlug;
+
+      profile = await userRepository.updateProfile(uid, email, slug);
+      
+      // Invertir caché en caso de que hayan intentado visitar su portafolio antes de loguearse (evita 404 fantasma)
+      invalidateSlugCache(slug);
+      
+      logger.info(`Perfil creado automaticamente para ${email} con slug: "${slug}"`);
     }
 
     return res.status(200).json({ success: true, data: profile });
@@ -154,12 +164,12 @@ const updateProfile = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Ese nombre de usuario ya está en uso. Por favor elige otro.' });
     }
 
-    // Obtener perfil anterior para limpiar su caché
+    // Obtener perfil anterior para limpiar su cache
     const oldProfile = await userRepository.getProfile(uid);
     if (oldProfile && oldProfile.slug) {
       invalidateSlugCache(oldProfile.slug);
     }
-    // También limpiar el fallback basado en email
+    // Tambien limpiar el fallback basado en email
     invalidateSlugCache(email.split('@')[0]);
 
     const updatedProfile = await userRepository.updateProfile(uid, email, slug);

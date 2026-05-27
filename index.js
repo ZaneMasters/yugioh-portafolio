@@ -17,6 +17,8 @@ catalogService.initCatalog();
 // Exporta la app Express como una Cloud Function HTTP llamada "api"
 // Firebase Hosting redirige /api/** a esta función
 const { onRequest } = require('firebase-functions/v2/https');
+const functions = require('firebase-functions');
+const { cleanupUserData } = require('./src/services/userService');
 
 exports.api = onRequest(
   {
@@ -28,6 +30,11 @@ exports.api = onRequest(
   },
   app,
 );
+
+// Trigger de Auth: Limpieza automática cuando se elimina un usuario desde Firebase Console
+exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
+  await cleanupUserData(user.uid);
+});
 
 // ── Modo servidor local ────────────────────────────────────────────────────
 // Solo se inicia si el archivo se ejecuta directamente (ej. `node index.js` o `npm run dev`)
