@@ -66,7 +66,7 @@ const getExternalCardById = async (req, res, next) => {
 const getCatalogStatus = async (req, res, next) => {
   try {
     const catalogService = require('../services/catalogService');
-    const status = catalogService.getStatus();
+    const status = await catalogService.getStatus();
     return res.status(200).json({ success: true, data: status });
   } catch (err) {
     next(err);

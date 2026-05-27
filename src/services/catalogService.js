@@ -166,7 +166,17 @@ const loadFromYGOProdeck = async () => {
  * en el primer cold start tras 7 días de inactividad del catálogo.
  * No se necesita node-cron ni Cloud Scheduler.
  */
-const initCatalog = async () => {
+// Promesa singleton para evitar múltiples descargas simultáneas
+let initPromise = null;
+
+const initCatalog = () => {
+  if (!initPromise) {
+    initPromise = _initCatalogInternal();
+  }
+  return initPromise;
+};
+
+const _initCatalogInternal = async () => {
   logger.info('🔍 Verificando estado del catálogo en Storage...');
 
   const backupUpdatedAt = await getBackupUpdatedAt();
@@ -213,7 +223,8 @@ const initCatalog = async () => {
  * @param {string} query - Ej: "live twin", "dark mag"
  */
 const searchCardsFuzzy = async (query) => {
-  if (!isLoaded) throw new Error('El catálogo local aún no está listo. Inténtalo en unos segundos.');
+  if (!isLoaded) await initCatalog();
+  if (!isLoaded) throw new Error('El catálogo local no pudo cargarse.');
 
   const normalizedQuery = normalizeString(query);
   const results = catalog.filter(card => card._searchName.includes(normalizedQuery));
@@ -224,7 +235,8 @@ const searchCardsFuzzy = async (query) => {
  * Busca por arquetipo en memoria (búsqueda parcial/difusa).
  */
 const searchArchetype = async (archetypeQuery) => {
-  if (!isLoaded) throw new Error('El catálogo local aún no está listo. Inténtalo en unos segundos.');
+  if (!isLoaded) await initCatalog();
+  if (!isLoaded) throw new Error('El catálogo local no pudo cargarse.');
 
   const normalizedQuery = normalizeString(archetypeQuery);
   if (!normalizedQuery) return [];
@@ -237,7 +249,8 @@ const searchArchetype = async (archetypeQuery) => {
 /**
  * Obtiene carta exacta por ID.
  */
-const getCardById = (id) => {
+const getCardById = async (id) => {
+  if (!isLoaded) await initCatalog();
   if (!isLoaded) return null;
   return catalog.find(c => c.id.toString() === id.toString());
 };
@@ -245,7 +258,10 @@ const getCardById = (id) => {
 /**
  * Obtiene el estado actual del catálogo (trazabilidad).
  */
-const getStatus = () => ({ isLoaded, ...catalogMetadata });
+const getStatus = async () => {
+  if (!isLoaded) await initCatalog();
+  return { isLoaded, ...catalogMetadata };
+};
 
 module.exports = {
   initCatalog,
