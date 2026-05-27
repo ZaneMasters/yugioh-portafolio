@@ -136,7 +136,7 @@ async function getByCardId(cardId) {
   const id = Number(cardId);
 
   // Intentar catálogo local primero (O(n) pero sin latencia de red)
-  const localCard = catalogService.getCardById(id);
+  const localCard = await catalogService.getCardById(id);
   if (localCard) {
     logger.debug(`⚡ Carta ID ${id} resuelta desde catálogo local`);
     return mapExternalCard(localCard);
@@ -167,7 +167,7 @@ async function getByCardId(cardId) {
 async function getByExactName(name) {
   // Buscar en catálogo local por nombre exacto (case-insensitive)
   const normalizedQuery = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const status = catalogService.getStatus();
+  const status = await catalogService.getStatus();
 
   if (status.isLoaded) {
     // Reutilizamos searchCardsFuzzy y filtramos por nombre exacto normalizado
