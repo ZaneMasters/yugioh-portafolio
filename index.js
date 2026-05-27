@@ -10,8 +10,9 @@ const logger = require('./src/utils/logger');
 const catalogService = require('./src/services/catalogService');
 const { PORT } = require('./src/config/env');
 
-// Inicializar el motor de búsqueda en memoria (descarga de YGOProdeck)
-catalogService.startCron();
+// Inicializar el catálogo con estrategia lazy refresh:
+// carga desde Storage si el backup tiene < 7 días, o descarga de YGOProdeck si no.
+catalogService.initCatalog();
 
 // Exporta la app Express como una Cloud Function HTTP llamada "api"
 // Firebase Hosting redirige /api/** a esta función

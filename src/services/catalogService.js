@@ -1,20 +1,24 @@
-const axios = require('axios');
-const cron = require('node-cron');
+'use strict';
+
+const axios  = require('axios');
 const logger = require('../utils/logger');
 const { getStorage } = require('../config/firebase');
 
 const YGO_API_ALL_CARDS_URL = 'https://db.ygoprodeck.com/api/v7/cardinfo.php';
-const BACKUP_FILENAME = 'ygo_catalog_backup.json';
+const BACKUP_FILENAME        = 'ygo_catalog_backup.json';
+const REFRESH_INTERVAL_MS    = 7 * 24 * 60 * 60 * 1000; // 7 días en ms
 
-// Variables en memoria
-let catalog = [];
-let isLoaded = false;
+// ── Estado en memoria ────────────────────────────────────────────────────────
+let catalog         = [];
+let isLoaded        = false;
 let catalogMetadata = {
   lastUpdated: null,
-  source: null,
-  totalCards: 0,
-  status: 'Inicializando...'
+  source:      null,
+  totalCards:  0,
+  status:      'Inicializando...',
 };
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
  * Normaliza un string para búsquedas extremas.
@@ -32,126 +36,187 @@ const normalizeString = (str) => {
  */
 const buildIndex = (cards) => {
   return cards.map(card => ({
-    id: card.id,
-    name: card.name,
-    type: card.type,
+    id:        card.id,
+    name:      card.name,
+    type:      card.type,
     frameType: card.frameType,
-    desc: card.desc,
-    atk: card.atk,
-    def: card.def,
-    level: card.level,
+    desc:      card.desc,
+    atk:       card.atk,
+    def:       card.def,
+    level:     card.level,
     attribute: card.attribute,
     archetype: card.archetype,
     card_images: [
       {
-        image_url: card.card_images?.[0]?.image_url,
-        image_url_small: card.card_images?.[0]?.image_url_small
-      }
+        image_url:       card.card_images?.[0]?.image_url,
+        image_url_small: card.card_images?.[0]?.image_url_small,
+      },
     ],
-    _searchName: normalizeString(card.name),
-    _searchArchetype: normalizeString(card.archetype)
+    _searchName:      normalizeString(card.name),
+    _searchArchetype: normalizeString(card.archetype),
   }));
 };
 
-/**
- * Descarga el catálogo de YGOProdeck, lo guarda en RAM y sube un respaldo a Storage.
- * Si falla, intenta recuperar el respaldo desde Storage.
- */
-const loadCatalog = async () => {
-  const storage = getStorage();
-  
-  try {
-    logger.info('📦 Descargando catálogo fresco de YGOProdeck...');
-    const response = await axios.get(YGO_API_ALL_CARDS_URL);
-    const cards = response.data.data;
-    
-    catalog = buildIndex(cards);
-    isLoaded = true;
-    catalogMetadata = {
-      lastUpdated: new Date().toISOString(),
-      source: 'YGOProdeck API (Fresco)',
-      totalCards: catalog.length,
-      status: 'Éxito'
-    };
-    logger.info(`✅ Catálogo cargado en RAM: ${catalog.length} cartas.`);
+// ── Operaciones con Storage ──────────────────────────────────────────────────
 
-    // Crear/actualizar el respaldo en Firebase Storage (si Storage está disponible)
-    if (storage) {
-      try {
-        const file = storage.file(BACKUP_FILENAME);
-        await file.save(JSON.stringify(catalog), {
-          contentType: 'application/json',
-          metadata: {
-            cacheControl: 'public, max-age=31536000',
-          }
-        });
-        logger.info(`☁️ Respaldo guardado exitosamente en Firebase Storage (${BACKUP_FILENAME}).`);
-      } catch (storageErr) {
-        logger.warn('⚠️ No se pudo guardar el respaldo en Firebase Storage:', storageErr.message);
-      }
-    }
-  } catch (error) {
-    logger.error('❌ Error al descargar catálogo de YGOProdeck:', error.message);
-    
-    // Si falla YGOProdeck, intentamos el Fallback con Storage
-    if (storage) {
-      logger.info('🔄 Intentando cargar catálogo desde copia de respaldo en Firebase Storage...');
-      try {
-        const file = storage.file(BACKUP_FILENAME);
-        const [exists] = await file.exists();
-        
-        if (exists) {
-          const [contents] = await file.download();
-          catalog = JSON.parse(contents.toString());
-          isLoaded = true;
-          catalogMetadata = {
-            lastUpdated: new Date().toISOString(),
-            source: 'Firebase Storage (Respaldo)',
-            totalCards: catalog.length,
-            status: 'Éxito (Fallback)'
-          };
-          logger.info(`✅ Catálogo de respaldo cargado en RAM: ${catalog.length} cartas.`);
-        } else {
-          logger.error('❌ No se encontró ninguna copia de respaldo en Firebase Storage.');
-          catalogMetadata.status = 'Error Crítico: YGOProdeck caído y sin respaldo.';
-        }
-      } catch (fallbackErr) {
-        logger.error('❌ Error al cargar la copia de respaldo desde Firebase Storage:', fallbackErr.message);
-        catalogMetadata.status = 'Error Crítico: Fallo al leer respaldo.';
-      }
-    } else {
-      catalogMetadata.status = 'Error Crítico: YGOProdeck caído y Storage inactivo.';
-    }
+/**
+ * Retorna la fecha de última actualización del backup en Storage,
+ * o null si el archivo no existe.
+ * Lee solo los metadatos del archivo — NO descarga el contenido.
+ */
+const getBackupUpdatedAt = async () => {
+  const storage = getStorage();
+  if (!storage) return null;
+
+  try {
+    const file         = storage.file(BACKUP_FILENAME);
+    const [exists]     = await file.exists();
+    if (!exists) return null;
+
+    const [metadata]   = await file.getMetadata();
+    const updatedRaw   = metadata.updated ?? metadata.timeCreated;
+    return updatedRaw ? new Date(updatedRaw) : null;
+  } catch (err) {
+    logger.warn(`⚠️  No se pudo leer metadatos del backup en Storage: ${err.message}`);
+    return null;
   }
 };
 
 /**
- * Inicializa la carga y el cronjob.
+ * Descarga el contenido del backup desde Firebase Storage y lo carga en memoria.
+ * @returns {boolean} true si tuvo éxito
  */
-const startCron = () => {
-  // Carga inicial al encender el servidor (fondo, no bloqueante)
-  loadCatalog();
+const loadFromStorage = async () => {
+  const storage = getStorage();
+  if (!storage) return false;
 
-  // Cronjob: Todos los Lunes a las 3:00 AM (0 3 * * 1)
-  cron.schedule('0 3 * * 1', () => {
-    logger.info('⏰ Ejecutando cron job semanal: Actualizando catálogo YGOProdeck...');
-    loadCatalog();
-  });
+  try {
+    const file        = storage.file(BACKUP_FILENAME);
+    const [contents]  = await file.download();
+    const parsed      = JSON.parse(contents.toString());
+
+    // El backup ya está indexado (buildIndex se aplica antes de guardarlo)
+    catalog   = parsed;
+    isLoaded  = true;
+    catalogMetadata = {
+      lastUpdated: new Date().toISOString(),
+      source:      'Firebase Storage (Backup)',
+      totalCards:  catalog.length,
+      status:      'OK',
+    };
+    logger.info(`✅ Catálogo cargado desde Storage: ${catalog.length} cartas.`);
+    return true;
+  } catch (err) {
+    logger.error(`❌ Error al cargar backup desde Storage: ${err.message}`);
+    return false;
+  }
 };
 
 /**
+ * Descarga el catálogo fresco de YGOProdeck, lo indexa,
+ * lo carga en memoria y guarda el backup en Storage.
+ * @returns {boolean} true si tuvo éxito
+ */
+const loadFromYGOProdeck = async () => {
+  try {
+    logger.info('📦 Descargando catálogo fresco de YGOProdeck...');
+    const response = await axios.get(YGO_API_ALL_CARDS_URL);
+    const cards    = response.data.data;
+
+    catalog  = buildIndex(cards);
+    isLoaded = true;
+    catalogMetadata = {
+      lastUpdated: new Date().toISOString(),
+      source:      'YGOProdeck API (Fresco)',
+      totalCards:  catalog.length,
+      status:      'OK',
+    };
+    logger.info(`✅ Catálogo descargado en RAM: ${catalog.length} cartas.`);
+
+    // Guardar backup en Storage (sin await — no bloqueamos la respuesta)
+    const storage = getStorage();
+    if (storage) {
+      storage.file(BACKUP_FILENAME)
+        .save(JSON.stringify(catalog), {
+          contentType: 'application/json',
+          metadata: { cacheControl: 'public, max-age=604800' }, // 7 días
+        })
+        .then(() => logger.info(`☁️  Backup actualizado en Firebase Storage (${BACKUP_FILENAME}).`))
+        .catch(err => logger.warn(`⚠️  No se pudo guardar backup en Storage: ${err.message}`));
+    }
+
+    return true;
+  } catch (err) {
+    logger.error(`❌ Error al descargar catálogo de YGOProdeck: ${err.message}`);
+    return false;
+  }
+};
+
+// ── Lógica principal: Lazy Refresh ───────────────────────────────────────────
+
+/**
+ * Inicializa el catálogo en memoria siguiendo la estrategia "lazy refresh":
+ *
+ *  1. Verificar si existe backup en Storage y leer su fecha (solo metadatos, sin descargar).
+ *  2a. Si el backup tiene menos de 7 días → cargar desde Storage (barato y rápido).
+ *  2b. Si el backup tiene más de 7 días o no existe → descargar de YGOProdeck → guardar en Storage.
+ *  3.  Si YGOProdeck falla y hay backup (aunque viejo) → cargarlo como fallback de emergencia.
+ *
+ * Con esta estrategia, YGOProdeck se llama como máximo 1 vez por semana,
+ * en el primer cold start tras 7 días de inactividad del catálogo.
+ * No se necesita node-cron ni Cloud Scheduler.
+ */
+const initCatalog = async () => {
+  logger.info('🔍 Verificando estado del catálogo en Storage...');
+
+  const backupUpdatedAt = await getBackupUpdatedAt();
+
+  if (backupUpdatedAt) {
+    const ageMs     = Date.now() - backupUpdatedAt.getTime();
+    const ageDays   = (ageMs / (1000 * 60 * 60 * 24)).toFixed(1);
+
+    if (ageMs < REFRESH_INTERVAL_MS) {
+      // ── Caso 1: Backup reciente → cargar desde Storage ──────────────────
+      logger.info(`📅 Backup tiene ${ageDays} días (< 7). Cargando desde Storage...`);
+      const ok = await loadFromStorage();
+      if (ok) return;
+
+      logger.warn('⚠️  Fallo al leer Storage. Intentando YGOProdeck como fallback...');
+    } else {
+      // ── Caso 2: Backup viejo (>= 7 días) → refrescar desde YGOProdeck ──
+      logger.info(`📅 Backup tiene ${ageDays} días (>= 7). Refrescando desde YGOProdeck...`);
+    }
+  } else {
+    // ── Caso 3: No hay backup → primera vez ─────────────────────────────
+    logger.info('📦 No se encontró backup en Storage. Descarga inicial desde YGOProdeck...');
+  }
+
+  // Intentar YGOProdeck
+  const ok = await loadFromYGOProdeck();
+
+  if (!ok && backupUpdatedAt) {
+    // ── Fallback de emergencia: YGOProdeck caído pero hay backup (aunque viejo) ──
+    logger.warn('🔄 YGOProdeck no disponible. Usando backup viejo de Storage como emergencia...');
+    await loadFromStorage();
+  }
+
+  if (!isLoaded) {
+    catalogMetadata.status = 'Error Crítico: Sin catálogo disponible.';
+    logger.error('❌ No se pudo cargar el catálogo por ninguna vía.');
+  }
+};
+
+// ── API pública ──────────────────────────────────────────────────────────────
+
+/**
  * Busca cartas difusamente en memoria.
- * @param {string} query - Ej: "live twin", "Live Twin Ki-sikil", "dark mag"
+ * @param {string} query - Ej: "live twin", "dark mag"
  */
 const searchCardsFuzzy = async (query) => {
   if (!isLoaded) throw new Error('El catálogo local aún no está listo. Inténtalo en unos segundos.');
-  
+
   const normalizedQuery = normalizeString(query);
-  
-  // Búsqueda difusa: la consulta debe estar incluida dentro del nombre de la carta
   const results = catalog.filter(card => card._searchName.includes(normalizedQuery));
-  
-  // Limitar resultados a un número razonable para no saturar el cliente
   return results.slice(0, 50);
 };
 
@@ -160,20 +225,17 @@ const searchCardsFuzzy = async (query) => {
  */
 const searchArchetype = async (archetypeQuery) => {
   if (!isLoaded) throw new Error('El catálogo local aún no está listo. Inténtalo en unos segundos.');
-  
+
   const normalizedQuery = normalizeString(archetypeQuery);
   if (!normalizedQuery) return [];
-  
-  // Búsqueda parcial para arquetipo (ej. "cyber" encuentra "Cyber Dragon", "Cyberdark")
-  const results = catalog.filter(card => 
+
+  return catalog.filter(card =>
     card._searchArchetype && card._searchArchetype.includes(normalizedQuery)
   );
-  
-  return results;
 };
 
 /**
- * Obtiene carta exacta por ID (usado si quieres buscar by Id rápido)
+ * Obtiene carta exacta por ID.
  */
 const getCardById = (id) => {
   if (!isLoaded) return null;
@@ -183,18 +245,12 @@ const getCardById = (id) => {
 /**
  * Obtiene el estado actual del catálogo (trazabilidad).
  */
-const getStatus = () => {
-  return {
-    isLoaded,
-    ...catalogMetadata
-  };
-};
+const getStatus = () => ({ isLoaded, ...catalogMetadata });
 
 module.exports = {
-  startCron,
-  loadCatalog,
+  initCatalog,
   searchCardsFuzzy,
   searchArchetype,
   getCardById,
-  getStatus
+  getStatus,
 };
