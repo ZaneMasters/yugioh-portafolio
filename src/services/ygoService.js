@@ -157,7 +157,14 @@ async function searchCards(query, type = 'name', lang = 'en') {
   // YGOProdeck es case-sensitive en fname y archetype: "Cyber" devuelve resultados pero
   // "cyber" devuelve 500. Enviamos en Title Case para máxima compatibilidad.
   // Usamos una regex que ignora los apóstrofes (ej. Vanity's) pero detecta guiones, dos puntos, barras, etc.
-  const titleCased = query.trim().replace(/(^\w|[^a-zA-Z0-9_']\w)/g, (c) => c.toUpperCase());
+  // Además, mantenemos las palabras de conexión (stop words) en minúscula si no son la primera palabra
+  // para que cartas como "Beatrice, Lady of the Eternal" mantengan la exactitud.
+  const stopWords = ['of', 'the', 'and', 'in', 'on', 'for', 'to', 'with', 'a', 'an'];
+  const titleCased = query.trim()
+    .replace(/(^\w|[^a-zA-Z0-9_']\w)/g, (c) => c.toUpperCase())
+    .split(' ')
+    .map((word, index) => (index > 0 && stopWords.includes(word.toLowerCase())) ? word.toLowerCase() : word)
+    .join(' ');
 
   return withCache(key, SEARCH_TTL, async () => {
     const params = type === 'archetype' ? { archetype: titleCased } : { fname: titleCased };
