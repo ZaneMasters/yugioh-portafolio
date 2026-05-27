@@ -44,8 +44,8 @@ export default function PortfolioPage() {
   } = usePortfolio(slug, currentTab, activeFilters)
 
   const displayName = slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : ''
-
-
+  const activeFolder = folders?.find(f => f.id === filters.folderId)
+  const folderName = activeFolder ? activeFolder.name : ''
 
   const observerTarget = useRef(null)
 
@@ -141,9 +141,11 @@ export default function PortfolioPage() {
             {loading
               ? 'Cargando...'
               : totalCount > 0
-              ? `${totalCount} carta${totalCount === 1 ? '' : 's'} en la ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
+              ? `${totalCount} carta${totalCount === 1 ? '' : 's'} en ${folderName ? `la colección "${folderName}"` : currentTab === 'inventory' ? 'la colección' : 'la wishlist'}`
               : currentTab === 'inventory'
-                ? 'Esta colección está vacía por ahora'
+                ? folderName
+                  ? `La colección "${folderName}" está vacía por ahora`
+                  : 'Esta colección está vacía por ahora'
                 : 'No hay cartas en la wishlist'}
           </p>
         </motion.div>
@@ -180,7 +182,24 @@ export default function PortfolioPage() {
         </motion.div>
 
         {/* Grid de cartas */}
-        <CardGrid cards={cards} loading={loading} />
+        <CardGrid 
+          cards={cards} 
+          loading={loading} 
+          emptyStateTitle={
+            currentTab === 'inventory' 
+              ? folderName 
+                ? `No hay cartas en la colección "${folderName}"`
+                : "No hay cartas en la colección pública"
+              : "No hay cartas en la wishlist"
+          }
+          emptyStateDescription={
+            currentTab === 'inventory'
+              ? folderName
+                ? "Este usuario no ha agregado cartas a esta colección todavía."
+                : "Este usuario no tiene cartas en su colección pública todavía."
+              : "Este usuario no tiene cartas en su lista de deseos todavía."
+          }
+        />
 
         {/* Intersection Observer Target */}
         <div ref={observerTarget} className="h-10 mt-10 flex justify-center">

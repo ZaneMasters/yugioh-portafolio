@@ -31,9 +31,9 @@ class WishlistRepository {
    */
   async findAll(filters = {}, userId = null, pagination = {}) {
     const { limit = 20, cursor = null, paginate = false } = pagination;
-    const hasTextFilter = !!(filters.name || filters.archetype);
+    const requiresMemorySort = !!(filters.name || filters.archetype || filters.type);
 
-    if (!paginate || hasTextFilter) {
+    if (!paginate || requiresMemorySort) {
       let query = this.collection;
       if (userId) query = query.where('userId', '==', userId);
 
@@ -67,14 +67,18 @@ class WishlistRepository {
     // Filtros Nativos
     if (filters.type) query = query.where('type', '==', filters.type);
 
-    const countSnapshot = await query.count().get();
-    const totalCount = countSnapshot.data().count;
-
+    // Ejecutar count y query en paralelo — son independientes entre si
+    let countQuery = query;
     query = query.orderBy('createdAt', 'desc');
     if (cursor) query = query.startAfter(cursor);
     query = query.limit(limit + 1);
 
-    const snapshot = await query.get();
+    const [countSnapshot, snapshot] = await Promise.all([
+      countQuery.count().get(),
+      query.get(),
+    ]);
+
+    const totalCount = countSnapshot.data().count;
     const docs = snapshot.docs;
     const hasMore = docs.length > limit;
     const pageDocs = hasMore ? docs.slice(0, limit) : docs;

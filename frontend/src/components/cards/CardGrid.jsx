@@ -7,7 +7,12 @@ import { CardSkeleton } from '../ui/Skeleton'
 import { EmptyState } from '../ui/EmptyState'
 import { LayoutGrid, Square, Columns2, List } from 'lucide-react'
 
-export function CardGrid({ cards, loading }) {
+export function CardGrid({ 
+  cards, 
+  loading, 
+  emptyStateTitle = "No hay cartas en el inventario",
+  emptyStateDescription = "Agrega cartas desde el panel de administración para verlas aquí."
+}) {
   const [selectedCard, setSelectedCard] = useState(null)
   const [mobileCols, setMobileCols] = useState('1')
   
@@ -69,8 +74,8 @@ export function CardGrid({ cards, loading }) {
     return (
       <EmptyState
         icon={LayoutGrid}
-        title="No hay cartas en el inventario"
-        description="Agrega cartas desde el panel de administración para verlas aquí."
+        title={emptyStateTitle}
+        description={emptyStateDescription}
       />
     )
   }

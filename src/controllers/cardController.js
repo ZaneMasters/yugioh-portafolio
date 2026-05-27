@@ -83,25 +83,28 @@ const getPortfolioBySlug = async (req, res, next) => {
     if (archetype) filters.archetype = archetype;
     if (folderId)  filters.folderId  = folderId;
 
-    // Obtener las carpetas privadas del usuario
-    const allFolders = await folderService.listFolders(uid);
+    const pagination = {
+      paginate: true,
+      limit:  Math.min(parseInt(limit) || 20, 100),
+      cursor: cursor || null,
+    };
+
+    // Ejecutar en paralelo: obtener carpetas y cartas requieren solo uid (ya resuelto)
+    const [allFolders, cardResult] = await Promise.all([
+      folderService.listFolders(uid),
+      cardService.listCards(filters, uid, pagination),
+    ]);
+
     const privateFolderIds = allFolders.filter(f => !f.isPublic).map(f => f.id);
 
-    // Si el usuario pide explícitamente una carpeta que es privada, no devolver nada.
-    // Si no pide carpeta, se devuelven todas las cartas del inventario por defecto.
+    // Si el usuario pide explícitamente una carpeta privada, no devolver nada
     if (folderId && privateFolderIds.includes(folderId)) {
       return res.status(200).json({
         success: true, slug, count: 0, totalCount: 0, hasMore: false, nextCursor: null, data: []
       });
     }
 
-    const pagination = {
-      paginate: true,
-      limit:  Math.min(parseInt(limit) || 20, 100), // máx 100 por página
-      cursor: cursor || null,
-    };
-
-    const { cards, nextCursor, hasMore, totalCount } = await cardService.listCards(filters, uid, pagination);
+    const { cards, nextCursor, hasMore, totalCount } = cardResult;
 
     // Caché pública corta (5s) para balancear actualizaciones rápidas y ahorro de lecturas
     res.set('Cache-Control', 'public, max-age=5, stale-while-revalidate=5');

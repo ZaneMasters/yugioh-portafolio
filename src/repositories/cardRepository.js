@@ -36,10 +36,12 @@ class CardRepository {
   async findAll(filters = {}, userId = null, pagination = {}) {
     const { limit = 20, cursor = null, paginate = false } = pagination;
 
-    // Solo hacemos fetch all si hay filtros que Firestore no soporta nativamente (substring de name o archetype)
-    const hasTextFilter = !!(filters.name || filters.archetype);
+    // Solo hacemos fetch all si hay filtros que Firestore no soporta nativamente o requieren indices compuestos
+    // que el usuario probablemente no ha creado (ej. folderIds array-contains + createdAt desc).
+    // Ordenar en memoria evita el error 500 (FAILED_PRECONDITION: The query requires an index).
+    const requiresMemorySort = !!(filters.name || filters.archetype || filters.folderId || filters.type);
 
-    if (!paginate || hasTextFilter) {
+    if (!paginate || requiresMemorySort) {
       // ── Comportamiento con filtrado en memoria ────────────────────────────────
       let query = this.collection;
       if (userId) query = query.where('userId', '==', userId);
@@ -77,28 +79,23 @@ class CardRepository {
     if (filters.folderId) query = query.where('folderIds', 'array-contains', filters.folderId);
     if (filters.type) query = query.where('type', '==', filters.type);
 
-    // Obtener total sin descargar documentos
-    const countSnapshot = await query.count().get();
-    const totalCount = countSnapshot.data().count;
-
-    // Ordenar por createdAt DESC para que las más nuevas aparezcan primero
+    // Ejecutar count y query en paralelo — son independientes entre si
+    let countQuery = query;
     query = query.orderBy('createdAt', 'desc');
-
-    // Cursor: continuar desde el último createdAt de la página anterior
-    if (cursor) {
-      query = query.startAfter(cursor);
-    }
-
-    // Pedimos limit+1 para saber si hay más páginas sin una query extra
+    if (cursor) query = query.startAfter(cursor);
     query = query.limit(limit + 1);
 
-    const snapshot = await query.get();
+    const [countSnapshot, snapshot] = await Promise.all([
+      countQuery.count().get(),
+      query.get(),
+    ]);
+
+    const totalCount = countSnapshot.data().count;
     const docs = snapshot.docs;
     const hasMore = docs.length > limit;
     const pageDocs = hasMore ? docs.slice(0, limit) : docs;
 
     const cards = pageDocs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    
     const nextCursor = hasMore ? pageDocs[pageDocs.length - 1].data().createdAt : null;
 
     return { cards, nextCursor, hasMore, totalCount };
