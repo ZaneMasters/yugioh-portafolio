@@ -17,7 +17,7 @@ catalogService.initCatalog();
 // Exporta la app Express como una Cloud Function HTTP llamada "api"
 // Firebase Hosting redirige /api/** a esta función
 const { onRequest } = require('firebase-functions/v2/https');
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const { cleanupUserData } = require('./src/services/userService');
 
 exports.api = onRequest(
