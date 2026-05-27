@@ -10,6 +10,7 @@ export const CardSearchResult = memo(function CardSearchResult({ card, destinati
   const [rarity,   setRarity]   = useState('Any')
   const [folderId, setFolderId] = useState('')
   const [expanded, setExpanded] = useState(false)
+  const [imgLoaded, setImgLoaded] = useState(false)
 
   function handleAdd() {
     if (destination === 'inventory') {
@@ -25,14 +26,22 @@ export const CardSearchResult = memo(function CardSearchResult({ card, destinati
       {/* ── Fila principal (siempre visible) ── */}
       <div className="flex items-center gap-2.5 p-2.5">
         {/* Imagen */}
-        <div className="shrink-0 w-10 h-14 sm:w-14 sm:h-20 rounded-md overflow-hidden bg-black/30">
+        <div className="relative shrink-0 w-10 h-14 sm:w-14 sm:h-20 rounded-md overflow-hidden bg-black/30">
           <img
             src={card.imageSmall || card.image}
             alt={card.name}
             loading="lazy"
-            className="w-full h-full object-contain"
-            onError={(e) => { e.target.src = '/card-placeholder.png' }}
+            onLoad={() => setImgLoaded(true)}
+            className={`w-full h-full object-contain transition-all duration-300 ${
+              imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'
+            }`}
+            onError={(e) => { e.target.src = '/card-placeholder.png'; setImgLoaded(true); }}
           />
+          {!imgLoaded && (
+            <div className="absolute inset-0 bg-white/5 animate-pulse flex items-center justify-center">
+              <div className="w-4 h-6 sm:w-6 sm:h-8 bg-white/10 rounded-sm" />
+            </div>
+          )}
         </div>
 
         {/* Info */}

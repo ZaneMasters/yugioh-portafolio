@@ -62,4 +62,15 @@ const getExternalCardById = async (req, res, next) => {
   }
 };
 
-module.exports = { searchCards, getExternalCardById };
+// ── GET /external/catalog-status ────────────────────────────────────────────────
+const getCatalogStatus = async (req, res, next) => {
+  try {
+    const catalogService = require('../services/catalogService');
+    const status = catalogService.getStatus();
+    return res.status(200).json({ success: true, data: status });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { searchCards, getExternalCardById, getCatalogStatus };
