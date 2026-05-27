@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Lock, Eye, EyeOff, Save } from 'lucide-react'
 import { changePassword } from '../../services/authService'
+import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 
 export default function ChangePasswordPage() {
@@ -10,6 +11,7 @@ export default function ChangePasswordPage() {
   const [showPwd, setShowPwd] = useState(false)
   const [showConfirmPwd, setShowConfirmPwd] = useState(false)
   const [loading, setLoading] = useState(false)
+  const { logout } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -25,9 +27,11 @@ export default function ChangePasswordPage() {
     setLoading(true)
     try {
       const res = await changePassword(newPassword)
-      toast.success(res.message || 'Contraseña actualizada correctamente')
+      toast.success(res.message || 'Contraseña actualizada. Por favor, inicia sesión nuevamente.')
       setNewPassword('')
       setConfirmPassword('')
+      // Cerrar sesión para obligar a logearse con la nueva contraseña
+      await logout()
     } catch (error) {
       toast.error(error.message || 'Error al cambiar contraseña')
     } finally {

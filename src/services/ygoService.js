@@ -156,8 +156,8 @@ async function searchCards(query, type = 'name', lang = 'en') {
 
   // YGOProdeck es case-sensitive en fname y archetype: "Cyber" devuelve resultados pero
   // "cyber" devuelve 500. Enviamos en Title Case para máxima compatibilidad.
-  // Usamos una regex que ignora los apóstrofes (ej. Vanity's) pero detecta guiones (Blue-Eyes).
-  const titleCased = query.trim().replace(/(^\w|\s\w|-\w)/g, (c) => c.toUpperCase());
+  // Usamos una regex que ignora los apóstrofes (ej. Vanity's) pero detecta guiones, dos puntos, barras, etc.
+  const titleCased = query.trim().replace(/(^\w|[^a-zA-Z0-9_']\w)/g, (c) => c.toUpperCase());
 
   return withCache(key, SEARCH_TTL, async () => {
     const params = type === 'archetype' ? { archetype: titleCased } : { fname: titleCased };
