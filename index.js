@@ -10,15 +10,26 @@ const logger = require('./src/utils/logger');
 const catalogService = require('./src/services/catalogService');
 const { PORT } = require('./src/config/env');
 
-// Inicializar el catálogo con estrategia lazy refresh:
-// carga desde Storage si el backup tiene < 7 días, o descarga de YGOProdeck si no.
-catalogService.initCatalog();
+// El catálogo se inicializará dinámicamente en el primer request
+// para evitar que se ejecute durante la fase de análisis de Firebase Deploy.
 
 // Exporta la app Express como una Cloud Function HTTP llamada "api"
 // Firebase Hosting redirige /api/** a esta función
 const { onRequest } = require('firebase-functions/v2/https');
 const functions = require('firebase-functions/v1');
 const { cleanupUserData } = require('./src/services/userService');
+
+// Middleware para inicializar el catálogo en el primer request (Cold Start)
+let catalogInitialized = false;
+app.use((req, res, next) => {
+  if (!catalogInitialized) {
+    catalogInitialized = true;
+    // No usamos await para no bloquear la primera petición si no es de cartas,
+    // pero si necesitan cartas tendrán que esperar internamente.
+    catalogService.initCatalog().catch(err => logger.error('Error initCatalog:', err));
+  }
+  next();
+});
 
 exports.api = onRequest(
   {
@@ -32,7 +43,7 @@ exports.api = onRequest(
 );
 
 // Trigger de Auth: Limpieza automática cuando se elimina un usuario desde Firebase Console
-exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
+exports.onUserDeleted = functions.region('us-central1').auth.user().onDelete(async (user) => {
   await cleanupUserData(user.uid);
 });
 
