@@ -61,7 +61,19 @@ class CardRepository {
       }
       if (filters.type) {
         const typeLower = filters.type.toLowerCase();
-        cards = cards.filter((c) => c.type && c.type.toLowerCase().includes(typeLower));
+        cards = cards.filter((c) => {
+          if (!c.type) return false;
+          const cTypeLower = c.type.toLowerCase();
+          
+          if (cTypeLower.includes(typeLower)) return true;
+          
+          // Ampliar "Effect Monster" para incluir subtipos que no tienen la palabra "effect" en la API
+          if (typeLower === 'effect monster') {
+            const effectSubtypes = ['gemini', 'spirit', 'toon', 'flip monster', 'tuner monster'];
+            return effectSubtypes.some(sub => cTypeLower.includes(sub));
+          }
+          return false;
+        });
       }
 
       cards.sort((a, b) => {
