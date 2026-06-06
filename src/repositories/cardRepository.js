@@ -48,11 +48,9 @@ class CardRepository {
 
       // Aplicar filtros nativos primero para traer menos documentos a memoria
       if (filters.folderId) query = query.where('folderIds', 'array-contains', filters.folderId);
-      if (filters.type) query = query.where('type', '==', filters.type);
 
       const snapshot = await query.get();
       let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
       if (filters.archetype) {
         const archLower = filters.archetype.toLowerCase();
         cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
@@ -60,6 +58,10 @@ class CardRepository {
       if (filters.name) {
         const nameLower = filters.name.toLowerCase();
         cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
+      }
+      if (filters.type) {
+        const typeLower = filters.type.toLowerCase();
+        cards = cards.filter((c) => c.type && c.type.toLowerCase().includes(typeLower));
       }
 
       cards.sort((a, b) => {
@@ -77,7 +79,6 @@ class CardRepository {
 
     // Filtros Nativos
     if (filters.folderId) query = query.where('folderIds', 'array-contains', filters.folderId);
-    if (filters.type) query = query.where('type', '==', filters.type);
 
     // Ejecutar count y query en paralelo — son independientes entre si
     let countQuery = query;
