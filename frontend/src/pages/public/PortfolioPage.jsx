@@ -9,6 +9,7 @@ import { FiltersPanel } from '../../components/filters/FiltersPanel'
 import { usePortfolio } from '../../hooks/usePortfolio'
 import { useDebounce } from '../../hooks/useDebounce'
 import { usePublicFolders } from '../../hooks/usePublicFolders'
+import { HeroBackground } from '../../components/ui/HeroBackground'
 
 /**
  * Página de portafolio público de un usuario.
@@ -123,32 +124,39 @@ export default function PortfolioPage() {
 
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        {/* Hero header */}
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-10 text-center"
-        >
-          <div className="mb-4" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {/* Banner Hero Épico */}
+        <div className="relative w-full h-[160px] sm:h-[200px] mb-6 rounded-2xl overflow-hidden shadow-xl border border-white/10">
+          {/* Fondo Animado Carrusel */}
+          <HeroBackground />
+          {/* Gradientes para integración y legibilidad */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#080a11] via-[#080a11]/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#080a11]/80 via-transparent to-transparent" />
 
-          <h1 className="text-4xl sm:text-5xl font-black text-white mb-3 font-display">
-            {currentTab === 'inventory' ? 'Colección de ' : 'Cartas Buscadas por '}
-            <span className="text-gradient">{displayName}</span>
-          </h1>
+          {/* Contenido del Banner */}
+          <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-7">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <h1 className="text-2xl sm:text-3xl font-black text-white mb-1 font-display drop-shadow-[0_0_12px_rgba(0,0,0,0.9)]">
+                {currentTab === 'inventory' ? 'Colección de ' : 'Cartas Buscadas por '}
+                <span className="text-gradient">{displayName}</span>
+              </h1>
 
-          <p className="text-slate-400 text-base max-w-md mx-auto">
-            {loading
-              ? 'Cargando...'
-              : totalCount > 0
-              ? `${totalCount} carta${totalCount === 1 ? '' : 's'} en ${folderName ? `la colección "${folderName}"` : currentTab === 'inventory' ? 'la colección' : 'la wishlist'}`
-              : currentTab === 'inventory'
-                ? folderName
-                  ? `La colección "${folderName}" está vacía por ahora`
-                  : 'Esta colección está vacía por ahora'
-                : 'No hay cartas en la wishlist'}
-          </p>
-        </motion.div>
+              <p className="text-slate-300 text-sm max-w-xl font-medium drop-shadow-md">
+                {loading
+                  ? 'Consultando los registros del milenio...'
+                  : totalCount > 0
+                  ? `${totalCount} carta${totalCount === 1 ? '' : 's'} en su ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
+                  : currentTab === 'inventory'
+                    ? 'Esta colección está vacía por ahora'
+                    : 'No hay cartas en la wishlist'}
+              </p>
+            </motion.div>
+          </div>
+        </div>
 
         {/* Pestañas (Tabs) */}
         <div className="flex justify-center border-b border-white/10 mb-8 max-w-lg mx-auto">

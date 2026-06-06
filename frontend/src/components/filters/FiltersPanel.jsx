@@ -63,10 +63,13 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
         {folders.length > 0 && (
           <div className="relative group flex-1 min-w-[140px] sm:flex-none sm:w-48 order-3 sm:order-none z-20">
             <Select
-              options={folders.map(f => ({ value: f.id, label: f.name }))}
+              options={[
+                { value: 'all', label: 'Todas las cartas' },
+                ...folders.map(f => ({ value: f.id, label: f.name }))
+              ]}
               value={filters.folderId || ''}
               onChange={(e) => onChange({ ...filters, folderId: e.target.value })}
-              placeholder="Todas las colecciones"
+              placeholder="Cartas sin colección"
               icon={Folder}
               triggerClassName="bg-black/30 border-white/8 hover:border-white/20 hover:bg-black/40 rounded-xl"
             />

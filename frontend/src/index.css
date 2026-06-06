@@ -40,24 +40,23 @@
 
   html {
     @apply text-slate-100 scroll-smooth;
-    background-color: #0d0f1a;
+    background-color: #080a11;
     background-image:
-      radial-gradient(ellipse at 50% 0%, rgba(140, 90, 10, 0.25) 0%, transparent 60%),
-      url('/background.jpg');
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
+      radial-gradient(ellipse at 50% 0%, rgba(245, 158, 11, 0.12) 0%, transparent 70%),
+      url('/2.webp');
+    background-size: 800px;
+    background-repeat: repeat;
     background-attachment: fixed;
     position: relative;
   }
 
-  /* Overlay oscuro sobre la imagen para que no tape el contenido */
+  /* Overlay oscuro sobre el patrón infinito para que sea sutil */
   html::before {
     content: '';
     position: fixed;
     inset: 0;
-    z-index: 0;
-    background: rgba(13, 15, 26, 0.82);
+    z-index: -1;
+    background: rgba(8, 10, 17, 0.94);
     pointer-events: none;
   }
 
@@ -120,6 +119,23 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .glass-textured {
+    position: relative;
+    overflow: hidden;
+  }
+  .glass-textured::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/2.webp');
+    background-size: 400px;
+    background-repeat: repeat;
+    opacity: 0.15;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    z-index: -1;
   }
 
   .card-glow:hover {

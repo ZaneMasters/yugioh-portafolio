@@ -45,7 +45,7 @@ class CardRepository {
       // ── Comportamiento con filtrado en memoria ────────────────────────────────
       let query = this.collection;
       if (userId) query = query.where('userId', '==', userId);
-      
+
       // Aplicar filtros nativos primero para traer menos documentos a memoria
       if (filters.folderId) query = query.where('folderIds', 'array-contains', filters.folderId);
       if (filters.type) query = query.where('type', '==', filters.type);
@@ -74,7 +74,7 @@ class CardRepository {
     // ── Paginación real con cursor ───────────────────────────────────────────
     let query = this.collection;
     if (userId) query = query.where('userId', '==', userId);
-    
+
     // Filtros Nativos
     if (filters.folderId) query = query.where('folderIds', 'array-contains', filters.folderId);
     if (filters.type) query = query.where('type', '==', filters.type);

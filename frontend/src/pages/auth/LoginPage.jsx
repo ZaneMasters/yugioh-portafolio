@@ -21,47 +21,54 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      {/* Fondo decorativo */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-amber-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-3xl" />
+    <div className="min-h-screen flex">
+      
+      {/* ── Lado Visual (Izquierdo) ── */}
+      <div className="hidden lg:flex flex-1 relative bg-black items-center justify-center overflow-hidden">
+        {/* Imagen de fondo (Yami minimalista) - bg-contain para evitar pixelado al estirarse */}
+        <div 
+          className="absolute inset-0 bg-contain bg-center bg-no-repeat opacity-90 scale-105"
+          style={{ backgroundImage: 'url(/1.jpg)' }}
+        />
+        {/* Gradiente para fusionarse con el lado del formulario */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-[#080a11]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#080a11] via-transparent to-transparent" />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        className="relative w-full max-w-sm"
-      >
-        <div className="glass rounded-2xl p-8 border border-white/10 shadow-2xl">
-          {/* Banner */}
-          <div className="text-center mb-8">
-            <img 
-              src="/og-image.png" 
-              alt="Yu-Gi-Oh! Inventory" 
-              className="w-full h-32 object-cover rounded-xl shadow-lg shadow-amber-500/10 mb-6 border border-white/10" 
-            />
-            <h1 className="text-2xl font-black text-white font-display">
+      {/* ── Lado Formulario (Derecho) ── */}
+      <div className="w-full lg:w-[500px] xl:w-[600px] flex items-center justify-center p-8 relative glass-textured border-l border-white/5 shadow-2xl z-10">
+        
+        {/* Luces decorativas sutiles detrás del form */}
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-amber-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+        <motion.div
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="w-full max-w-sm relative"
+        >
+          {/* Header del formulario */}
+          <div className="mb-10 text-center">
+            <h1 className="text-3xl font-black text-white font-display mb-2">
               Yu-Gi-Oh! <span className="text-gradient">Inventory</span>
             </h1>
-            <p className="text-slate-400 text-sm mt-1 font-heading">Panel de Administración</p>
+            <p className="text-slate-400 text-sm font-heading tracking-wide uppercase">Bóveda de Administración</p>
           </div>
 
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1 h-px bg-white/10" />
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+          <div className="flex items-center gap-3 mb-8 opacity-60">
+            <div className="flex-1 h-px bg-white/20" />
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-slate-400">
               <Shield className="w-3.5 h-3.5" />
-              Acceso privado
+              Acceso Restringido
             </div>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-white/20" />
           </div>
 
           {/* Formulario */}
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="email"
                 placeholder="Email de administrador"
@@ -70,17 +77,17 @@ export default function LoginPage() {
                 autoFocus
                 required
                 className="
-                  w-full bg-[#1f2937] border border-[#374151] rounded-lg text-slate-100 text-sm
-                  placeholder:text-slate-600 outline-none transition-all
-                  focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/10
-                  pl-9 pr-4 py-2.5
+                  w-full bg-[#111827]/80 border border-white/10 rounded-xl text-slate-100 text-sm
+                  placeholder:text-slate-600 outline-none transition-all backdrop-blur-md
+                  focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/10 focus:bg-[#1f2937]/90
+                  pl-10 pr-4 py-3
                 "
               />
             </div>
 
             {/* Contraseña */}
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type={showPwd ? 'text' : 'password'}
                 placeholder="Contraseña"
@@ -88,26 +95,26 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="
-                  w-full bg-[#1f2937] border border-[#374151] rounded-lg text-slate-100 text-sm
-                  placeholder:text-slate-600 outline-none transition-all
-                  focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/10
-                  pl-9 pr-10 py-2.5
+                  w-full bg-[#111827]/80 border border-white/10 rounded-xl text-slate-100 text-sm
+                  placeholder:text-slate-600 outline-none transition-all backdrop-blur-md
+                  focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/10 focus:bg-[#1f2937]/90
+                  pl-10 pr-10 py-3
                 "
               />
               <button
                 type="button"
                 onClick={() => setShowPwd(!showPwd)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
               >
                 {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
 
-            <div className="flex justify-end pt-1 pb-2">
+            <div className="flex justify-end pt-1 pb-4">
               <a 
                 href="/recover-password" 
                 onClick={(e) => { e.preventDefault(); navigate('/recover-password') }}
-                className="text-xs text-amber-500 hover:text-amber-400 transition-colors"
+                className="text-xs text-amber-500/80 hover:text-amber-400 transition-colors"
               >
                 ¿Olvidaste tu contraseña?
               </a>
@@ -117,24 +124,24 @@ export default function LoginPage() {
               type="submit"
               disabled={loading || !password || !email}
               className="
-                w-full py-2.5 rounded-lg font-semibold text-sm transition-all duration-150
-                bg-amber-500 hover:bg-amber-400 text-black active:scale-[0.98]
-                disabled:opacity-50 disabled:cursor-not-allowed
-                shadow-lg shadow-amber-500/20
+                w-full py-3 rounded-xl font-bold text-sm transition-all duration-300
+                bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400
+                text-black active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed
+                shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_25px_rgba(245,158,11,0.3)]
               "
             >
-              {loading ? 'Verificando...' : 'Entrar al panel'}
+              {loading ? 'Sincronizando...' : 'Desbloquear Bóveda'}
             </button>
           </form>
-        </div>
 
-        <p className="text-center mt-4 text-sm text-slate-500">
-          ¿Solo quieres ver la colección?{' '}
-          <a href="/" className="text-amber-400 hover:text-amber-300 transition-colors">
-            Ver galería pública
-          </a>
-        </p>
-      </motion.div>
+          <p className="text-center mt-8 text-xs text-slate-500">
+            ¿Solo quieres ver la colección?{' '}
+            <a href="/" className="text-amber-400/80 hover:text-amber-300 transition-colors">
+              Ver galería pública
+            </a>
+          </p>
+        </motion.div>
+      </div>
     </div>
   )
 }
