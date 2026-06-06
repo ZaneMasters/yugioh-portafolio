@@ -66,7 +66,7 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
               options={folders.map(f => ({ value: f.id, label: f.name }))}
               value={filters.folderId || ''}
               onChange={(e) => onChange({ ...filters, folderId: e.target.value })}
-              placeholder="Todas las colecciones"
+              placeholder="Todas las cartas"
               icon={Folder}
               triggerClassName="bg-black/30 border-white/8 hover:border-white/20 hover:bg-black/40 rounded-xl"
             />
