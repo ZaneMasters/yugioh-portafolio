@@ -1,9 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Search, Loader2, PackagePlus, ChevronLeft, ChevronRight, ServerCrash, RefreshCw, AlertCircle, Filter, ChevronDown, Info } from 'lucide-react'
+import { Search, Loader2, PackagePlus, ChevronLeft, ChevronRight, ServerCrash, RefreshCw, AlertCircle, Info, Sword, Wand2, Shield, LayoutGrid } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { SearchInput } from '../../components/ui/Input'
-import { Select } from '../../components/ui/Select'
 import { CardSearchResult } from '../../components/cards/CardSearchResult'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useSearchCards } from '../../hooks/useSearchCards'
@@ -15,13 +13,43 @@ import { getCatalogStatus } from '../../services/externalService'
 
 const PAGE_SIZE = 10 // resultados por página
 
+const CARD_TYPE_FILTERS = [
+  {
+    value: 'all',
+    label: 'Todas',
+    icon: LayoutGrid,
+    activeClass: 'bg-slate-600/40 text-slate-200 border-slate-500/50 shadow-inner',
+    inactiveClass: 'text-slate-500 border-white/5 hover:text-slate-300 hover:border-white/15 hover:bg-white/5',
+  },
+  {
+    value: 'monster',
+    label: 'Monstruos',
+    icon: Sword,
+    activeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-inner shadow-amber-500/10',
+    inactiveClass: 'text-slate-500 border-white/5 hover:text-amber-400/70 hover:border-amber-500/20 hover:bg-amber-500/5',
+  },
+  {
+    value: 'spell',
+    label: 'Magias',
+    icon: Wand2,
+    activeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-inner shadow-emerald-500/10',
+    inactiveClass: 'text-slate-500 border-white/5 hover:text-emerald-400/70 hover:border-emerald-500/20 hover:bg-emerald-500/5',
+  },
+  {
+    value: 'trap',
+    label: 'Trampas',
+    icon: Shield,
+    activeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-inner shadow-rose-500/10',
+    inactiveClass: 'text-slate-500 border-white/5 hover:text-rose-400/70 hover:border-rose-500/20 hover:bg-rose-500/5',
+  },
+]
+
 export default function SearchPage() {
   const [queryInput, setQueryInput] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
   const [searchType, setSearchType] = useState('name') // 'name' | 'archetype'
   const [filterType, setFilterType] = useState('all') // 'all' | 'monster' | 'spell' | 'trap'
-  const [showFilter, setShowFilter] = useState(false)
-  
+
   const [addingId, setAddingId] = useState(null)
   const [destination, setDestination] = useState('inventory') // 'inventory' | 'wishlist'
   const [page, setPage]         = useState(1)
@@ -138,7 +166,7 @@ export default function SearchPage() {
           <div className="flex items-center gap-6 border-b border-white/5 px-2">
             <button
               type="button"
-              onClick={() => { setSearchType('name'); setQueryInput(''); setActiveQuery(''); }}
+              onClick={() => { setSearchType('name'); setQueryInput(''); setActiveQuery(''); setFilterType('all'); }}
               className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] ${
                 searchType === 'name' 
                   ? 'border-amber-500 text-amber-400' 
@@ -206,80 +234,68 @@ export default function SearchPage() {
               autoFocus
             />
           </div>
-
-          {/* Botón Filtro (ahora dentro de la barra de búsqueda, solo en arquetipo) */}
-          {searchType === 'archetype' && (
-            <button
-              type="button"
-              onClick={() => setShowFilter(!showFilter)}
-              className={`flex-shrink-0 relative w-9 h-9 md:w-[36px] md:h-[36px] flex items-center justify-center rounded-lg transition-colors border ${
-                showFilter || filterType !== 'all'
-                  ? 'bg-amber-500/20 border-amber-500/30 text-amber-400'
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-slate-200'
-              }`}
-              title="Filtrar resultados"
-            >
-              <Filter className="w-4 h-4" />
-              {filterType !== 'all' && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full" />
-              )}
-            </button>
-          )}
         </form>
 
-        {/* Dropdown de Filtros (se despliega abajo de la barra) */}
-        {showFilter && (
-          <motion.div 
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-3 flex justify-end"
-          >
-            <div className="w-full sm:w-[160px]">
-              <Select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                options={[
-                  { value: 'all', label: 'Todas' },
-                  { value: 'monster', label: 'Monstruos' },
-                  { value: 'spell', label: 'Magias' },
-                  { value: 'trap', label: 'Trampas' },
-                ]}
-                placeholder="Todas las cartas"
-                hidePlaceholderOption={true}
-                triggerClassName="bg-black/30 border-white/10 hover:border-white/20 text-slate-300 focus:ring-1 focus:ring-amber-500/50"
-                className="w-full h-[36px] [&>button]:h-full [&>button]:py-0 text-sm"
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Tags de Arquetipos y Filtros */}
-        {searchType === 'archetype' && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-1 pt-2 border-t border-white/5 mt-2 gap-3"
-          >
-            <div className="flex flex-wrap gap-2 flex-1">
-              {matchedArchetypes.length > 0 ? (
-                <>
-                  <span className="text-xs text-slate-500 flex items-center h-6 font-medium mr-1">
-                    Encontrados:
+        {/* Filtros de tipo y arquetipos — visible solo en modo arquetipo */}
+        <AnimatePresence>
+          {searchType === 'archetype' && (
+            <motion.div
+              key="archetype-filters"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-col gap-3 pt-3 border-t border-white/5">
+                
+                {/* Pills de tipo de carta */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mr-1 shrink-0">
+                    Tipo:
                   </span>
-                  {matchedArchetypes.map(arch => (
-                    <span key={arch} className="px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md">
-                      {arch}
-                    </span>
+                  {CARD_TYPE_FILTERS.map(({ value, label, icon: Icon, activeClass, inactiveClass }) => (
+                    <motion.button
+                      key={value}
+                      type="button"
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => setFilterType(value)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                        filterType === value ? activeClass : inactiveClass
+                      }`}
+                    >
+                      <Icon className="w-3 h-3" />
+                      {label}
+                      {value !== 'all' && filterType === value && rawResults.length > 0 && (
+                        <span className="ml-0.5 px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-white/10">
+                          {results.length}
+                        </span>
+                      )}
+                    </motion.button>
                   ))}
-                </>
-              ) : (
-                <span className="text-xs text-slate-500 h-6 flex items-center">
-                  {queryInput.length >= 3 ? 'Buscando arquetipos...' : 'Escribe para buscar'}
-                </span>
-              )}
-            </div>
-          </motion.div>
-        )}
+                </div>
+
+                {/* Tags de arquetipos encontrados */}
+                {matchedArchetypes.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mr-1 shrink-0">
+                      Arquetipos:
+                    </span>
+                    {matchedArchetypes.map(arch => (
+                      <span
+                        key={arch}
+                        className="px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md"
+                      >
+                        {arch}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Resultados */}
