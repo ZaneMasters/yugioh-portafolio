@@ -34,12 +34,32 @@ export function useFolders() {
     mutationFn: ({ id, folderData }) => folderService.updateFolder(id, folderData),
     onSuccess: (res, { id }) => {
       const updated = res.data ?? res
+      
+      // Obtener el estado anterior para saber qué cambió
+      const oldFolders = queryClient.getQueryData(queryKeys.folders())
+      const oldFolder = oldFolders?.find(f => f.id === id)
+
       queryClient.setQueryData(queryKeys.folders(), (old = []) =>
         old.map((f) => (f.id === id ? updated : f))
       )
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
       queryClient.invalidateQueries({ queryKey: ['publicFolders'] })
-      toast.success('Carpeta actualizada.')
+      
+      let message = 'Carpeta actualizada.'
+      if (oldFolder) {
+        const nameChanged = oldFolder.name !== updated.name
+        const visibilityChanged = oldFolder.isPublic !== updated.isPublic
+
+        if (nameChanged && visibilityChanged) {
+          message = `Colección actualizada y cambiada a ${updated.isPublic ? 'pública' : 'privada'}.`
+        } else if (visibilityChanged) {
+          message = `Colección cambiada a ${updated.isPublic ? 'pública' : 'privada'}.`
+        } else if (nameChanged) {
+          message = 'Nombre de la colección actualizado.'
+        }
+      }
+
+      toast.success(message)
     },
     onError: (err) => toast.error(err.message || 'Error al actualizar carpeta.'),
   })

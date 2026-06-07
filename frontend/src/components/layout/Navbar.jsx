@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { LayoutGrid, Settings } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -18,8 +19,41 @@ export function Navbar() {
   
   const galleryLink = `/portfolio/${currentPortfolioSlug}`
 
+  // Lógica para mostrar/ocultar el navbar en móvil según el scroll
+  const [show, setShow] = useState(true)
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY
+    let ticking = false
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY
+          
+          if (currentScrollY < 50) {
+            setShow(true)
+          } else if (currentScrollY > lastScrollY) {
+            // Scroll hacia abajo -> Ocultar
+            setShow(false)
+          } else {
+            // Scroll hacia arriba -> Mostrar
+            setShow(true)
+          }
+          
+          lastScrollY = currentScrollY
+          ticking = false
+        })
+        ticking = true
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   return (
-    <header className="sticky top-0 z-30 glass border-b border-white/5">
+    <header className={`sticky top-0 z-40 glass border-b border-white/5 transition-transform duration-300 ${show ? 'translate-y-0' : '-translate-y-full sm:translate-y-0'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
         {/* Brand */}
         <NavLink to={galleryLink} className="flex items-center gap-3 group shrink-0">

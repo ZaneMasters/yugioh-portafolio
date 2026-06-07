@@ -52,7 +52,7 @@ export function Sidebar() {
       <div className="px-4 py-4 border-t border-white/5">
         <div className="flex gap-2">
           <NavLink
-            to={`/portfolio/${profile?.slug ?? user?.email?.split('@')[0] ?? ''}`}
+            to={`/portfolio/${profile?.slug || user?.email?.split('@')[0] || 'angel'}`}
             className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />

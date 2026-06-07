@@ -45,14 +45,12 @@ class CardRepository {
       // ── Comportamiento con filtrado en memoria ────────────────────────────────
       let query = this.collection;
       if (userId) query = query.where('userId', '==', userId);
-      
+
       // Aplicar filtros nativos primero para traer menos documentos a memoria
       if (filters.folderId) query = query.where('folderIds', 'array-contains', filters.folderId);
-      if (filters.type) query = query.where('type', '==', filters.type);
 
       const snapshot = await query.get();
       let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
       if (filters.archetype) {
         const archLower = filters.archetype.toLowerCase();
         cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
@@ -60,6 +58,22 @@ class CardRepository {
       if (filters.name) {
         const nameLower = filters.name.toLowerCase();
         cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
+      }
+      if (filters.type) {
+        const typeLower = filters.type.toLowerCase();
+        cards = cards.filter((c) => {
+          if (!c.type) return false;
+          const cTypeLower = c.type.toLowerCase();
+          
+          if (cTypeLower.includes(typeLower)) return true;
+          
+          // Ampliar "Effect Monster" para incluir subtipos que no tienen la palabra "effect" en la API
+          if (typeLower === 'effect monster') {
+            const effectSubtypes = ['gemini', 'spirit', 'toon', 'flip monster', 'tuner monster'];
+            return effectSubtypes.some(sub => cTypeLower.includes(sub));
+          }
+          return false;
+        });
       }
 
       cards.sort((a, b) => {
@@ -74,10 +88,9 @@ class CardRepository {
     // ── Paginación real con cursor ───────────────────────────────────────────
     let query = this.collection;
     if (userId) query = query.where('userId', '==', userId);
-    
+
     // Filtros Nativos
     if (filters.folderId) query = query.where('folderIds', 'array-contains', filters.folderId);
-    if (filters.type) query = query.where('type', '==', filters.type);
 
     // Ejecutar count y query en paralelo — son independientes entre si
     let countQuery = query;
