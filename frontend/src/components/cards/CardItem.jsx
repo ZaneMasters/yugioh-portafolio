@@ -11,6 +11,18 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
 
   const [imgLoaded, setImgLoaded] = useState(false)
 
+  const getFoilClass = (rarity) => {
+    if (!rarity) return ''
+    const r = rarity.toLowerCase()
+    if (r.includes('secret') || r.includes('prismatic')) return 'foil-secret'
+    if (r.includes('ultimate')) return 'foil-ultimate'
+    if (r.includes('ultra')) return 'foil-ultra'
+    if (r.includes('super')) return 'foil-super'
+    return ''
+  }
+
+  const foilClass = getFoilClass(card.rarity)
+
   // Pill de cantidad
   const quantityPill = (
     <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-bold border border-white/10 whitespace-nowrap shrink-0">
@@ -45,41 +57,46 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
       `}
     >
       {/* ── Imagen ── */}
-      <div className={`relative overflow-hidden bg-black/30 shrink-0 ${
+      <div className={`relative shrink-0 flex justify-center bg-black/30 ${
         isList ? 'w-24 sm:w-auto sm:h-56' : 'h-56'
       }`}>
-        <img
-          src={card.imageSmall || card.image}
-          alt={card.name}
-          loading="lazy"
-          onLoad={() => setImgLoaded(true)}
-          className={`w-full h-full object-contain transition-all duration-500 group-hover:scale-105 ${
-            imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'
-          }`}
-          onError={(e) => { e.target.src = '/card-placeholder.png'; setImgLoaded(true); }}
-        />
-        
-        {/* Skeleton de carga mientras la imagen no esté lista */}
-        {!imgLoaded && (
-          <div className="absolute inset-0 bg-white/5 animate-pulse flex items-center justify-center">
-            <div className="w-8 h-12 bg-white/10 rounded-sm" />
-          </div>
-        )}
-
-        {/* Overlay "Ver detalles" */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-medium border border-white/20">
-            <Eye className="w-3.5 h-3.5" /> Ver detalles
-          </span>
-        </div>
-
-        {/* Badge SOLO en vista 1-columna: dentro de la imagen (hay espacio) */}
+        {/* Badge SOLO en vista 1-columna: fuera de la carta, en la esquina superior derecha del fondo */}
         {isGrid1 && !isList && (
-          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
+          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end pointer-events-none">
             {quantityPill}
             {rarityBadge}
           </div>
         )}
+
+        <div 
+          className={`relative h-full aspect-[400/580] foil-wrapper overflow-hidden ${foilClass}`}
+        >
+          <img
+            src={card.imageSmall || card.image}
+            alt={card.name}
+            loading="lazy"
+            onLoad={() => setImgLoaded(true)}
+            className={`w-full h-full object-fill transition-all duration-500 group-hover:scale-105 relative z-0 ${
+              imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'
+            }`}
+            onError={(e) => { e.target.src = '/card-placeholder.png'; setImgLoaded(true); }}
+          />
+          
+          {/* Skeleton de carga mientras la imagen no esté lista */}
+          {!imgLoaded && (
+            <div className="absolute inset-0 bg-white/5 animate-pulse flex items-center justify-center z-10">
+              <div className="w-8 h-12 bg-white/10 rounded-sm" />
+            </div>
+          )}
+
+          {/* Overlay "Ver detalles" */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center z-20">
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-medium border border-white/20">
+              <Eye className="w-3.5 h-3.5" /> Ver detalles
+            </span>
+          </div>
+
+        </div>
       </div>
 
       {/* ── Info ── */}
@@ -88,34 +105,54 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
         {/* Vista lista: nombre en su propia fila completa */}
         {isList && (
           <>
-            <h3 className="font-semibold text-sm text-white leading-snug line-clamp-3 group-hover:text-amber-400 transition-colors break-words">
-              {card.name}
-            </h3>
-            <div className="flex flex-wrap gap-1 items-center">
+            <div className="flex items-start gap-1.5 justify-between">
+              <h3 className="font-semibold text-sm text-white leading-snug line-clamp-3 group-hover:text-amber-400 transition-colors break-words flex-1 min-w-0">
+                {card.name}
+              </h3>
+              {card.setCode && (
+                <span className="shrink-0 mt-0.5 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20 leading-none">
+                  {card.setCode}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1 items-center mt-0.5">
               {quantityPill}
               {rarityBadge}
             </div>
           </>
         )}
 
-        {/* Vista 2 columnas: nombre + badge debajo del nombre */}
+        {/* Vista Cuadrícula (1 o 2 columnas): nombre + badge (solo si no es 1 columna) debajo del nombre */}
         {!isList && !isGrid1 && (
           <>
-            <h3 className="font-semibold text-sm text-white leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors">
-              {card.name}
-            </h3>
-            <div className="flex flex-wrap gap-1 items-center">
+            <div className="flex items-start gap-1.5 justify-between">
+              <h3 className="font-semibold text-sm text-white leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors flex-1 min-w-0">
+                {card.name}
+              </h3>
+              {card.setCode && (
+                <span className="shrink-0 mt-0.5 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20 leading-none">
+                  {card.setCode}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1 items-center mt-0.5">
               {quantityPill}
               {rarityBadge}
             </div>
           </>
         )}
 
-        {/* Vista 1 columna: solo nombre (badge está en la imagen) */}
         {isGrid1 && !isList && (
-          <h3 className="font-semibold text-sm text-white leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors">
-            {card.name}
-          </h3>
+          <div className="flex items-start gap-1.5 justify-between">
+            <h3 className="font-semibold text-sm text-white leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors flex-1 min-w-0">
+              {card.name}
+            </h3>
+            {card.setCode && (
+              <span className="shrink-0 mt-0.5 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20 leading-none">
+                {card.setCode}
+              </span>
+            )}
+          </div>
         )}
 
         <p className="text-xs text-slate-500 line-clamp-1">{card.type}</p>

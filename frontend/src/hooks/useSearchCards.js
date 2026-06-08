@@ -22,7 +22,7 @@ export function useSearchCards(query = '', type = 'name', lang = 'en') {
     queryKey: queryKeys.search(normalized, type, lang),
     queryFn: ({ signal }) => searchExternalCards(normalized, type, lang, signal),
     select: (res) => res.data ?? [],
-    enabled: normalized.length >= 3,
+    enabled: normalized.length >= (type === 'set' ? 4 : 3),
     staleTime: 10 * 60 * 1000,  // 10 minutos
     gcTime:    30 * 60 * 1000,  // 30 minutos en memoria
     retry: false,

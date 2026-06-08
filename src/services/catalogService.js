@@ -8,6 +8,13 @@ const YGO_API_ALL_CARDS_URL = 'https://db.ygoprodeck.com/api/v7/cardinfo.php';
 const BACKUP_FILENAME        = 'ygo_catalog_backup.json';
 const REFRESH_INTERVAL_MS    = 7 * 24 * 60 * 60 * 1000; // 7 días en ms
 
+/**
+ * Versión del esquema de buildIndex.
+ * Incrementar cuando se cambie la estructura de buildIndex para invalidar backups viejos.
+ * v2 — añade card_sets, card_images (multi-arte), tcgPrice, race, _searchSets
+ */
+const CATALOG_SCHEMA_VERSION = 2;
+
 // ── Estado en memoria ────────────────────────────────────────────────────────
 let catalog         = [];
 let isLoaded        = false;
@@ -41,19 +48,41 @@ const buildIndex = (cards) => {
     type:      card.type,
     frameType: card.frameType,
     desc:      card.desc,
+    race:      card.race      ?? null,
     atk:       card.atk,
     def:       card.def,
     level:     card.level,
     attribute: card.attribute,
     archetype: card.archetype,
-    card_images: [
-      {
-        image_url:       card.card_images?.[0]?.image_url,
-        image_url_small: card.card_images?.[0]?.image_url_small,
-      },
-    ],
+    // Todas las artes disponibles — guardamos solo id + URL small para ahorrar RAM
+    // La URL full se construye on-demand: https://images.ygoprodeck.com/images/cards/{id}.jpg
+    card_images: (card.card_images ?? []).map(i => ({
+      id: i.id,
+      s:  i.image_url_small,
+    })),
+    // Todas las versiones físicas de la carta (set code, rareza, precio por expansión)
+    // Claves cortas para minimizar RAM: n=name, c=code, r=rarity, p=price
+    card_sets: (card.card_sets ?? []).map(s => ({
+      n: s.set_name,
+      c: s.set_code,
+      r: s.set_rarity,
+      p: s.set_price,
+    })),
+    // Precio de mercado genérico (TCGPlayer) como referencia rápida
+    tcgPrice: card.card_prices?.[0]?.tcgplayer_price ?? null,
+    // Índices de búsqueda
     _searchName:      normalizeString(card.name),
     _searchArchetype: normalizeString(card.archetype),
+    // Índice de búsqueda por set: guarda TANTO el code completo normalizado,
+    // COMO el prefijo del set (parte antes del guión), COMO el nombre completo.
+    // Ej: "MP24-EN001" → "mp24en001 mp24 2024anniversarytindueling..."
+    // Esto permite buscar por "MP24", "mp24en001", "Anniversary Tin", etc.
+    _searchSets: (card.card_sets ?? []).map(s => {
+      const codeNorm   = normalizeString(s.set_code);
+      const prefixNorm = normalizeString(s.set_code.split('-')[0]); // "MP24" de "MP24-EN001"
+      const nameNorm   = normalizeString(s.set_name);
+      return `${codeNorm} ${prefixNorm} ${nameNorm}`;
+    }).join(' '),
   }));
 };
 
@@ -95,8 +124,15 @@ const loadFromStorage = async () => {
     const [contents]  = await file.download();
     const parsed      = JSON.parse(contents.toString());
 
-    // El backup ya está indexado (buildIndex se aplica antes de guardarlo)
-    catalog   = parsed;
+    // Detectar si el backup usa el formato nuevo (envuelto en {version, cards})
+    // o el formato viejo (array directo sin versión → incompatible, regenerar)
+    const backupVersion = parsed.version ?? 0;
+    if (backupVersion !== CATALOG_SCHEMA_VERSION) {
+      logger.warn(`⚠️  Backup de catálogo con esquema v${backupVersion} (esperado v${CATALOG_SCHEMA_VERSION}). Se regenerará desde YGOProdeck.`);
+      return false; // Fuerza descarga fresca
+    }
+
+    catalog   = parsed.cards;
     isLoaded  = true;
     catalogMetadata = {
       lastUpdated: new Date().toISOString(),
@@ -104,7 +140,7 @@ const loadFromStorage = async () => {
       totalCards:  catalog.length,
       status:      'OK',
     };
-    logger.info(`✅ Catálogo cargado desde Storage: ${catalog.length} cartas.`);
+    logger.info(`✅ Catálogo cargado desde Storage (schema v${CATALOG_SCHEMA_VERSION}): ${catalog.length} cartas.`);
     return true;
   } catch (err) {
     logger.error(`❌ Error al cargar backup desde Storage: ${err.message}`);
@@ -133,15 +169,16 @@ const loadFromYGOProdeck = async () => {
     };
     logger.info(`✅ Catálogo descargado en RAM: ${catalog.length} cartas.`);
 
-    // Guardar backup en Storage (sin await — no bloqueamos la respuesta)
+    // Guardar backup en Storage envuelto con versión de esquema (sin await)
     const storage = getStorage();
     if (storage) {
+      const backupPayload = JSON.stringify({ version: CATALOG_SCHEMA_VERSION, cards: catalog });
       storage.file(BACKUP_FILENAME)
-        .save(JSON.stringify(catalog), {
+        .save(backupPayload, {
           contentType: 'application/json',
           metadata: { cacheControl: 'public, max-age=604800' }, // 7 días
         })
-        .then(() => logger.info(`☁️  Backup actualizado en Firebase Storage (${BACKUP_FILENAME}).`))
+        .then(() => logger.info(`☁️  Backup v${CATALOG_SCHEMA_VERSION} actualizado en Firebase Storage (${BACKUP_FILENAME}).`))
         .catch(err => logger.warn(`⚠️  No se pudo guardar backup en Storage: ${err.message}`));
     }
 
@@ -247,6 +284,26 @@ const searchArchetype = async (archetypeQuery) => {
 };
 
 /**
+ * Busca cartas pertenecientes a un set específico.
+ * Acepta nombre parcial del set (ej: "Maximum Gold") o prefijo del code (ej: "MAGO").
+ * Búsqueda en RAM sobre _searchSets — sin llamadas externas.
+ *
+ * @param {string} query - Nombre o código del set
+ * @returns {Promise<Array>}
+ */
+const searchBySet = async (query) => {
+  if (!isLoaded) await initCatalog();
+  if (!isLoaded) throw new Error('El catálogo local no pudo cargarse.');
+
+  const normalizedQuery = normalizeString(query);
+  if (!normalizedQuery) return [];
+
+  return catalog.filter(card =>
+    card._searchSets && card._searchSets.includes(normalizedQuery)
+  );
+};
+
+/**
  * Obtiene carta exacta por ID.
  */
 const getCardById = async (id) => {
@@ -267,6 +324,7 @@ module.exports = {
   initCatalog,
   searchCardsFuzzy,
   searchArchetype,
+  searchBySet,
   getCardById,
   getStatus,
 };

@@ -4,7 +4,7 @@ import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Select'
 import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal'
-import { CONDITIONS, RARITIES } from '../../utils/constants'
+import { CONDITIONS, RARITIES, EDITIONS, LANGUAGES } from '../../utils/constants'
 import { motion } from 'framer-motion'
 
 export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inventory', folders = [] }) {
@@ -16,6 +16,10 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
   const [deleting, setDeleting] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  // Nuevos campos de la versión física
+  const [setCode, setSetCode]   = useState(card.setCode   || '')
+  const [edition, setEdition]   = useState(card.edition   || '')
+  const [language, setLanguage] = useState(card.language  || '')
 
   const handleSave = async () => {
     const numQty = Number(qty)
@@ -24,13 +28,16 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
     let payload = {}
 
     if (mode === 'inventory') {
-      const origCond = card.condition || 'new'
+      const origCond    = card.condition || 'new'
       const origFolders = card.folderIds || []
       const currentFolders = folderIds || []
-      
       const foldersChanged = origFolders.length !== currentFolders.length || !origFolders.every(f => currentFolders.includes(f))
-      changed = qtyChanged || cond !== origCond || foldersChanged
-      payload = { quantity: numQty, condition: cond, folderIds: currentFolders }
+      const setCodeChanged = setCode !== (card.setCode || '')
+      const editionChanged = edition !== (card.edition || '')
+      const languageChanged = language !== (card.language || '')
+      const rarityChanged  = rarity  !== (card.rarity  || 'Common')
+      changed = qtyChanged || cond !== origCond || foldersChanged || setCodeChanged || editionChanged || languageChanged || rarityChanged
+      payload = { quantity: numQty, condition: cond, folderIds: currentFolders, rarity, setCode: setCode || undefined, edition: edition || undefined, language: language || undefined }
     } else {
       const origRarity = card.rarity || 'Common'
       changed = qtyChanged || rarity !== origRarity
@@ -52,6 +59,9 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
     setCond(card.condition || 'new')
     setFolderIds(card.folderIds || [])
     setRarity(card.rarity || 'Common')
+    setSetCode(card.setCode || '')
+    setEdition(card.edition || '')
+    setLanguage(card.language || '')
   }
 
   const handleDelete = async () => {
@@ -100,6 +110,31 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
           {card.archetype || <span className="text-slate-600">—</span>}
         </td>
 
+        {/* Set Code + Rareza (datos de la versión física) */}
+        <td className="px-4 py-3">
+          {editing && mode !== 'inventory' ? (
+            <div className="flex flex-col gap-1.5">
+              <Select
+                options={RARITIES.filter(r => r.value !== 'Any')}
+                value={rarity}
+                onChange={(e) => setRarity(e.target.value)}
+                className="min-w-[130px]"
+                hidePlaceholderOption
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {card.setCode && (
+                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 w-fit">
+                  {card.setCode}
+                </span>
+              )}
+              {card.rarity && <Badge rarity={card.rarity} />}
+              {!card.setCode && !card.rarity && <span className="text-slate-600 text-xs">—</span>}
+            </div>
+          )}
+        </td>
+
         {/* Cantidad */}
         <td className="px-4 py-3">
           {editing ? (
@@ -122,14 +157,28 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
           <div className="flex items-center gap-2">
             {editing ? (
               mode === 'inventory' ? (
-                <>
-                  <Select
-                    options={CONDITIONS}
-                    value={cond}
-                    onChange={(e) => setCond(e.target.value)}
-                    className="min-w-[120px]"
-                    hidePlaceholderOption
-                  />
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      options={CONDITIONS}
+                      value={cond}
+                      onChange={(e) => setCond(e.target.value)}
+                      className="min-w-[120px]"
+                      hidePlaceholderOption
+                    />
+                    <Select
+                      options={[{ value: '', label: 'Idioma...' }, ...LANGUAGES]}
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value)}
+                      className="min-w-[100px]"
+                      hidePlaceholderOption
+                    />
+                    {card.edition && (
+                      <span className="text-[10px] text-slate-400 bg-white/5 border border-white/10 rounded px-1.5 py-1">
+                        {card.edition}
+                      </span>
+                    )}
+                  </div>
                   {folders.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 ml-2 border-l border-white/10 pl-2">
                       <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Carpetas:</span>
@@ -152,7 +201,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                       })}
                     </div>
                   )}
-                </>
+                </div>
               ) : (
                 <Select
                   options={RARITIES}
@@ -164,7 +213,15 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
               )
             ) : (
               mode === 'inventory'
-                ? <Badge condition={card.condition} />
+                ? (
+                  <div className="flex flex-col gap-1">
+                    <Badge condition={card.condition} />
+                    <div className="flex flex-wrap gap-1">
+                      {card.edition  && <span className="text-[10px] text-slate-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5">{card.edition}</span>}
+                      {card.language && <span className="text-[10px] text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5">{card.language}</span>}
+                    </div>
+                  </div>
+                )
                 : <Badge rarity={card.rarity} />
             )}
           </div>
@@ -206,7 +263,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
         exit={{ opacity: 0 }}
         className={`md:hidden border-b border-white/5 ${card.isHidden ? 'opacity-60 bg-white/[0.02]' : ''}`}
       >
-        <td colSpan={5} className="p-3">
+        <td colSpan={6} className="p-3">
           <div className="flex gap-3">
             {/* Imagen */}
             <img
@@ -271,14 +328,36 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
 
                 {editing ? (
                   mode === 'inventory' ? (
-                    <>
-                      <Select
-                        options={CONDITIONS}
-                        value={cond}
-                        onChange={(e) => setCond(e.target.value)}
-                        className="flex-1 min-w-[100px]"
-                        hidePlaceholderOption
-                      />
+                    <div className="flex flex-col gap-2 w-full mt-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                          options={CONDITIONS}
+                          value={cond}
+                          onChange={(e) => setCond(e.target.value)}
+                          className="flex-1 min-w-[100px]"
+                          hidePlaceholderOption
+                        />
+                        <Select
+                          options={[{ value: '', label: 'Idioma...' }, ...LANGUAGES]}
+                          value={language}
+                          onChange={(e) => setLanguage(e.target.value)}
+                          className="flex-1 min-w-[90px]"
+                          hidePlaceholderOption
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {card.setCode && (
+                          <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 w-fit">
+                            {card.setCode}
+                          </span>
+                        )}
+                        {card.rarity && <Badge rarity={card.rarity} />}
+                        {card.edition && (
+                          <span className="text-[10px] text-slate-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5">
+                            {card.edition}
+                          </span>
+                        )}
+                      </div>
                       {folders.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 w-full mt-1">
                           <span className="text-xs text-slate-500 w-full mb-0.5">Carpetas:</span>
@@ -301,7 +380,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                           })}
                         </div>
                       )}
-                    </>
+                    </div>
                   ) : (
                     <Select
                       options={RARITIES}
@@ -313,9 +392,24 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                   )
                 ) : (
                   mode === 'inventory'
-                    ? <Badge condition={card.condition} />
+                    ? (
+                      <div className="flex flex-col gap-1">
+                        {card.setCode && (
+                          <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 w-fit">
+                            {card.setCode}
+                          </span>
+                        )}
+                        <div className="flex flex-wrap gap-1">
+                          <Badge condition={card.condition} />
+                          {card.rarity   && <Badge rarity={card.rarity} />}
+                          {card.edition  && <span className="text-[10px] text-slate-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5">{card.edition}</span>}
+                          {card.language && <span className="text-[10px] text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5">{card.language}</span>}
+                        </div>
+                      </div>
+                    )
                     : <Badge rarity={card.rarity} />
                 )}
+
               </div>
 
               {/* Fila 3: botones editar / guardar / eliminar */}

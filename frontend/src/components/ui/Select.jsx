@@ -216,6 +216,7 @@ export function Select({
                   <motion.button
                     type="button"
                     role="option"
+                    title={opt.title}
                     aria-selected={value === opt.value}
                     onClick={() => pick(opt.value)}
                     whileHover={{ x: 6 }}

@@ -2,10 +2,10 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  X, Sword, Shield, Star, Layers, Link2, Sparkles,
+  X, Sword, Shield, Star, Layers, Link2, Sparkles, Tag, DollarSign, Globe, BookOpen,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
-import { CONDITIONS, RARITIES } from '../../utils/constants'
+import { CONDITIONS, RARITIES, LANGUAGES } from '../../utils/constants'
 import { lockScroll, unlockScroll } from '../../utils/scrollLock'
 
 
@@ -450,6 +450,103 @@ export function CardDetailModal({ card, onClose }) {
                 className="cdm-body"
                 style={{ borderTop: `1px solid ${glowColor}18` }}
               >
+                {/* Detalles de la versión física del inventario */}
+                {(card.setCode || card.setName || card.rarity || card.edition || card.language || card.setPrice || card.tcgPrice) && (
+                  <div style={{ marginTop: '20px' }}>
+                    <SectionLabel
+                      icon={<Tag style={{ width: 12, height: 12 }} />}
+                      text="Detalles de Colección"
+                    />
+                    <div style={{
+                      marginTop: '10px',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '10px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                        background: `linear-gradient(90deg, ${glowColor}60, transparent)`,
+                      }} />
+                      {card.setCode && (
+                        <InfoChip
+                          icon={<Tag style={{ width: 11, height: 11 }} />}
+                          label="Set Code"
+                          value={card.setCode}
+                          color="#fbbf24"
+                        />
+                      )}
+                      {card.rarity && (
+                        <InfoChip
+                          icon={<Sparkles style={{ width: 11, height: 11 }} />}
+                          label="Rareza"
+                          value={card.rarity}
+                          color="#c084fc"
+                        />
+                      )}
+                      {card.edition && (
+                        <InfoChip
+                          icon={<BookOpen style={{ width: 11, height: 11 }} />}
+                          label="Edición"
+                          value={card.edition}
+                          color="#94a3b8"
+                        />
+                      )}
+                      {card.language && (
+                        <InfoChip
+                          icon={<Globe style={{ width: 11, height: 11 }} />}
+                          label="Idioma"
+                          value={LANGUAGES.find(l => l.value === card.language)?.label || card.language}
+                          color="#38bdf8"
+                        />
+                      )}
+                      {card.setCode ? (
+                        (card.setPrice && card.setPrice !== '0.00' && card.setPrice !== '0') ? (
+                          <InfoChip
+                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                            label="Precio Est."
+                            value={`$${card.setPrice} USD`}
+                            color="#34d399"
+                          />
+                        ) : (
+                          <InfoChip
+                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                            label="Precio Est."
+                            value="N/D"
+                            color="#f87171"
+                          />
+                        )
+                      ) : (
+                        (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0') ? (
+                          <InfoChip
+                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                            label="TCGPlayer"
+                            value={`$${card.tcgPrice} USD`}
+                            color="#34d399"
+                          />
+                        ) : (
+                          <InfoChip
+                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                            label="Precio"
+                            value="N/D"
+                            color="#f87171"
+                          />
+                        )
+                      )}
+                      {card.setName && (
+                        <div style={{ width: '100%', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                          {card.setName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {card.desc && (
                   <div style={{ marginTop: '20px' }}>
                     <SectionLabel
@@ -522,6 +619,21 @@ function StatPill({ icon, label, value, color }) {
       <span style={{ color }}>{icon}</span>
       <span style={{ fontSize: '11px', color: `${color}cc`, fontWeight: 600 }}>{label}</span>
       <span style={{ fontSize: '14px', fontWeight: 800, color, letterSpacing: '0.02em' }}>{value}</span>
+    </div>
+  )
+}
+
+function InfoChip({ icon, label, value, color }) {
+  return (
+    <div style={{
+      display: 'inline-flex', flexDirection: 'column', gap: '2px',
+      background: `${color}10`, border: `1px solid ${color}30`,
+      borderRadius: '8px', padding: '6px 10px', minWidth: '80px',
+    }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: `${color}99`, fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        {icon} {label}
+      </span>
+      <span style={{ fontSize: '12px', fontWeight: 700, color }}>{value}</span>
     </div>
   )
 }

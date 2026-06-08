@@ -82,6 +82,31 @@ async function withRetry(fn, retries = MAX_RETRIES, delayMs = RETRY_DELAY) {
 // ── Transformación ────────────────────────────────────────────────────────────
 
 function mapExternalCard(rawCard) {
+  // Cuando viene del catálogo local (buildIndex), card_images tiene {id, s}
+  // Cuando viene directo de la API de YGOProdeck, tiene {id, image_url, image_url_small}
+  const normalizeImages = (imgs) => {
+    if (!Array.isArray(imgs)) return [];
+    return imgs.map(i => ({
+      id:         i.id,
+      imageSmall: i.s ?? i.image_url_small ?? null,
+      // URL full: reconstruir desde el ID (evita guardar la URL larga en RAM)
+      image:      i.image_url ?? `https://images.ygoprodeck.com/images/cards/${i.id}.jpg`,
+    }));
+  };
+
+  const images = normalizeImages(rawCard.card_images);
+
+  // Sets del catálogo local: {n, c, r, p} → expandir a nombres completos para el frontend
+  const normalizeSets = (sets) => {
+    if (!Array.isArray(sets)) return [];
+    return sets.map(s => ({
+      setName:   s.n ?? s.set_name   ?? null,
+      setCode:   s.c ?? s.set_code   ?? null,
+      rarity:    s.r ?? s.set_rarity ?? null,
+      setPrice:  s.p ?? s.set_price  ?? null,
+    }));
+  };
+
   return {
     cardId:     rawCard.id        ?? rawCard.cardId,
     name:       rawCard.name,
@@ -93,9 +118,14 @@ function mapExternalCard(rawCard) {
     atk:        rawCard.atk       !== undefined ? rawCard.atk : null,
     def:        rawCard.def       !== undefined ? rawCard.def : null,
     desc:       rawCard.desc      ?? null,
-    image:      rawCard.card_images?.[0]?.image_url       ?? rawCard.image       ?? null,
-    imageSmall: rawCard.card_images?.[0]?.image_url_small ?? rawCard.imageSmall  ?? null,
+    // Primera imagen (compatibilidad con código existente)
+    image:      images[0]?.image      ?? rawCard.card_images?.[0]?.image_url ?? rawCard.image ?? null,
+    imageSmall: images[0]?.imageSmall ?? rawCard.card_images?.[0]?.image_url_small ?? rawCard.imageSmall ?? null,
     frameType:  rawCard.frameType ?? null,
+    // Nuevos campos enriquecidos
+    cardImages: images,                                // Todas las artes
+    cardSets:   normalizeSets(rawCard.card_sets),      // Todas las expansiones con precio
+    tcgPrice:   rawCard.tcgPrice ?? rawCard.card_prices?.[0]?.tcgplayer_price ?? null,
   };
 }
 
@@ -114,6 +144,8 @@ async function searchCards(query, type = 'name') {
 
     if (type === 'archetype') {
       rawResults = await catalogService.searchArchetype(query);
+    } else if (type === 'set') {
+      rawResults = await catalogService.searchBySet(query);
     } else {
       rawResults = await catalogService.searchCardsFuzzy(query);
     }

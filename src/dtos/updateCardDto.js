@@ -28,14 +28,50 @@ const updateCardSchema = z
       .optional(),
 
     folderIds: z.array(z.string()).optional(),
+
+    // —— Datos de la versión física (editables después de agregar) ——
+    setCode: z.string().trim().optional(),
+    setName: z.string().trim().optional(),
+    rarity:  z.string().trim().optional(),
+    setPrice: z.string().optional(),
+
+    selectedImageId: z
+      .union([
+        z.number().int().positive(),
+        z.string().regex(/^\d+$/).transform(Number),
+      ])
+      .optional(),
+
+    edition: z
+      .enum(['1st Edition', 'Unlimited', 'Limited Edition'], {
+        errorMap: () => ({ message: 'edition debe ser: 1st Edition, Unlimited o Limited Edition.' }),
+      })
+      .optional(),
+
+    language: z
+      .enum(['EN', 'SP', 'JP', 'FR', 'DE', 'IT', 'PT'], {
+        errorMap: () => ({ message: 'language debe ser: EN, SP, JP, FR, DE, IT o PT.' }),
+      })
+      .optional(),
+
+    /** Ocultar/mostrar en el portafolio público (campo interno existente) */
+    isHidden: z.boolean().optional(),
   })
   .refine(
     (data) =>
-      data.quantity !== undefined ||
-      data.condition !== undefined ||
-      data.folderIds !== undefined,
+      data.quantity     !== undefined ||
+      data.condition    !== undefined ||
+      data.folderIds    !== undefined ||
+      data.setCode      !== undefined ||
+      data.setName      !== undefined ||
+      data.rarity       !== undefined ||
+      data.setPrice     !== undefined ||
+      data.selectedImageId !== undefined ||
+      data.edition      !== undefined ||
+      data.language     !== undefined ||
+      data.isHidden     !== undefined,
     {
-      message: 'Debes proporcionar al menos quantity, condition o folderIds para actualizar.',
+      message: 'Debes proporcionar al menos un campo para actualizar.',
       path: ['quantity'],
     }
   );
