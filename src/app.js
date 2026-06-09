@@ -107,12 +107,20 @@ app.get('/portfolio/:slug', async (req, res, next) => {
     
     // Fallback para producción: Firebase Functions a veces excluye el directorio 'dist'
     // Descargamos el index.html estático de nuestro propio hosting.
-    const host = req.get('x-forwarded-host') || req.get('host');
-    const protocol = req.get('x-forwarded-proto') || req.protocol;
+    // Firebase Hosting a veces no pasa el x-forwarded-host correcto en los rewrites,
+    // y si intentamos hacer fetch al dominio de la Cloud Function (us-central1-...) nos dará 404.
+    let host = req.get('x-forwarded-host') || req.get('host');
+    if (host.includes('cloudfunctions.net') || host.includes('localhost:3000')) {
+      // Si estamos en la function cruda o en dev backend, usamos el dominio real o el dev server
+      host = process.env.NODE_ENV === 'production' ? 'yugioh-8fc03.web.app' : 'localhost:5173';
+    }
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    
     const response = await require('axios').get(`${protocol}://${host}/index.html`);
     res.set('Content-Type', 'text/html');
     return res.status(200).send(response.data);
   } catch(e) {
+    require('./utils/logger').error(`Error fetching index.html:`, e.message);
     next();
   }
 });
