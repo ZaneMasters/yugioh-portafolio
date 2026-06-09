@@ -12,7 +12,18 @@ const router        = require('./routes');
 const app = express();
 
 // ── Seguridad de Cabeceras (Helmet) ───────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https://storage.googleapis.com", "https://images.ygoprodeck.com", "http://localhost:*"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      connectSrc: ["'self'", "https://yugioh-8fc03.web.app", "https://yugioh-8fc03.firebaseapp.com", "https://db.ygoprodeck.com", "http://localhost:*", "ws://localhost:*"],
+    },
+  },
+}));
 
 // ── Rate Limiting (Prevenir DDoS y Spam) ──────────────────────────────────────
 const limiter = rateLimit({
