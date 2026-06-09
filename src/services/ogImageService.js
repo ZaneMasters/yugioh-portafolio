@@ -119,7 +119,7 @@ async function generateOGImage(cards, type) {
 
   const finalImage = await sharp(bgBuffer)
     .composite(composites)
-    .png()
+    .jpeg({ quality: 85 })
     .toBuffer();
 
   return finalImage;

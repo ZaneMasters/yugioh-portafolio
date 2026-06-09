@@ -39,7 +39,7 @@ const getOgImage = async (req, res, next) => {
 
     // Set cache control for 24 hours
     res.set('Cache-Control', 'public, max-age=86400');
-    res.set('Content-Type', 'image/png');
+    res.set('Content-Type', 'image/jpeg');
     return res.status(200).send(imageBuffer);
   } catch (err) {
     logger.error('Error generando OG Image:', err.message);

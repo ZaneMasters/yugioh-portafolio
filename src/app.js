@@ -13,6 +13,7 @@ const app = express();
 
 // ── Seguridad de Cabeceras (Helmet) ───────────────────────────────────────────
 app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
