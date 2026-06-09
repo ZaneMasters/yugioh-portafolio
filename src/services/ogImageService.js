@@ -108,6 +108,10 @@ async function generateOGImage(cards, type) {
     }
   }
 
+  // Add the "See more" text at the bottom
+  const ctaText = type === 'wishlist' ? "👉 HAZ CLIC PARA VER TODAS LAS CARTAS QUE BUSCO 👈" : "👉 HAZ CLIC PARA VER MI PORTAFOLIO COMPLETO 👈";
+  svgOverlays += `<text x="${WIDTH / 2}" y="570" font-family="Arial, sans-serif" font-weight="bold" font-size="26" fill="#fbbf24" text-anchor="middle" letter-spacing="2">${ctaText}</text>`;
+
   svgOverlays += '</svg>';
 
   // Add the SVG layer
