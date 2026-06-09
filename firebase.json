@@ -12,6 +12,11 @@
         "region": "us-central1"
       },
       {
+        "source": "/portfolio/**",
+        "function": "api",
+        "region": "us-central1"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
@@ -32,7 +37,13 @@
       "node_modules",
       ".git",
       "firebase-admin.js",
-      "frontend/**",
+      "frontend/src/**",
+      "frontend/public/**",
+      "frontend/node_modules/**",
+      "frontend/package*.json",
+      "frontend/vite.config.js",
+      "frontend/.eslintrc.cjs",
+      "frontend/index.html",
       ".env",
       "firebase-credentials.json",
       "*.md"

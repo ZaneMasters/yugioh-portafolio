@@ -6,6 +6,8 @@ export const getWishlist = (filters = {}) => {
   if (filters.name) params.name = filters.name
   if (filters.type) params.type = filters.type
   if (filters.archetype) params.archetype = filters.archetype
+  if (filters.cursor) params.cursor = filters.cursor
+  if (filters.limit) params.limit = filters.limit
   return api.get('/wishlist', { params })
 }
 

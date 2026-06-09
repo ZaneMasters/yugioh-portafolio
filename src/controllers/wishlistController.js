@@ -26,18 +26,28 @@ const createCard = async (req, res, next) => {
 
 const getAllCards = async (req, res, next) => {
   try {
-    const { name, type, archetype } = req.query;
+    const { name, type, archetype, cursor, limit } = req.query;
     const filters = {};
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
     if (archetype) filters.archetype = archetype;
 
     const userId = req.user.uid;
-    const { cards } = await wishlistService.listCards(filters, userId);
+
+    const pagination = {
+      paginate: true,
+      limit: Math.min(parseInt(limit) || 20, 100),
+      cursor: cursor || null,
+    };
+
+    const { cards, nextCursor, hasMore, totalCount } = await wishlistService.listCards(filters, userId, pagination);
 
     return res.status(200).json({
       success: true,
       count: cards.length,
+      nextCursor,
+      hasMore,
+      totalCount,
       data: cards,
     });
   } catch (err) {

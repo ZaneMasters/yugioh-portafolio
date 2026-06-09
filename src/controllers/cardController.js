@@ -40,7 +40,7 @@ const createCard = async (req, res, next) => {
 // Devuelve las cartas del inventario del administrador autenticado
 const getAllCards = async (req, res, next) => {
   try {
-    const { name, type, archetype, folderId } = req.query;
+    const { name, type, archetype, folderId, cursor, limit } = req.query;
     const filters = {};
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
@@ -48,13 +48,23 @@ const getAllCards = async (req, res, next) => {
     if (folderId)  filters.folderId  = folderId;
 
     const userId = req.user.uid;
-    const { cards } = await cardService.listCards(filters, userId);
+
+    const pagination = {
+      paginate: true,
+      limit: Math.min(parseInt(limit) || 20, 100),
+      cursor: cursor || null,
+    };
+
+    const { cards, nextCursor, hasMore, totalCount } = await cardService.listCards(filters, userId, pagination);
 
     res.set('Cache-Control', 'private, max-age=0, no-cache');
 
     return res.status(200).json({
       success: true,
       count: cards.length,
+      nextCursor,
+      hasMore,
+      totalCount,
       data: cards,
     });
   } catch (err) {

@@ -1,13 +1,14 @@
 import api from './api'
 import publicApi from './publicApi'
 
-/** Obtener todas las cartas del inventario con filtros opcionales */
 export const getCards = (filters = {}) => {
   const params = {}
   if (filters.name) params.name = filters.name
   if (filters.type) params.type = filters.type
   if (filters.archetype) params.archetype = filters.archetype
   if (filters.folderId) params.folderId = filters.folderId
+  if (filters.cursor) params.cursor = filters.cursor
+  if (filters.limit) params.limit = filters.limit
   return api.get('/cards', { params })
 }
 
