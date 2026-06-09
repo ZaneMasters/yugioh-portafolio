@@ -40,7 +40,7 @@ const createCard = async (req, res, next) => {
 // Devuelve las cartas del inventario del administrador autenticado
 const getAllCards = async (req, res, next) => {
   try {
-    const { name, type, archetype, folderId } = req.query;
+    const { name, type, archetype, folderId, cursor, limit } = req.query;
     const filters = {};
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
@@ -48,13 +48,23 @@ const getAllCards = async (req, res, next) => {
     if (folderId)  filters.folderId  = folderId;
 
     const userId = req.user.uid;
-    const { cards } = await cardService.listCards(filters, userId);
+
+    const pagination = {
+      paginate: true,
+      limit: Math.min(parseInt(limit) || 20, 100),
+      cursor: cursor || null,
+    };
+
+    const { cards, nextCursor, hasMore, totalCount } = await cardService.listCards(filters, userId, pagination);
 
     res.set('Cache-Control', 'private, max-age=0, no-cache');
 
     return res.status(200).json({
       success: true,
       count: cards.length,
+      nextCursor,
+      hasMore,
+      totalCount,
       data: cards,
     });
   } catch (err) {
@@ -89,10 +99,11 @@ const getPortfolioBySlug = async (req, res, next) => {
       cursor: cursor || null,
     };
 
-    // Ejecutar en paralelo: obtener carpetas y cartas requieren solo uid (ya resuelto)
-    const [allFolders, cardResult] = await Promise.all([
+    // Ejecutar en paralelo: obtener carpetas, cartas y perfil requieren uid (ya resuelto)
+    const [allFolders, cardResult, profile] = await Promise.all([
       folderService.listFolders(uid),
       cardService.listCards(filters, uid, pagination),
+      require('../repositories/userRepository').getProfile(uid),
     ]);
 
     const privateFolderIds = allFolders.filter(f => !f.isPublic).map(f => f.id);
@@ -100,7 +111,7 @@ const getPortfolioBySlug = async (req, res, next) => {
     // Si el usuario pide explícitamente una carpeta privada, no devolver nada
     if (folderId && privateFolderIds.includes(folderId)) {
       return res.status(200).json({
-        success: true, slug, count: 0, totalCount: 0, hasMore: false, nextCursor: null, data: []
+        success: true, slug, whatsapp: profile?.whatsapp || null, count: 0, totalCount: 0, hasMore: false, nextCursor: null, data: []
       });
     }
 
@@ -112,6 +123,7 @@ const getPortfolioBySlug = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       slug,
+      whatsapp: profile?.whatsapp || null,
       count: cards.length,
       totalCount,
       hasMore,

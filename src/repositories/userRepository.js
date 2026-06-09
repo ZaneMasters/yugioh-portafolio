@@ -56,17 +56,21 @@ class UserRepository {
   }
 
   /**
-   * Actualiza el perfil (incluyendo el slug)
+   * Actualiza el perfil (incluyendo el slug y whatsapp)
    * @param {string} uid 
    * @param {string} email 
    * @param {string} slug 
+   * @param {string} whatsapp 
    */
-  async updateProfile(uid, email, slug) {
+  async updateProfile(uid, email, slug, whatsapp = null) {
     const payload = {
       email,
       slug,
       updatedAt: new Date().toISOString()
     };
+    if (whatsapp !== null) {
+      payload.whatsapp = whatsapp;
+    }
     await this.collection.doc(uid).set(payload, { merge: true });
     return payload;
   }

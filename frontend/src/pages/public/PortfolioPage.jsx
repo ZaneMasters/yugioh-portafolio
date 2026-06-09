@@ -10,6 +10,9 @@ import { usePortfolio } from '../../hooks/usePortfolio'
 import { useDebounce } from '../../hooks/useDebounce'
 import { usePublicFolders } from '../../hooks/usePublicFolders'
 import { HeroBackground } from '../../components/ui/HeroBackground'
+import { CartSidebar } from '../../components/cart/CartSidebar'
+import { useCartStore } from '../../store/useCartStore'
+import { ShoppingCart } from 'lucide-react'
 
 /**
  * Página de portafolio público de un usuario.
@@ -21,6 +24,9 @@ export default function PortfolioPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [filters, setFilters] = useState({ name: '', type: '', archetype: '', folderId: '' })
   const { folders } = usePublicFolders(slug)
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  const items = useCartStore(state => state.items)
+  const totalCartItems = items.reduce((total, item) => total + item.cartQuantity, 0)
 
   const currentTab = searchParams.get('tab') === 'wishlist' ? 'wishlist' : 'inventory'
 
@@ -41,7 +47,7 @@ export default function PortfolioPage() {
   }
 
   const {
-    cards, loading, loadingMore, notFound, hasMore, totalCount, fetchNextPage,
+    cards, whatsapp, loading, loadingMore, notFound, hasMore, totalCount, fetchNextPage,
   } = usePortfolio(slug, currentTab, activeFilters)
 
   const displayName = slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : ''
@@ -193,6 +199,8 @@ export default function PortfolioPage() {
         <CardGrid 
           cards={cards} 
           loading={loading} 
+          isPublic={true}
+          isWishlist={currentTab === 'wishlist'}
           emptyStateTitle={
             currentTab === 'inventory' 
               ? folderName 
@@ -216,6 +224,32 @@ export default function PortfolioPage() {
           )}
         </div>
       </main>
+
+      {/* Floating Cart Button */}
+      {totalCartItems > 0 && (
+        <motion.button
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0, opacity: 0 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsCartOpen(true)}
+          className="fixed bottom-6 right-6 z-40 bg-amber-500 text-black p-4 rounded-full shadow-[0_8px_32px_rgba(245,158,11,0.4)] flex items-center justify-center hover:bg-amber-400 transition-colors"
+        >
+          <ShoppingCart className="w-6 h-6" />
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-md border-2 border-[#0f1117]">
+            {totalCartItems > 99 ? '99+' : totalCartItems}
+          </span>
+        </motion.button>
+      )}
+
+      {/* Cart Sidebar */}
+      <CartSidebar 
+        isOpen={isCartOpen} 
+        onClose={() => setIsCartOpen(false)} 
+        whatsappNumber={whatsapp}
+        sellerName={displayName}
+      />
     </div>
   )
 }

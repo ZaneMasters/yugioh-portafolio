@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import * as cardService from '../services/cardService'
 import { queryKeys } from '../lib/queryKeys'
@@ -13,14 +13,22 @@ export function useCards(filters = {}) {
   const safeFilters = filters ?? {}
 
   // ── Query ───────────────────────────────────────────────────────────────────────
-  const { data, isLoading: loading, isFetching } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
     queryKey: queryKeys.cards(safeFilters),
-    queryFn: () => cardService.getCards(safeFilters),
-    select: (res) => res.data ?? [],
+    queryFn: ({ pageParam }) => cardService.getCards({ ...safeFilters, cursor: pageParam }),
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextCursor : null,
     enabled,
   })
 
-  const cards = data ?? []
+  const cards = data?.pages.flatMap(page => page.data) ?? []
 
   // ── Mutaciones ─────────────────────────────────────────────────────────────
   const addMutation = useMutation({
@@ -62,6 +70,9 @@ export function useCards(filters = {}) {
     cards,
     loading,
     isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     actionLoading: addMutation.isPending || editMutation.isPending || removeMutation.isPending,
     addCard:    (payload)        => addMutation.mutateAsync(payload),
     editCard:   (id, payload)    => editMutation.mutateAsync({ id, payload }),

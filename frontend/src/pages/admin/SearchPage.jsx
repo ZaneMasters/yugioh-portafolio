@@ -47,7 +47,7 @@ const CARD_TYPE_FILTERS = [
 export default function SearchPage() {
   const [queryInput, setQueryInput] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
-  const [searchType, setSearchType] = useState('name') // 'name' | 'archetype'
+  const [searchType, setSearchType] = useState('name') // 'name' | 'archetype' | 'set'
   const [filterType, setFilterType] = useState('all') // 'all' | 'monster' | 'spell' | 'trap'
 
   const [addingId, setAddingId] = useState(null)
@@ -55,7 +55,8 @@ export default function SearchPage() {
   const [page, setPage]         = useState(1)
   const [catalogStatus, setCatalogStatus] = useState(null)
 
-  const debouncedQueryInput = useDebounce(queryInput, 650)
+  const debouncedQueryInputRaw = useDebounce(queryInput, 650)
+  const debouncedQueryInput = queryInput === '' ? '' : debouncedQueryInputRaw
 
   // Cargar estado del catálogo al montar
   useEffect(() => {
@@ -70,8 +71,11 @@ export default function SearchPage() {
 
   // Búsqueda automática basada en debouncedQueryInput
   useEffect(() => {
-    setActiveQuery(debouncedQueryInput.trim());
-  }, [debouncedQueryInput])
+    const minChars = searchType === 'set' ? 4 : 3;
+    if (debouncedQueryInput.trim().length === 0 || debouncedQueryInput.trim().length >= minChars) {
+      setActiveQuery(debouncedQueryInput.trim());
+    }
+  }, [debouncedQueryInput, searchType])
 
   const { results: rawResults, searching, searchError } = useSearchCards(activeQuery, searchType)
   const { addCard: addCardInventory }         = useCards()
@@ -106,15 +110,16 @@ export default function SearchPage() {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    if (queryInput.trim().length >= 2) {
+    const minChars = searchType === 'set' ? 4 : 3;
+    if (queryInput.trim().length >= minChars) {
       setActiveQuery(queryInput.trim());
     }
   }
 
-  const handleAdd = async (card, qty, condOrRarity, folderId) => {
+  const handleAdd = async (card, qty, condOrRarity, folderId, extraPayload = {}) => {
     setAddingId(card.cardId)
     if (destination === 'inventory') {
-      const payload = { cardId: card.cardId, condition: condOrRarity, quantity: qty }
+      const payload = { cardId: card.cardId, condition: condOrRarity, quantity: qty, ...extraPayload }
       if (folderId) payload.folderIds = [folderId];
       await addCardInventory(payload)
     } else {
@@ -162,7 +167,7 @@ export default function SearchPage() {
         {/* Fila Superior: Modos y Destino */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           
-          {/* Tabs Minimalistas (Nombre vs Arquetipo) */}
+          {/* Tabs Minimalistas (Nombre vs Arquetipo vs Set) */}
           <div className="flex items-center gap-6 border-b border-white/5 px-2">
             <button
               type="button"
@@ -185,6 +190,17 @@ export default function SearchPage() {
               }`}
             >
               Por Arquetipo
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSearchType('set'); setQueryInput(''); setActiveQuery(''); setFilterType('all'); }}
+              className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] ${
+                searchType === 'set' 
+                  ? 'border-amber-500 text-amber-400' 
+                  : 'border-transparent text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              Por Set
             </button>
           </div>
 
@@ -227,7 +243,11 @@ export default function SearchPage() {
           <div className="flex-1 relative flex items-center px-4 py-3 md:py-0 md:h-[44px]">
             <Search className={`w-4 h-4 mr-3 shrink-0 transition-colors ${searchType === 'archetype' && activeQuery.trim().length === 0 ? 'text-amber-500/50' : 'text-slate-500'}`} />
             <input
-              placeholder={searchType === 'name' ? "Escribe el nombre en inglés... (ej: Dark Magician)" : "Escribe el arquetipo en inglés... (ej: Salamangreat)"}
+              placeholder={searchType === 'name'
+                ? 'Escribe el nombre en inglés... (ej: Dark Magician)'
+                : searchType === 'archetype'
+                  ? 'Escribe el arquetipo en inglés... (ej: Salamangreat)'
+                  : 'Escribe el nombre del set... (ej: Maximum Gold, MAGO)'}
               value={queryInput}
               onChange={(e) => setQueryInput(e.target.value)}
               className="w-full bg-transparent border-none outline-none text-slate-100 text-sm placeholder:text-slate-600 font-medium"
@@ -383,6 +403,8 @@ export default function SearchPage() {
                   onAdd={handleAdd}
                   adding={addingId === card.cardId}
                   folders={folders}
+                  searchType={searchType}
+                  searchQuery={activeQuery}
                 />
               ))}
             </motion.div>

@@ -22,68 +22,30 @@ class CardRepository {
   // ── READ ──────────────────────────────────────────────────────────────────────
 
   /**
-   * Obtiene documentos con filtros opcionales y paginación cursor-based.
+   * Obtiene TODAS las cartas de un usuario sin filtros ni ordenamiento.
+   * Útil para almacenar en caché y filtrar en memoria superior.
+   * @param {string|null} userId
+   */
+  async findAllRaw(userId = null) {
+    let query = this.collection;
+    if (userId) {
+      query = query.where('userId', '==', userId);
+    }
+    const snapshot = await query.get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  /**
+   * Obtiene documentos con filtros nativos y paginación cursor-based.
+   * Únicamente realiza la paginación a nivel de base de datos.
    *
-   * Estrategia:
-   *  - Si hay filtros de texto (name/type): fetch all + filter en memoria (sin paginar)
-   *  - Si no hay filtros de texto: paginación real con startAfter(cursor) en Firestore
-   *
-   * @param {{ name?: string, type?: string, archetype?: string }} filters
-   * @param {string|null} userId  - UID del propietario (null = sin filtro)
-   * @param {{ limit?: number, cursor?: string, paginate?: boolean }} pagination
-   * @returns {Promise<{ cards: Array, nextCursor: string|null, hasMore: boolean }>}
+   * @param {{ folderId?: string }} filters
+   * @param {string|null} userId
+   * @param {{ limit?: number, cursor?: string }} pagination
+   * @returns {Promise<{ cards: Array, nextCursor: string|null, hasMore: boolean, totalCount: number }>}
    */
   async findAll(filters = {}, userId = null, pagination = {}) {
-    const { limit = 20, cursor = null, paginate = false } = pagination;
-
-    // Solo hacemos fetch all si hay filtros que Firestore no soporta nativamente o requieren indices compuestos
-    // que el usuario probablemente no ha creado (ej. folderIds array-contains + createdAt desc).
-    // Ordenar en memoria evita el error 500 (FAILED_PRECONDITION: The query requires an index).
-    const requiresMemorySort = !!(filters.name || filters.archetype || filters.folderId || filters.type);
-
-    if (!paginate || requiresMemorySort) {
-      // ── Comportamiento con filtrado en memoria ────────────────────────────────
-      let query = this.collection;
-      if (userId) query = query.where('userId', '==', userId);
-
-      // Aplicar filtros nativos primero para traer menos documentos a memoria
-      if (filters.folderId) query = query.where('folderIds', 'array-contains', filters.folderId);
-
-      const snapshot = await query.get();
-      let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      if (filters.archetype) {
-        const archLower = filters.archetype.toLowerCase();
-        cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
-      }
-      if (filters.name) {
-        const nameLower = filters.name.toLowerCase();
-        cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
-      }
-      if (filters.type) {
-        const typeLower = filters.type.toLowerCase();
-        cards = cards.filter((c) => {
-          if (!c.type) return false;
-          const cTypeLower = c.type.toLowerCase();
-          
-          if (cTypeLower.includes(typeLower)) return true;
-          
-          // Ampliar "Effect Monster" para incluir subtipos que no tienen la palabra "effect" en la API
-          if (typeLower === 'effect monster') {
-            const effectSubtypes = ['gemini', 'spirit', 'toon', 'flip monster', 'tuner monster'];
-            return effectSubtypes.some(sub => cTypeLower.includes(sub));
-          }
-          return false;
-        });
-      }
-
-      cards.sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      });
-
-      return { cards, nextCursor: null, hasMore: false, totalCount: cards.length };
-    }
+    const { limit = 20, cursor = null } = pagination;
 
     // ── Paginación real con cursor ───────────────────────────────────────────
     let query = this.collection;
@@ -131,20 +93,34 @@ class CardRepository {
   }
 
   /**
-   * Busca un documento por cardId (ID de la API externa) dentro del scope de un usuario.
+   * Busca un documento duplicado exacto dentro del scope de un usuario.
+   * Considera duplicado si tiene el mismo cardId y los mismos atributos físicos.
    * @param {number} cardId
    * @param {string} userId - UID del propietario
+   * @param {Object} attrs - Atributos físicos
    * @returns {Promise<Object|null>} null si no existe
    */
-  async findByCardId(cardId, userId) {
+  async findExactDuplicate(cardId, userId, attrs = {}) {
     let query = this.collection.where('cardId', '==', cardId);
     if (userId) {
       query = query.where('userId', '==', userId);
     }
-    const snapshot = await query.limit(1).get();
+    
+    const snapshot = await query.get();
     if (snapshot.empty) return null;
-    const doc = snapshot.docs[0];
-    return { id: doc.id, ...doc.data() };
+    
+    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Filtrar en memoria por coincidencia exacta física
+    const exactMatch = docs.find(c => 
+      c.setCode === (attrs.setCode ?? null) &&
+      c.rarity === (attrs.rarity ?? null) &&
+      c.edition === (attrs.edition ?? null) &&
+      c.language === (attrs.language ?? null) &&
+      c.condition === (attrs.condition ?? 'new')
+    );
+
+    return exactMatch || null;
   }
 
   // ── CREATE ────────────────────────────────────────────────────────────────────

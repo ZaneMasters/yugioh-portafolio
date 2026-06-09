@@ -19,7 +19,7 @@ const logger         = require('../utils/logger');
  */
 
 const INVENTORY_CACHE_PREFIX = 'inventory:';
-const INVENTORY_TTL          = 2 * 60; // 2 minutos
+const INVENTORY_TTL          = 15 * 60; // 15 minutos
 
 /** Genera la clave de caché por usuario y filtros */
 function inventoryKey(userId, filters = {}) {
@@ -57,8 +57,8 @@ async function registerCard(dto, userId) {
 
   logger.info(`🔍 Carta encontrada en API: ${externalCard.name} (ID: ${externalCard.cardId})`);
 
-  // Buscar duplicado dentro del inventario del mismo usuario
-  const existing = await cardRepository.findByCardId(externalCard.cardId, userId);
+  // Buscar duplicado exacto (misma carta y mismos atributos físicos)
+  const existing = await cardRepository.findExactDuplicate(externalCard.cardId, userId, dto);
 
   if (existing) {
     const updatedQuantity = existing.quantity + (quantity || 1);
@@ -78,6 +78,11 @@ async function registerCard(dto, userId) {
     return { card: updated, created: false };
   }
 
+  // Determinar qué imagen usar (arte alternativo o primera por defecto)
+  const selectedImageId = dto.selectedImageId ?? externalCard.cardId;
+  const selectedImageUrl = externalCard.cardImages?.find(i => i.id === selectedImageId)?.image
+    ?? externalCard.image;
+
   // Guardar la carta inmediatamente con la URL de YGOProdeck (respuesta rápida al usuario)
   const newCard = await cardRepository.create({
     userId,
@@ -91,30 +96,38 @@ async function registerCard(dto, userId) {
     atk:       externalCard.atk,
     def:       externalCard.def,
     desc:      externalCard.desc,
-    image:     externalCard.image,      // URL temporal de YGOProdeck
+    image:     selectedImageUrl,        // URL temporal (arte seleccionado)
     frameType: externalCard.frameType,
     condition: condition || 'new',
     quantity:  quantity  || 1,
     folderIds: Array.isArray(dto.folderIds) ? dto.folderIds : [],
+    // —— Nuevos campos de la versión física ——
+    setCode:         dto.setCode         ?? null,
+    setName:         dto.setName         ?? null,
+    rarity:          dto.rarity          ?? null,
+    setPrice:        dto.setPrice        ?? null,
+    selectedImageId: selectedImageId,
+    edition:         dto.edition         ?? null,
+    language:        dto.language        ?? null,
+    tcgPrice:        externalCard.tcgPrice ?? null,
   });
 
   invalidateInventoryCache(userId);
 
-  // ── Subida de imagen en segundo plano (fire-and-forget) ───────────────────
-  // No bloqueamos la respuesta — la imagen se comprime y sube a Storage
-  // de forma asíncrona y luego se actualiza el campo image en Firestore.
+  // ── Subida de imagen en segundo plano (fire-and-forget) ────────────────────────
+  // Subimos el arte específico elegido por el usuario (no siempre el primero)
   setImmediate(() => {
-    imageService.uploadCardImage(externalCard.cardId, externalCard.image)
+    imageService.uploadCardImage(selectedImageId, selectedImageUrl)
       .then(async (storageUrl) => {
-        if (storageUrl && storageUrl !== externalCard.image) {
+        if (storageUrl && storageUrl !== selectedImageUrl) {
           await cardRepository.update(newCard.id, { image: storageUrl }, null);
           invalidateInventoryCache(userId);
-          logger.info(`🔄 Imagen actualizada a Storage para carta: ${externalCard.name}`);
+          logger.info(`🔄 Imagen actualizada a Storage para carta: ${externalCard.name} (arte: ${selectedImageId})`);
         }
       })
       .catch((err) => {
         // Error silencioso — la carta ya está guardada con la URL de YGOProdeck
-        logger.warn(`⚠️  Background image upload falló para ${externalCard.cardId}: ${err.message}`);
+        logger.warn(`⚠️  Background image upload falló para ${selectedImageId}: ${err.message}`);
       });
   });
 
@@ -130,24 +143,75 @@ async function registerCard(dto, userId) {
  * @param {{ limit?: number, cursor?: string, paginate?: boolean }} pagination
  */
 async function listCards(filters = {}, userId = null, pagination = {}) {
-  const key    = inventoryKey(userId, filters);
-  const cached = memCache.get(key);
+  const { limit = 20, cursor = null, paginate = false } = pagination;
 
-  // Si está paginando, no usamos caché global (cada página tiene su propio cursor)
-  if (cached && !pagination.paginate) {
-    logger.debug(`⚡ Inventory cache HIT → ${key}`);
-    return cached;
+  // Clave para el inventario completo (sin filtrar)
+  const rawKey = `${INVENTORY_CACHE_PREFIX}${userId || 'global'}:raw`;
+  let rawCards = memCache.get(rawKey);
+
+  if (!rawCards) {
+    rawCards = await cardRepository.findAllRaw(userId);
+    // Nota: memCache.set() usa su TTL por defecto que está sincronizado con el env.
+    // Podría ajustarse a 15 min si el caché permite custom TTL, pero el default está bien.
+    memCache.set(rawKey, rawCards);
+    logger.debug(`💾 Raw Inventory cache SET → ${rawKey} (${rawCards.length} cartas)`);
   }
 
-  const result = await cardRepository.findAll(filters, userId, pagination);
+  // 1. Filtrado en memoria
+  let cards = rawCards;
 
-  // Solo cacheamos el resultado completo (sin paginar) para no mezclar páginas
-  if (!pagination.paginate) {
-    memCache.set(key, result);
-    logger.debug(`💾 Inventory cache SET → ${key} (${result.cards.length} cartas)`);
+  if (filters.folderId) {
+    cards = cards.filter(c => c.folderIds && c.folderIds.includes(filters.folderId));
+  }
+  if (filters.archetype) {
+    const archLower = filters.archetype.toLowerCase();
+    cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
+  }
+  if (filters.name) {
+    const nameLower = filters.name.toLowerCase();
+    cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
+  }
+  if (filters.type) {
+    const typeLower = filters.type.toLowerCase();
+    cards = cards.filter((c) => {
+      if (!c.type) return false;
+      const cTypeLower = c.type.toLowerCase();
+      if (cTypeLower.includes(typeLower)) return true;
+      if (typeLower === 'effect monster') {
+        const effectSubtypes = ['gemini', 'spirit', 'toon', 'flip monster', 'tuner monster'];
+        return effectSubtypes.some(sub => cTypeLower.includes(sub));
+      }
+      return false;
+    });
   }
 
-  return result;
+  // 2. Ordenamiento (más reciente primero)
+  cards.sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  const totalCount = cards.length;
+
+  if (!paginate) {
+    return { cards, nextCursor: null, hasMore: false, totalCount };
+  }
+
+  // 3. Paginación visual en memoria basada en cursor
+  let startIndex = 0;
+  if (cursor) {
+    const cursorIdx = cards.findIndex(c => c.createdAt === cursor);
+    if (cursorIdx !== -1) {
+      startIndex = cursorIdx + 1;
+    }
+  }
+
+  const pageDocs = cards.slice(startIndex, startIndex + limit);
+  const hasMore = startIndex + limit < cards.length;
+  const nextCursor = hasMore && pageDocs.length > 0 ? pageDocs[pageDocs.length - 1].createdAt : null;
+
+  return { cards: pageDocs, nextCursor, hasMore, totalCount };
 }
 
 // ── Obtener carta por ID ───────────────────────────────────────────────────────
@@ -165,14 +229,18 @@ async function updateCard(id, dto, userId) {
     if (dto.quantity < 0) throw new AppError('La cantidad no puede ser negativa.', 400);
     updates.quantity = dto.quantity;
   }
+  if (dto.condition    !== undefined) updates.condition    = dto.condition;
+  if (dto.folderIds    !== undefined) updates.folderIds    = dto.folderIds;
+  if (dto.isHidden     !== undefined) updates.isHidden     = dto.isHidden;
+  if (dto.rarity       !== undefined) updates.rarity       = dto.rarity;
 
-  if (dto.condition !== undefined) {
-    updates.condition = dto.condition;
-  }
-
-  if (dto.folderIds !== undefined) {
-    updates.folderIds = dto.folderIds;
-  }
+  // Campos de la versión física
+  if (dto.setCode         !== undefined) updates.setCode         = dto.setCode;
+  if (dto.setName         !== undefined) updates.setName         = dto.setName;
+  if (dto.setPrice        !== undefined) updates.setPrice        = dto.setPrice;
+  if (dto.selectedImageId !== undefined) updates.selectedImageId = dto.selectedImageId;
+  if (dto.edition         !== undefined) updates.edition         = dto.edition;
+  if (dto.language        !== undefined) updates.language        = dto.language;
 
   const card = await cardRepository.update(id, updates, userId);
   invalidateInventoryCache(userId);

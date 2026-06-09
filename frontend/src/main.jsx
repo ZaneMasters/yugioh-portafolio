@@ -39,7 +39,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             error: { iconTheme: { primary: '#ef4444', secondary: '#1f2937' } },
           }}
         />
-        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />}
       </QueryClientProvider>
     </HelmetProvider>
   </React.StrictMode>,

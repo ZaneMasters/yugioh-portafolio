@@ -71,3 +71,19 @@ export const RARITY_COLORS = {
   'Quarter Century Secret Rare': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
   'Gold Rare':                   'bg-yellow-400/20 text-yellow-300 border-yellow-400/30',
 }
+
+export const EDITIONS = [
+  { value: '1st Edition',    label: '1st Edition' },
+  { value: 'Unlimited',      label: 'Unlimited' },
+  { value: 'Limited Edition', label: 'Limited Edition' },
+]
+
+export const LANGUAGES = [
+  { value: 'EN', label: 'Inglés (EN)' },
+  { value: 'SP', label: 'Español (SP)' },
+  { value: 'JP', label: 'Japonés (JP)' },
+  { value: 'FR', label: 'Francés (FR)' },
+  { value: 'DE', label: 'Alemán (DE)' },
+  { value: 'IT', label: 'Italiano (IT)' },
+  { value: 'PT', label: 'Portugués (PT)' },
+]

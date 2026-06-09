@@ -2,11 +2,13 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  X, Sword, Shield, Star, Layers, Link2, Sparkles,
+  X, Sword, Shield, Star, Layers, Link2, Sparkles, Tag, DollarSign, Globe, BookOpen, ShoppingCart, Check, ArrowRightLeft
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
-import { CONDITIONS, RARITIES } from '../../utils/constants'
+import { CONDITIONS, RARITIES, LANGUAGES } from '../../utils/constants'
 import { lockScroll, unlockScroll } from '../../utils/scrollLock'
+import { useCartStore } from '../../store/useCartStore'
+import { toast } from 'react-hot-toast'
 
 
 // ─── Tipo meta ────────────────────────────────────────────────────────────────
@@ -180,7 +182,7 @@ const MODAL_STYLES = `
     .cdm-header {
       flex-direction: column;
       align-items: center;
-      padding-top: 12px;
+      padding-top: 16px;
       padding-bottom: 0;
     }
 
@@ -189,31 +191,41 @@ const MODAL_STYLES = `
       min-height: unset;
       border-right: none !important;
       border-bottom: 1px solid rgba(255,255,255,0.06);
-      padding: 16px 16px 12px;
+      padding: 0 16px 16px;
     }
 
     .cdm-img-wrap img {
-      width: 110px;
+      width: 180px;
     }
 
     .cdm-info-col {
       width: 100%;
-      padding: 14px 16px 14px;
-      gap: 8px;
+      padding: 16px;
+      gap: 12px;
     }
 
     .cdm-card-name {
-      font-size: 1.05rem;
+      font-size: 1.25rem;
       padding-right: 36px; /* espacio para el botón cerrar */
     }
 
     .cdm-body {
-      padding: 0 14px 20px;
+      padding: 0 16px 20px;
     }
 
     .cdm-close-btn {
-      top: 10px;
-      right: 10px;
+      top: 12px;
+      right: 12px;
+    }
+
+    .cdm-inventory-row button {
+      margin-left: 0 !important;
+      width: 100% !important;
+      justify-content: center;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      margin-top: 4px;
+      font-size: 14px;
     }
   }
 `
@@ -229,8 +241,29 @@ function injectStyles() {
 /**
  * Modal de detalles de carta – diseño premium, totalmente responsivo
  */
-export function CardDetailModal({ card, onClose }) {
+export function CardDetailModal({ card, onClose, isPublic, isWishlist = false }) {
   const open = !!card
+
+  const { items, addItem, removeItem } = useCartStore()
+  const inCartItem = card ? items.find(i => i.card.id === card.id && i.isWishlist === isWishlist) : null
+  const isMaxInCart = isWishlist ? !!inCartItem : (inCartItem && inCartItem.cartQuantity >= card?.quantity)
+
+  const handleAddToCart = (e) => {
+    e.stopPropagation()
+    if (isMaxInCart && card) {
+      removeItem(card.id, isWishlist)
+      toast.success(isWishlist ? 'Removido de trades' : 'Removido del carrito', {
+        icon: '🗑️',
+        style: { background: '#333', color: '#fff' }
+      })
+    } else if (card) {
+      addItem(card, isWishlist)
+      toast.success(isWishlist ? 'Añadido a trades' : 'Añadido al carrito', {
+        icon: isWishlist ? '🤝' : '🛒',
+        style: { background: '#333', color: '#fff' }
+      })
+    }
+  }
 
   // Inyectar estilos responsivos una sola vez
   useEffect(() => { injectStyles() }, [])
@@ -415,7 +448,7 @@ export function CardDetailModal({ card, onClose }) {
                     </div>
                   )}
 
-                  {/* Inventario */}
+                  {/* Inventario y Carrito */}
                   <div className="cdm-inventory-row">
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -431,6 +464,27 @@ export function CardDetailModal({ card, onClose }) {
                       <Badge rarity={card.rarity} />
                     ) : (
                       <Badge condition={card.condition} />
+                    )}
+
+                    {isPublic && (
+                      <button 
+                        onClick={handleAddToCart}
+                        className={`ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-lg font-bold text-xs transition-colors border ${
+                          isMaxInCart 
+                            ? 'bg-green-500/20 hover:bg-green-500/40 text-green-400 border-green-500/30 cursor-pointer' 
+                            : isWishlist 
+                              ? 'bg-purple-500 hover:bg-purple-400 text-white border-purple-500 cursor-pointer'
+                              : 'bg-amber-500 hover:bg-amber-400 text-black border-amber-500 cursor-pointer'
+                        }`}
+                      >
+                        {isMaxInCart ? (
+                          <><Check style={{ width: 14, height: 14 }} /> {isWishlist ? 'Añadido' : 'Máximo añadido'}</>
+                        ) : isWishlist ? (
+                          <><ArrowRightLeft style={{ width: 14, height: 14 }} /> Ofrecer</>
+                        ) : (
+                          <><ShoppingCart style={{ width: 14, height: 14 }} /> Añadir</>
+                        )}
+                      </button>
                     )}
                   </div>
                 </div>
@@ -450,6 +504,103 @@ export function CardDetailModal({ card, onClose }) {
                 className="cdm-body"
                 style={{ borderTop: `1px solid ${glowColor}18` }}
               >
+                {/* Detalles de la versión física del inventario */}
+                {(card.setCode || card.setName || card.rarity || card.edition || card.language || card.setPrice || card.tcgPrice) && (
+                  <div style={{ marginTop: '20px' }}>
+                    <SectionLabel
+                      icon={<Tag style={{ width: 12, height: 12 }} />}
+                      text="Detalles de Colección"
+                    />
+                    <div style={{
+                      marginTop: '10px',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '10px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                        background: `linear-gradient(90deg, ${glowColor}60, transparent)`,
+                      }} />
+                      {card.setCode && (
+                        <InfoChip
+                          icon={<Tag style={{ width: 11, height: 11 }} />}
+                          label="Set Code"
+                          value={card.setCode}
+                          color="#fbbf24"
+                        />
+                      )}
+                      {card.rarity && (
+                        <InfoChip
+                          icon={<Sparkles style={{ width: 11, height: 11 }} />}
+                          label="Rareza"
+                          value={card.rarity}
+                          color="#c084fc"
+                        />
+                      )}
+                      {card.edition && (
+                        <InfoChip
+                          icon={<BookOpen style={{ width: 11, height: 11 }} />}
+                          label="Edición"
+                          value={card.edition}
+                          color="#94a3b8"
+                        />
+                      )}
+                      {card.language && (
+                        <InfoChip
+                          icon={<Globe style={{ width: 11, height: 11 }} />}
+                          label="Idioma"
+                          value={LANGUAGES.find(l => l.value === card.language)?.label || card.language}
+                          color="#38bdf8"
+                        />
+                      )}
+                      {card.setCode ? (
+                        (card.setPrice && card.setPrice !== '0.00' && card.setPrice !== '0') ? (
+                          <InfoChip
+                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                            label="Precio Est."
+                            value={`$${card.setPrice} USD`}
+                            color="#34d399"
+                          />
+                        ) : (
+                          <InfoChip
+                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                            label="Precio Est."
+                            value="N/D"
+                            color="#f87171"
+                          />
+                        )
+                      ) : (
+                        (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0') ? (
+                          <InfoChip
+                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                            label="TCGPlayer"
+                            value={`$${card.tcgPrice} USD`}
+                            color="#34d399"
+                          />
+                        ) : (
+                          <InfoChip
+                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                            label="Precio"
+                            value="N/D"
+                            color="#f87171"
+                          />
+                        )
+                      )}
+                      {card.setName && (
+                        <div style={{ width: '100%', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                          {card.setName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {card.desc && (
                   <div style={{ marginTop: '20px' }}>
                     <SectionLabel
@@ -522,6 +673,21 @@ function StatPill({ icon, label, value, color }) {
       <span style={{ color }}>{icon}</span>
       <span style={{ fontSize: '11px', color: `${color}cc`, fontWeight: 600 }}>{label}</span>
       <span style={{ fontSize: '14px', fontWeight: 800, color, letterSpacing: '0.02em' }}>{value}</span>
+    </div>
+  )
+}
+
+function InfoChip({ icon, label, value, color }) {
+  return (
+    <div style={{
+      display: 'inline-flex', flexDirection: 'column', gap: '2px',
+      background: `${color}10`, border: `1px solid ${color}30`,
+      borderRadius: '8px', padding: '6px 10px', minWidth: '80px',
+    }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: `${color}99`, fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        {icon} {label}
+      </span>
+      <span style={{ fontSize: '12px', fontWeight: 700, color }}>{value}</span>
     </div>
   )
 }

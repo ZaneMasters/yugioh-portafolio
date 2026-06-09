@@ -5,7 +5,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { Package } from 'lucide-react'
 
 export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading, mode = 'inventory', folders = [] }) {
-  const HEADERS = ['Carta', 'Arquetipo', 'Cantidad', mode === 'inventory' ? 'Condición' : 'Rareza', 'Acciones']
+  const HEADERS = ['Carta', 'Arquetipo', 'Expansión', 'Cantidad', mode === 'inventory' ? 'Condición' : 'Rareza', 'Acciones']
 
   return (
     <div className="overflow-x-auto rounded-xl border border-white/5 bg-[#111827]">

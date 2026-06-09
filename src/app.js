@@ -61,6 +61,54 @@ app.get('/health', (_req, res) => {
 app.use('/api/v1', router);
 app.use('/v1', router);
 
+const fs = require('fs');
+const path = require('path');
+
+// ── Intercepción SEO para Bots (WhatsApp, Discord, etc) ──────────────────────
+app.get('/portfolio/:slug', (req, res, next) => {
+  const isBot = /bot|whatsapp|facebook|twitter|discord|telegram|linkedin/i.test(req.get('user-agent'));
+  
+  if (isBot) {
+    const { slug } = req.params;
+    const tab = req.query.tab || 'inventory';
+    const title = tab === 'wishlist' ? `Wishlist de ${slug}` : `Portafolio de ${slug}`;
+    const desc = tab === 'wishlist' ? 'Cartas que estoy buscando' : 'Mi colección de cartas';
+    
+    const host = req.get('x-forwarded-host') || req.get('host');
+    const protocol = req.get('x-forwarded-proto') || req.protocol;
+    const ogImageUrl = `${protocol}://${host}/api/v1/og/portfolio/${slug}.png?tab=${tab}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="utf-8">
+        <title>${title}</title>
+        <meta property="og:title" content="${title}">
+        <meta property="og:description" content="${desc}">
+        <meta property="og:image" content="${ogImageUrl}">
+        <meta property="og:url" content="${protocol}://${host}${req.originalUrl}">
+        <meta property="og:type" content="website">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:image" content="${ogImageUrl}">
+      </head>
+      <body></body>
+      </html>
+    `;
+    return res.status(200).send(html);
+  }
+
+  // Si no es un bot, servimos el index.html de React
+  try {
+    const indexPath = path.join(__dirname, '../frontend/dist/index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+  } catch(e) {}
+  
+  next();
+});
+
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Ruta no encontrada.' });

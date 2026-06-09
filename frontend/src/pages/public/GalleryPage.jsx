@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Navbar } from '../../components/layout/Navbar'
 import { CardGrid } from '../../components/cards/CardGrid'
 import { FiltersPanel } from '../../components/filters/FiltersPanel'
@@ -8,18 +8,32 @@ import { motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
 
 export default function GalleryPage() {
-  const { cards, loading, fetchCards } = useCards()
   const [filters, setFilters] = useState({ name: '', type: '', archetype: '' })
-  const debouncedName = useDebounce(filters.name, 400)
+  
+  const debouncedNameRaw = useDebounce(filters.name, 400)
+  const debouncedName = filters.name === '' ? '' : debouncedNameRaw
 
-  // Refetch cuando cambian los filtros (con debounce en nombre)
+  const activeFilters = {
+    name: debouncedName,
+    type: filters.type,
+    archetype: filters.archetype,
+  }
+
+  const { cards, loading, fetchNextPage, hasNextPage, isFetchingNextPage } = useCards(activeFilters)
+
+  const observerTarget = useRef(null)
   useEffect(() => {
-    fetchCards({
-      name: debouncedName,
-      type: filters.type,
-      archetype: filters.archetype,
-    })
-  }, [debouncedName, filters.type, filters.archetype])
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      { rootMargin: '300px' }
+    )
+    if (observerTarget.current) observer.observe(observerTarget.current)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   return (
     <div className="min-h-screen ">
@@ -58,7 +72,14 @@ export default function GalleryPage() {
         </motion.div>
 
         {/* Grid */}
-        <CardGrid cards={cards} loading={loading} />
+        <CardGrid cards={cards} loading={loading && cards.length === 0} />
+
+        {/* Intersection Observer Target */}
+        <div ref={observerTarget} className="h-10 mt-8 flex justify-center">
+          {isFetchingNextPage && (
+            <div className="w-8 h-8 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+          )}
+        </div>
       </main>
     </div>
   )

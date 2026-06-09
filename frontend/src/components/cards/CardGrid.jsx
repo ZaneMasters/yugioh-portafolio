@@ -11,7 +11,9 @@ export function CardGrid({
   cards, 
   loading, 
   emptyStateTitle = "No hay cartas en el inventario",
-  emptyStateDescription = "Agrega cartas desde el panel de administración para verlas aquí."
+  emptyStateDescription = "Agrega cartas desde el panel de administración para verlas aquí.",
+  isPublic = false,
+  isWishlist = false
 }) {
   const [selectedCard, setSelectedCard] = useState(null)
   const [mobileCols, setMobileCols] = useState('1')
@@ -155,6 +157,8 @@ export function CardGrid({
                       viewMode={mobileCols} 
                       // Desactivar animaciones pesadas durante scroll rápido
                       disableAnimation={virtualizer.isScrolling || virtualRow.index > 0} 
+                      isPublic={isPublic}
+                      isWishlist={isWishlist}
                     />
                   ))}
                 </AnimatePresence>
@@ -164,7 +168,7 @@ export function CardGrid({
         })}
       </div>
 
-      <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
+      <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} isPublic={isPublic} isWishlist={isWishlist} />
     </>
   )
 }

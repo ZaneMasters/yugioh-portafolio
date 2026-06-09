@@ -17,8 +17,18 @@ export default function InventoryPage() {
   const [filters, setFilters] = useState({ name: '', type: '', archetype: '', folderId: '' })
   const queryClient = useQueryClient()
 
-  const debouncedName      = useDebounce(filters.name, 400)
-  const debouncedArchetype = useDebounce(filters.archetype, 400)
+  const debouncedNameRaw      = useDebounce(filters.name, 400)
+  const debouncedArchetypeRaw = useDebounce(filters.archetype, 400)
+
+  const debouncedName      = filters.name === '' ? '' : debouncedNameRaw
+  const debouncedArchetype = filters.archetype === '' ? '' : debouncedArchetypeRaw
+
+  const handleTabChange = (tab) => {
+    if (tab !== currentTab) {
+      setCurrentTab(tab)
+      setFilters({ name: '', type: '', archetype: '', folderId: '' })
+    }
+  }
 
   // Filtros debounced para pasar al hook
   const activeFilters = {
@@ -36,33 +46,21 @@ export default function InventoryPage() {
           createFolder, updateFolder, deleteFolder, fetchFolders } = useFolders()
 
   const currentHook = currentTab === 'inventory' ? invHook : wishHook
-  const { cards = [], loading, actionLoading, editCard, removeCard } = currentHook
-
-  // Paginación visual (slice) con IntersectionObserver
-  const INITIAL_LIMIT = 20
-  const [visibleCount, setVisibleCount] = useState(INITIAL_LIMIT)
-
-  // Reset visible count al cambiar tab o filtros
-  useEffect(() => {
-    setVisibleCount(INITIAL_LIMIT)
-  }, [currentTab, debouncedName, filters.type, debouncedArchetype, filters.folderId])
-
-  const displayedCards = cards.slice(0, visibleCount)
-  const hasMoreCards   = visibleCount < cards.length
+  const { cards = [], loading, actionLoading, editCard, removeCard, fetchNextPage, hasNextPage, isFetchingNextPage } = currentHook
 
   const observerTarget = useRef(null)
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMoreCards) {
-          setVisibleCount((prev) => prev + 20)
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
         }
       },
       { rootMargin: '300px' }
     )
     if (observerTarget.current) observer.observe(observerTarget.current)
     return () => observer.disconnect()
-  }, [hasMoreCards])
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   const handleRefresh = () => {
     if (currentTab === 'inventory') {
@@ -103,7 +101,7 @@ export default function InventoryPage() {
         {['inventory', 'wishlist', 'folders'].map((tab) => (
           <button
             key={tab}
-            onClick={() => setCurrentTab(tab)}
+            onClick={() => handleTabChange(tab)}
             className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
               currentTab === tab
                 ? 'border-amber-400 text-amber-400'
@@ -151,8 +149,8 @@ export default function InventoryPage() {
             transition={{ delay: 0.1 }}
           >
             <InventoryTable
-              cards={displayedCards}
-              loading={loading}
+              cards={cards}
+              loading={loading && cards.length === 0}
               onEdit={editCard}
               onDelete={removeCard}
               actionLoading={actionLoading}
@@ -162,7 +160,7 @@ export default function InventoryPage() {
 
             {/* Intersection Observer Target */}
             <div ref={observerTarget} className="h-10 mt-8 flex justify-center">
-              {hasMoreCards && (
+              {isFetchingNextPage && (
                 <div className="w-8 h-8 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
               )}
             </div>
