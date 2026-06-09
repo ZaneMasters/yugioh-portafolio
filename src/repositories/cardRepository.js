@@ -56,8 +56,16 @@ class CardRepository {
 
     // Ejecutar count y query en paralelo — son independientes entre si
     let countQuery = query;
-    query = query.orderBy('createdAt', 'desc');
-    if (cursor) query = query.startAfter(cursor);
+    query = query.orderBy('createdAt', 'desc').orderBy(this.db.collection(COLLECTION).firestore.constructor.FieldPath.documentId(), 'desc');
+    
+    if (cursor) {
+      const [createdAt, docId] = cursor.split('_');
+      if (createdAt && docId) {
+        query = query.startAfter(createdAt, docId);
+      } else {
+        query = query.startAfter(cursor);
+      }
+    }
     query = query.limit(limit + 1);
 
     const [countSnapshot, snapshot] = await Promise.all([
@@ -71,7 +79,7 @@ class CardRepository {
     const pageDocs = hasMore ? docs.slice(0, limit) : docs;
 
     const cards = pageDocs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    const nextCursor = hasMore ? pageDocs[pageDocs.length - 1].data().createdAt : null;
+    const nextCursor = hasMore ? `${pageDocs[pageDocs.length - 1].data().createdAt}_${pageDocs[pageDocs.length - 1].id}` : null;
 
     return { cards, nextCursor, hasMore, totalCount };
   }

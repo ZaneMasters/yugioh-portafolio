@@ -201,7 +201,7 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   // 3. Paginación visual en memoria basada en cursor
   let startIndex = 0;
   if (cursor) {
-    const cursorIdx = cards.findIndex(c => c.createdAt === cursor);
+    const cursorIdx = cards.findIndex(c => c.id === cursor);
     if (cursorIdx !== -1) {
       startIndex = cursorIdx + 1;
     }
@@ -209,7 +209,7 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
 
   const pageDocs = cards.slice(startIndex, startIndex + limit);
   const hasMore = startIndex + limit < cards.length;
-  const nextCursor = hasMore && pageDocs.length > 0 ? pageDocs[pageDocs.length - 1].createdAt : null;
+  const nextCursor = hasMore && pageDocs.length > 0 ? pageDocs[pageDocs.length - 1].id : null;
 
   return { cards: pageDocs, nextCursor, hasMore, totalCount };
 }
