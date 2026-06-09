@@ -65,7 +65,7 @@ const fs = require('fs');
 const path = require('path');
 
 // ── Intercepción SEO para Bots (WhatsApp, Discord, etc) ──────────────────────
-app.get('/portfolio/:slug', (req, res, next) => {
+app.get('/portfolio/:slug', async (req, res, next) => {
   const isBot = /bot|whatsapp|facebook|twitter|discord|telegram|linkedin/i.test(req.get('user-agent'));
   
   if (isBot) {
@@ -104,9 +104,17 @@ app.get('/portfolio/:slug', (req, res, next) => {
     if (fs.existsSync(indexPath)) {
       return res.sendFile(indexPath);
     }
-  } catch(e) {}
-  
-  next();
+    
+    // Fallback para producción: Firebase Functions a veces excluye el directorio 'dist'
+    // Descargamos el index.html estático de nuestro propio hosting.
+    const host = req.get('x-forwarded-host') || req.get('host');
+    const protocol = req.get('x-forwarded-proto') || req.protocol;
+    const response = await require('axios').get(`${protocol}://${host}/index.html`);
+    res.set('Content-Type', 'text/html');
+    return res.status(200).send(response.data);
+  } catch(e) {
+    next();
+  }
 });
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
