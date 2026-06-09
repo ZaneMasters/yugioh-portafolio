@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { Search, Package, ExternalLink, LogOut, Key } from 'lucide-react'
+import { Search, Package, ExternalLink, LogOut, Key, Store } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
 
 const navItems = [
   { to: '/admin/search', icon: Search, label: 'Buscar Cartas' },
   { to: '/admin/inventory', icon: Package, label: 'Mi Inventario' },
+  { to: '/admin/store', icon: Store, label: 'Tienda' },
   { to: '/admin/profile', icon: Key, label: 'Perfil' },
 ]
 

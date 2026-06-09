@@ -55,7 +55,8 @@ export default function SearchPage() {
   const [page, setPage]         = useState(1)
   const [catalogStatus, setCatalogStatus] = useState(null)
 
-  const debouncedQueryInput = useDebounce(queryInput, 650)
+  const debouncedQueryInputRaw = useDebounce(queryInput, 650)
+  const debouncedQueryInput = queryInput === '' ? '' : debouncedQueryInputRaw
 
   // Cargar estado del catálogo al montar
   useEffect(() => {

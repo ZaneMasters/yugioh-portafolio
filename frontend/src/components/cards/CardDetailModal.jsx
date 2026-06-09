@@ -2,11 +2,13 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  X, Sword, Shield, Star, Layers, Link2, Sparkles, Tag, DollarSign, Globe, BookOpen,
+  X, Sword, Shield, Star, Layers, Link2, Sparkles, Tag, DollarSign, Globe, BookOpen, ShoppingCart, Check, ArrowRightLeft
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { CONDITIONS, RARITIES, LANGUAGES } from '../../utils/constants'
 import { lockScroll, unlockScroll } from '../../utils/scrollLock'
+import { useCartStore } from '../../store/useCartStore'
+import { toast } from 'react-hot-toast'
 
 
 // ─── Tipo meta ────────────────────────────────────────────────────────────────
@@ -180,7 +182,7 @@ const MODAL_STYLES = `
     .cdm-header {
       flex-direction: column;
       align-items: center;
-      padding-top: 12px;
+      padding-top: 16px;
       padding-bottom: 0;
     }
 
@@ -189,31 +191,41 @@ const MODAL_STYLES = `
       min-height: unset;
       border-right: none !important;
       border-bottom: 1px solid rgba(255,255,255,0.06);
-      padding: 16px 16px 12px;
+      padding: 0 16px 16px;
     }
 
     .cdm-img-wrap img {
-      width: 110px;
+      width: 180px;
     }
 
     .cdm-info-col {
       width: 100%;
-      padding: 14px 16px 14px;
-      gap: 8px;
+      padding: 16px;
+      gap: 12px;
     }
 
     .cdm-card-name {
-      font-size: 1.05rem;
+      font-size: 1.25rem;
       padding-right: 36px; /* espacio para el botón cerrar */
     }
 
     .cdm-body {
-      padding: 0 14px 20px;
+      padding: 0 16px 20px;
     }
 
     .cdm-close-btn {
-      top: 10px;
-      right: 10px;
+      top: 12px;
+      right: 12px;
+    }
+
+    .cdm-inventory-row button {
+      margin-left: 0 !important;
+      width: 100% !important;
+      justify-content: center;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      margin-top: 4px;
+      font-size: 14px;
     }
   }
 `
@@ -229,8 +241,29 @@ function injectStyles() {
 /**
  * Modal de detalles de carta – diseño premium, totalmente responsivo
  */
-export function CardDetailModal({ card, onClose }) {
+export function CardDetailModal({ card, onClose, isPublic, isWishlist = false }) {
   const open = !!card
+
+  const { items, addItem, removeItem } = useCartStore()
+  const inCartItem = card ? items.find(i => i.card.id === card.id && i.isWishlist === isWishlist) : null
+  const isMaxInCart = isWishlist ? !!inCartItem : (inCartItem && inCartItem.cartQuantity >= card?.quantity)
+
+  const handleAddToCart = (e) => {
+    e.stopPropagation()
+    if (isMaxInCart && card) {
+      removeItem(card.id, isWishlist)
+      toast.success(isWishlist ? 'Removido de trades' : 'Removido del carrito', {
+        icon: '🗑️',
+        style: { background: '#333', color: '#fff' }
+      })
+    } else if (card) {
+      addItem(card, isWishlist)
+      toast.success(isWishlist ? 'Añadido a trades' : 'Añadido al carrito', {
+        icon: isWishlist ? '🤝' : '🛒',
+        style: { background: '#333', color: '#fff' }
+      })
+    }
+  }
 
   // Inyectar estilos responsivos una sola vez
   useEffect(() => { injectStyles() }, [])
@@ -415,7 +448,7 @@ export function CardDetailModal({ card, onClose }) {
                     </div>
                   )}
 
-                  {/* Inventario */}
+                  {/* Inventario y Carrito */}
                   <div className="cdm-inventory-row">
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -431,6 +464,27 @@ export function CardDetailModal({ card, onClose }) {
                       <Badge rarity={card.rarity} />
                     ) : (
                       <Badge condition={card.condition} />
+                    )}
+
+                    {isPublic && (
+                      <button 
+                        onClick={handleAddToCart}
+                        className={`ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-lg font-bold text-xs transition-colors border ${
+                          isMaxInCart 
+                            ? 'bg-green-500/20 hover:bg-green-500/40 text-green-400 border-green-500/30 cursor-pointer' 
+                            : isWishlist 
+                              ? 'bg-purple-500 hover:bg-purple-400 text-white border-purple-500 cursor-pointer'
+                              : 'bg-amber-500 hover:bg-amber-400 text-black border-amber-500 cursor-pointer'
+                        }`}
+                      >
+                        {isMaxInCart ? (
+                          <><Check style={{ width: 14, height: 14 }} /> {isWishlist ? 'Añadido' : 'Máximo añadido'}</>
+                        ) : isWishlist ? (
+                          <><ArrowRightLeft style={{ width: 14, height: 14 }} /> Ofrecer</>
+                        ) : (
+                          <><ShoppingCart style={{ width: 14, height: 14 }} /> Añadir</>
+                        )}
+                      </button>
                     )}
                   </div>
                 </div>

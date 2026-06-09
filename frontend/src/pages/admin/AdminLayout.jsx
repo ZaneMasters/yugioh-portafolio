@@ -1,6 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { Sidebar } from '../../components/layout/Sidebar'
-import { Search, Package, ExternalLink, LogOut, Key } from 'lucide-react'
+import { Search, Package, ExternalLink, LogOut, Key, Store } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
 
@@ -38,36 +38,50 @@ export default function AdminLayout() {
           </div>
 
           {/* Fila 2: Tabs principales */}
-          <div className="flex items-center gap-1 px-3 py-2">
+          <div className="flex items-center justify-between px-2 py-1.5 border-t border-white/5 bg-[#111827]">
             <NavLink
               to="/admin/search"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm flex-1 justify-center transition-all ${
-                  isActive ? 'bg-amber-500/15 text-amber-400' : 'text-slate-400 hover:bg-white/5'
+                `flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-medium transition-all flex-1 mx-0.5 ${
+                  isActive ? 'text-amber-400 bg-amber-500/10' : 'text-slate-400 hover:text-slate-200'
                 }`
               }
             >
-              <Search className="w-4 h-4" /> Buscar
+              <Search className="w-5 h-5" />
+              <span>Buscar</span>
             </NavLink>
             <NavLink
               to="/admin/inventory"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm flex-1 justify-center transition-all ${
-                  isActive ? 'bg-amber-500/15 text-amber-400' : 'text-slate-400 hover:bg-white/5'
+                `flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-medium transition-all flex-1 mx-0.5 ${
+                  isActive ? 'text-amber-400 bg-amber-500/10' : 'text-slate-400 hover:text-slate-200'
                 }`
               }
             >
-              <Package className="w-4 h-4" /> Inventario
+              <Package className="w-5 h-5" />
+              <span>Inventario</span>
+            </NavLink>
+            <NavLink
+              to="/admin/store"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-medium transition-all flex-1 mx-0.5 ${
+                  isActive ? 'text-amber-400 bg-amber-500/10' : 'text-slate-400 hover:text-slate-200'
+                }`
+              }
+            >
+              <Store className="w-5 h-5" />
+              <span>Tienda</span>
             </NavLink>
             <NavLink
               to="/admin/profile"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm flex-1 justify-center transition-all ${
-                  isActive ? 'bg-amber-500/15 text-amber-400' : 'text-slate-400 hover:bg-white/5'
+                `flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-medium transition-all flex-1 mx-0.5 ${
+                  isActive ? 'text-amber-400 bg-amber-500/10' : 'text-slate-400 hover:text-slate-200'
                 }`
               }
             >
-              <Key className="w-4 h-4" /> Perfil
+              <Key className="w-5 h-5" />
+              <span>Perfil</span>
             </NavLink>
           </div>
         </div>

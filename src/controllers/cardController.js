@@ -89,10 +89,11 @@ const getPortfolioBySlug = async (req, res, next) => {
       cursor: cursor || null,
     };
 
-    // Ejecutar en paralelo: obtener carpetas y cartas requieren solo uid (ya resuelto)
-    const [allFolders, cardResult] = await Promise.all([
+    // Ejecutar en paralelo: obtener carpetas, cartas y perfil requieren uid (ya resuelto)
+    const [allFolders, cardResult, profile] = await Promise.all([
       folderService.listFolders(uid),
       cardService.listCards(filters, uid, pagination),
+      require('../repositories/userRepository').getProfile(uid),
     ]);
 
     const privateFolderIds = allFolders.filter(f => !f.isPublic).map(f => f.id);
@@ -100,7 +101,7 @@ const getPortfolioBySlug = async (req, res, next) => {
     // Si el usuario pide explícitamente una carpeta privada, no devolver nada
     if (folderId && privateFolderIds.includes(folderId)) {
       return res.status(200).json({
-        success: true, slug, count: 0, totalCount: 0, hasMore: false, nextCursor: null, data: []
+        success: true, slug, whatsapp: profile?.whatsapp || null, count: 0, totalCount: 0, hasMore: false, nextCursor: null, data: []
       });
     }
 
@@ -112,6 +113,7 @@ const getPortfolioBySlug = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       slug,
+      whatsapp: profile?.whatsapp || null,
       count: cards.length,
       totalCount,
       hasMore,

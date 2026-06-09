@@ -227,11 +227,12 @@ export const CardSearchResult = memo(function CardSearchResult({
             <Button
               variant="primary"
               size="sm"
-              icon={Plus}
               loading={adding}
               onClick={handleAdd}
-              className="shrink-0 h-6 w-6 p-0 sm:px-3 sm:w-auto sm:h-auto sm:text-sm"
+              className="shrink-0 w-6 h-6 !p-0 sm:!px-3 sm:w-auto sm:h-auto sm:text-sm flex items-center justify-center rounded"
             >
+              <Plus className="w-5 h-5 shrink-0 sm:hidden" />
+              <Plus className="w-4 h-4 shrink-0 hidden sm:block" />
               <span className="hidden sm:inline">Agregar</span>
             </Button>
           </div>

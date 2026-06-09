@@ -141,12 +141,12 @@ const getProfile = async (req, res, next) => {
 };
 
 /**
- * Actualizar perfil (especialmente el slug)
+ * Actualizar perfil (especialmente el slug y whatsapp)
  */
 const updateProfile = async (req, res, next) => {
   try {
     const { uid, email } = req.user;
-    let { slug } = req.body;
+    let { slug, whatsapp } = req.body;
 
     if (!slug || slug.trim() === '') {
       return res.status(400).json({ success: false, message: 'El nombre de usuario (slug) es requerido.' });
@@ -157,6 +157,13 @@ const updateProfile = async (req, res, next) => {
     // Validar formato (solo letras, numeros y guiones, sin espacios)
     if (!/^[a-z0-9-]+$/.test(slug)) {
       return res.status(400).json({ success: false, message: 'El nombre de usuario solo puede contener letras minúsculas, números y guiones.' });
+    }
+
+    if (whatsapp) {
+      // Validar que el WhatsApp contenga solo dígitos y opcionalmente un '+' al inicio
+      if (!/^\+?[0-9]{10,15}$/.test(whatsapp)) {
+        return res.status(400).json({ success: false, message: 'El número de WhatsApp es inválido. Debe contener entre 10 y 15 dígitos numéricos (ej: +573001234567).' });
+      }
     }
 
     const isTaken = await userRepository.isSlugTaken(slug, uid);
@@ -172,11 +179,11 @@ const updateProfile = async (req, res, next) => {
     // Tambien limpiar el fallback basado en email
     invalidateSlugCache(email.split('@')[0]);
 
-    const updatedProfile = await userRepository.updateProfile(uid, email, slug);
+    const updatedProfile = await userRepository.updateProfile(uid, email, slug, whatsapp);
 
     return res.status(200).json({
       success: true,
-      message: 'Nombre de usuario actualizado correctamente.',
+      message: 'Perfil actualizado correctamente.',
       data: updatedProfile
     });
   } catch (err) {

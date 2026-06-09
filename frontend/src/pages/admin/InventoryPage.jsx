@@ -17,8 +17,18 @@ export default function InventoryPage() {
   const [filters, setFilters] = useState({ name: '', type: '', archetype: '', folderId: '' })
   const queryClient = useQueryClient()
 
-  const debouncedName      = useDebounce(filters.name, 400)
-  const debouncedArchetype = useDebounce(filters.archetype, 400)
+  const debouncedNameRaw      = useDebounce(filters.name, 400)
+  const debouncedArchetypeRaw = useDebounce(filters.archetype, 400)
+
+  const debouncedName      = filters.name === '' ? '' : debouncedNameRaw
+  const debouncedArchetype = filters.archetype === '' ? '' : debouncedArchetypeRaw
+
+  const handleTabChange = (tab) => {
+    if (tab !== currentTab) {
+      setCurrentTab(tab)
+      setFilters({ name: '', type: '', archetype: '', folderId: '' })
+    }
+  }
 
   // Filtros debounced para pasar al hook
   const activeFilters = {
@@ -103,7 +113,7 @@ export default function InventoryPage() {
         {['inventory', 'wishlist', 'folders'].map((tab) => (
           <button
             key={tab}
-            onClick={() => setCurrentTab(tab)}
+            onClick={() => handleTabChange(tab)}
             className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
               currentTab === tab
                 ? 'border-amber-400 text-amber-400'

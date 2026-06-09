@@ -65,12 +65,18 @@ const getPublicWishlist = async (req, res, next) => {
       cursor: cursor || null,
     };
 
-    const { cards, nextCursor, hasMore, totalCount } = await wishlistService.listCards(filters, targetUid, pagination);
+    const [wishlistResult, profile] = await Promise.all([
+      wishlistService.listCards(filters, targetUid, pagination),
+      require('../repositories/userRepository').getProfile(targetUid),
+    ]);
+
+    const { cards, nextCursor, hasMore, totalCount } = wishlistResult;
 
     const visibleCards = cards.filter(c => !c.isHidden);
 
     return res.status(200).json({
       success: true,
+      whatsapp: profile?.whatsapp || null,
       count: visibleCards.length,
       totalCount,
       hasMore,

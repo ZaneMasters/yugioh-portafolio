@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Lock, Eye, EyeOff, Save, User, Link as LinkIcon, Info } from 'lucide-react'
+import { Lock, Eye, EyeOff, Save, User, Link as LinkIcon, Info, MessageCircle } from 'lucide-react'
 import { changePassword, updateProfile } from '../../services/authService'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
@@ -8,14 +8,14 @@ import toast from 'react-hot-toast'
 export default function ProfilePage() {
   const { profile, updateProfileContext } = useAuth()
   
-  // Estado para el Slug
+  // Estado para el Slug y WhatsApp
   const [slug, setSlug] = useState('')
   const [slugLoading, setSlugLoading] = useState(false)
 
   // Estado para Contraseña
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPwd, setShowPwd] = useState(false)
+  const [showPwd, setPwd] = useState(false)
   const [showConfirmPwd, setShowConfirmPwd] = useState(false)
   const [pwdLoading, setPwdLoading] = useState(false)
 
@@ -34,15 +34,21 @@ export default function ProfilePage() {
 
     setSlugLoading(true)
     try {
-      const res = await updateProfile({ slug: slug.trim().toLowerCase() })
-      toast.success(res.message || 'Nombre de usuario actualizado')
+      const payload = { 
+        slug: slug.trim().toLowerCase(), 
+        whatsapp: profile?.whatsapp || null 
+      }
+      const res = await updateProfile(payload)
+      toast.success(res.message || 'URL pública actualizada')
       updateProfileContext(res.data)
     } catch (error) {
-      toast.error(error.message || 'Error al actualizar el nombre de usuario')
+      toast.error(error.message || 'Error al actualizar la URL')
     } finally {
       setSlugLoading(false)
     }
   }
+
+
 
   const handlePwdSubmit = async (e) => {
     e.preventDefault()
@@ -80,7 +86,7 @@ export default function ProfilePage() {
           <span>Configuración del <span className="text-gradient">Perfil</span></span>
         </h1>
         <p className="text-slate-400 mt-2 text-sm">
-          Personaliza tu URL pública y gestiona tu seguridad.
+          Personaliza tu URL pública, configura tu WhatsApp de contacto y gestiona tu seguridad.
         </p>
       </motion.div>
 
@@ -137,12 +143,14 @@ export default function ProfilePage() {
             <div className="flex items-start gap-2 p-3 mt-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
               <Info className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
               <p className="text-xs text-blue-200/80 leading-relaxed">
-                Debido a sistemas de caché para optimizar la velocidad, <strong>el cambio podría tardar hasta 10 minutos</strong> en reflejarse globalmente. Durante este periodo, la URL anterior podría seguir funcionando temporalmente.
+                Debido a sistemas de caché para optimizar la velocidad, <strong>el cambio podría tardar hasta unos minutos</strong> en reflejarse globalmente. Durante este periodo, la URL anterior podría seguir funcionando temporalmente.
               </p>
             </div>
           </div>
         </form>
       </motion.div>
+
+
 
       {/* SECCIÓN: SEGURIDAD (CONTRASEÑA) */}
       <motion.div
