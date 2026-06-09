@@ -112,7 +112,7 @@ export const CardSearchResult = memo(function CardSearchResult({
             className={`w-full h-full object-contain transition-all duration-300 ${
               imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'
             }`}
-            onError={(e) => { e.target.src = '/card-placeholder.png'; setImgLoaded(true); }}
+            onError={(e) => { e.target.onerror = null; e.target.src = '/card-placeholder.png'; setImgLoaded(true); }}
           />
           {!imgLoaded && (
             <div className="absolute inset-0 bg-white/5 animate-pulse flex items-center justify-center">
@@ -386,7 +386,7 @@ export const CardSearchResult = memo(function CardSearchResult({
                         src={img.imageSmall}
                         alt={`Arte ${idx + 1}`}
                         className="w-full h-full object-contain"
-                        onError={(e) => { e.target.src = '/card-placeholder.png' }}
+                        onError={(e) => { e.target.onerror = null; e.target.src = '/card-placeholder.png' }}
                       />
                       {selectedImageId === img.id && (
                         <div className="absolute inset-0 bg-amber-500/10" />

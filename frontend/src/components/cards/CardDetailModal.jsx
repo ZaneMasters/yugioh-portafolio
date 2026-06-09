@@ -353,7 +353,7 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                       src={card.image}
                       alt={card.name}
                       loading="lazy"
-                      onError={(e) => { e.target.src = '/card-placeholder.png' }}
+                      onError={(e) => { e.target.onerror = null; e.target.src = '/card-placeholder.png' }}
                     />
                     {/* Shimmer */}
                     <div style={{

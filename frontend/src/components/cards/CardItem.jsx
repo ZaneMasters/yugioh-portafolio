@@ -102,7 +102,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
             className={`w-full h-full object-fill transition-all duration-500 group-hover:scale-105 relative z-0 ${
               imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'
             }`}
-            onError={(e) => { e.target.src = '/card-placeholder.png'; setImgLoaded(true); }}
+            onError={(e) => { e.target.onerror = null; e.target.src = '/card-placeholder.png'; setImgLoaded(true); }}
           />
           
           {/* Skeleton de carga mientras la imagen no esté lista */}

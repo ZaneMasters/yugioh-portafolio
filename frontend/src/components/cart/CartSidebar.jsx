@@ -114,7 +114,7 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName }) {
                             src={card.imageSmall || card.image} 
                             alt={card.name} 
                             className="w-full h-full object-cover"
-                            onError={(e) => { e.target.src = '/card-placeholder.png' }}
+                            onError={(e) => { e.target.onerror = null; e.target.src = '/card-placeholder.png' }}
                           />
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col py-1">
