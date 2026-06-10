@@ -2,7 +2,7 @@ import { Outlet, NavLink } from 'react-router-dom'
 import { Sidebar } from '../../components/layout/Sidebar'
 import { Search, Package, ExternalLink, LogOut, Key, Store } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import logo from '../../assets/logo.png'
+import logo from '../../assets/logo.webp'
 
 export default function AdminLayout() {
   const { user, profile, logout } = useAuth()

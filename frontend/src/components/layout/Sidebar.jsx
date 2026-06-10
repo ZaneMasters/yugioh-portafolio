@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { Search, Package, ExternalLink, LogOut, Key, Store } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import logo from '../../assets/logo.png'
+import logo from '../../assets/logo.webp'
 
 const navItems = [
   { to: '/admin/search', icon: Search, label: 'Buscar Cartas' },

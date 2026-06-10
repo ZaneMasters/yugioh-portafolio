@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { LayoutGrid, Settings } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { YuGiOhIcon } from '../ui/YuGiOhIcon'
-import logo from '../../assets/logo.png'
+import logo from '../../assets/logo.webp'
 
 export function Navbar() {
   const { user, profile } = useAuth()
