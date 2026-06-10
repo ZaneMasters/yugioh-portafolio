@@ -94,17 +94,31 @@ app.get('/portfolio/:slug', async (req, res, next) => {
       <!DOCTYPE html>
       <html lang="es">
       <head>
-        <meta charset="utf-8">
+        <meta charset="utf-8" />
         <title>${title}</title>
-        <meta property="og:title" content="${title}">
-        <meta property="og:description" content="${desc}">
-        <meta property="og:image" content="${ogImageUrl}">
-        <meta property="og:url" content="${protocol}://${host}${req.originalUrl}">
-        <meta property="og:type" content="website">
-        <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:image" content="${ogImageUrl}">
+        <meta name="description" content="${desc}" />
+        
+        <meta property="og:site_name" content="Yu-Gi-Oh! Inventory" />
+        <meta property="og:title" content="${title}" />
+        <meta property="og:description" content="${desc}" />
+        <meta property="og:image" content="${ogImageUrl}" />
+        <meta property="og:image:secure_url" content="${ogImageUrl}" />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:url" content="${protocol}://${host}${req.originalUrl}" />
+        <meta property="og:type" content="website" />
+        
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="${title}" />
+        <meta name="twitter:description" content="${desc}" />
+        <meta name="twitter:image" content="${ogImageUrl}" />
       </head>
-      <body></body>
+      <body>
+        <h1>${title}</h1>
+        <p>${desc}</p>
+        <img src="${ogImageUrl}" alt="${title}" />
+      </body>
       </html>
     `;
     return res.status(200).send(html);
