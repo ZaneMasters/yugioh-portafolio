@@ -22,6 +22,7 @@ export const getPortfolioCards = (slug, filters = {}, cursor = null) => {
   if (filters.type) params.type = filters.type
   if (filters.archetype) params.archetype = filters.archetype
   if (filters.folderId) params.folderId = filters.folderId
+  if (filters.t) params.t = filters.t
   if (cursor) params.cursor = cursor
   return publicApi.get(`/cards/portfolio/${slug}/cards`, { params })
 }

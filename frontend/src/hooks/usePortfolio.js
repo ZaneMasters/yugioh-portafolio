@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import * as cardService from '../services/cardService'
 import * as wishlistService from '../services/wishlistService'
 import { queryKeys } from '../lib/queryKeys'
+import { useAuth } from '../context/AuthContext'
 
 /**
  * Hook para cargar el portafolio público de un usuario por su slug.
@@ -14,15 +15,26 @@ import { queryKeys } from '../lib/queryKeys'
  * @param {object} filters     - Filtros de búsqueda
  */
 export function usePortfolio(slug, tab = 'inventory', filters = {}) {
+  const { profile } = useAuth()
+  
+  // Clonar filtros para no mutar el original
+  const activeFilters = { ...filters }
+  if (profile?.slug && profile.slug === slug) {
+    const lastUpdate = localStorage.getItem('portfolioLastUpdate')
+    if (lastUpdate) {
+      activeFilters.t = lastUpdate
+    }
+  }
+
   const isInventory = tab === 'inventory'
   const queryKey = isInventory
-    ? queryKeys.portfolio(slug, filters)
-    : queryKeys.publicWishlist(slug, filters)
+    ? queryKeys.portfolio(slug, activeFilters)
+    : queryKeys.publicWishlist(slug, activeFilters)
 
   const fetchFn = ({ pageParam = null }) =>
     isInventory
-      ? cardService.getPortfolioCards(slug, filters, pageParam)
-      : wishlistService.getPublicWishlist(slug, filters, pageParam)
+      ? cardService.getPortfolioCards(slug, activeFilters, pageParam)
+      : wishlistService.getPublicWishlist(slug, activeFilters, pageParam)
 
   const {
     data,

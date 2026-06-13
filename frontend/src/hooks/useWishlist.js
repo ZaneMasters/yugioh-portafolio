@@ -34,6 +34,7 @@ export function useWishlist(filters = {}) {
     mutationFn: (payload) => wishlistService.createWishlistCard(payload),
     onSuccess: (res) => {
       toast.success(res.message || 'Carta agregada a la wishlist')
+      localStorage.setItem('portfolioLastUpdate', Date.now().toString())
       queryClient.invalidateQueries({ queryKey: ['wishlist'] })
       queryClient.invalidateQueries({ queryKey: ['publicWishlist'] })
     },
@@ -47,6 +48,7 @@ export function useWishlist(filters = {}) {
         if (!old || !old.data) return old
         return { ...old, data: old.data.map((c) => (c.id === id ? { ...c, ...payload } : c)) }
       })
+      localStorage.setItem('portfolioLastUpdate', Date.now().toString())
       queryClient.invalidateQueries({ queryKey: ['wishlist'] })
       queryClient.invalidateQueries({ queryKey: ['publicWishlist'] })
       toast.success('Carta actualizada')
@@ -58,6 +60,7 @@ export function useWishlist(filters = {}) {
     mutationFn: (id) => wishlistService.deleteWishlistCard(id),
     onSuccess: () => {
       toast.success('Carta eliminada de la wishlist')
+      localStorage.setItem('portfolioLastUpdate', Date.now().toString())
       queryClient.invalidateQueries({ queryKey: ['wishlist'] })
       queryClient.invalidateQueries({ queryKey: ['publicWishlist'] })
     },

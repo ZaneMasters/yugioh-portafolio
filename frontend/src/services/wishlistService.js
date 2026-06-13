@@ -16,6 +16,7 @@ export const getPublicWishlist = (slug, filters = {}, cursor = null) => {
   if (filters.name) params.name = filters.name
   if (filters.type) params.type = filters.type
   if (filters.archetype) params.archetype = filters.archetype
+  if (filters.t) params.t = filters.t
   if (cursor) params.cursor = cursor
   return publicApi.get(`/wishlist/public/${slug}`, { params })
 }

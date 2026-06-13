@@ -35,6 +35,7 @@ export function useCards(filters = {}) {
     mutationFn: (payload) => cardService.createCard(payload),
     onSuccess: (res) => {
       toast.success(res.message || 'Carta agregada al inventario')
+      localStorage.setItem('portfolioLastUpdate', Date.now().toString())
       queryClient.invalidateQueries({ queryKey: ['cards'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
     },
@@ -49,6 +50,7 @@ export function useCards(filters = {}) {
         if (!old || !old.data) return old
         return { ...old, data: old.data.map((c) => (c.id === id ? { ...c, ...payload } : c)) }
       })
+      localStorage.setItem('portfolioLastUpdate', Date.now().toString())
       queryClient.invalidateQueries({ queryKey: ['cards'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
       toast.success('Carta actualizada')
@@ -60,6 +62,7 @@ export function useCards(filters = {}) {
     mutationFn: (id) => cardService.deleteCard(id),
     onSuccess: () => {
       toast.success('Carta eliminada del inventario')
+      localStorage.setItem('portfolioLastUpdate', Date.now().toString())
       queryClient.invalidateQueries({ queryKey: ['cards'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
     },
