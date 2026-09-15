@@ -5,7 +5,11 @@ import { EmptyState } from '../ui/EmptyState'
 import { Package } from 'lucide-react'
 
 export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading, mode = 'inventory', folders = [] }) {
-  const HEADERS = ['Carta', 'Arquetipo', 'Expansión', 'Cantidad', mode === 'inventory' ? 'Condición' : 'Rareza', 'Acciones']
+  const HEADERS = mode === 'inventory'
+    ? ['Carta', 'Arquetipo', 'Expansión/Rareza', 'Cantidad', 'Detalles', 'Acciones']
+    : ['Carta', 'Arquetipo', 'Cantidad', 'Rareza', 'Acciones']
+
+  const numCols = HEADERS.length
 
   return (
     <div className="overflow-x-auto rounded-xl border border-white/5 bg-[#111827]">
@@ -21,10 +25,10 @@ export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading
         </thead>
         <tbody>
           {loading ? (
-            Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} cols={5} />)
+            Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} cols={numCols} />)
           ) : cards.length === 0 ? (
             <tr>
-              <td colSpan={5}>
+              <td colSpan={numCols}>
                 <EmptyState
                   icon={Package}
                   title={mode === 'inventory' ? 'Inventario vacío' : 'Wishlist vacía'}

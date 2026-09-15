@@ -5,9 +5,7 @@ const { z } = require('zod');
 /**
  * DTO para PUT /cards/:id — Actualizar carta del inventario.
  *
- * Solo permite actualizar quantity y condition.
- * Al menos uno de los dos campos debe estar presente.
- * Solo permite actualizar quantity, condition y folderIds.
+ * Permite actualizar cantidad, carpetas, rareza, y detalles físicos de la carta.
  * Al menos uno de los campos debe estar presente.
  */
 const updateCardSchema = z
@@ -18,14 +16,6 @@ const updateCardSchema = z
       .positive('quantity debe ser mayor a 0.')
       .optional(),
 
-    condition: z
-      .enum(['new', 'near_mint', 'lightly_played', 'moderately_played', 'heavily_played', 'damaged'], {
-        errorMap: () => ({
-          message:
-            'condition debe ser: new, near_mint, lightly_played, moderately_played, heavily_played o damaged.',
-        }),
-      })
-      .optional(),
 
     folderIds: z.array(z.string()).optional(),
 
@@ -60,7 +50,6 @@ const updateCardSchema = z
   .refine(
     (data) =>
       data.quantity     !== undefined ||
-      data.condition    !== undefined ||
       data.folderIds    !== undefined ||
       data.setCode      !== undefined ||
       data.setName      !== undefined ||

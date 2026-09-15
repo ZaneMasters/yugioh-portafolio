@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, TrendingUp } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { InventoryTable } from '../../components/inventory/InventoryTable'
 import { FiltersPanel } from '../../components/filters/FiltersPanel'
@@ -64,9 +64,9 @@ export default function InventoryPage() {
 
   const handleRefresh = () => {
     if (currentTab === 'inventory') {
-      queryClient.invalidateQueries({ queryKey: queryKeys.cards(activeFilters) })
+      queryClient.invalidateQueries({ queryKey: ['cards'] })
     } else if (currentTab === 'wishlist') {
-      queryClient.invalidateQueries({ queryKey: queryKeys.wishlist(activeFilters) })
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] })
     } else {
       fetchFolders()
     }
@@ -85,15 +85,29 @@ export default function InventoryPage() {
             }
           </p>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={RefreshCw}
-          loading={loading || foldersLoading}
-          onClick={handleRefresh}
-        >
-          Actualizar
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {currentTab === 'inventory' && (
+            <Button
+              variant="outline"
+              size="sm"
+              icon={TrendingUp}
+              loading={invHook.syncPricesLoading}
+              onClick={() => invHook.syncPrices(true)}
+              title="Forzar actualización de precios con TCGPlayer"
+            >
+              Actualizar Precios TCG
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={RefreshCw}
+            loading={loading || foldersLoading}
+            onClick={handleRefresh}
+          >
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       {/* Pestañas (Tabs) */}

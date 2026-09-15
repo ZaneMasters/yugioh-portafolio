@@ -124,8 +124,7 @@ class CardRepository {
       c.setCode === (attrs.setCode ?? null) &&
       c.rarity === (attrs.rarity ?? null) &&
       c.edition === (attrs.edition ?? null) &&
-      c.language === (attrs.language ?? null) &&
-      c.condition === (attrs.condition ?? 'new')
+      c.language === (attrs.language ?? null)
     );
 
     return exactMatch || null;

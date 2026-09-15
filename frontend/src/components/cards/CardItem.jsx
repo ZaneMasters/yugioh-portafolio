@@ -53,12 +53,23 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
     </span>
   )
 
-  // Badge de rareza o condición
+  // Badge de rareza
   const rarityBadge = card.rarity
     ? <Badge rarity={card.rarity} />
-    : card.condition
-      ? <Badge condition={card.condition} />
-      : null
+    : null
+
+  // Badge de precio (exclusivo de TCGPlayer)
+  const priceVal = card.tcgMarketPrice ?? (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0' ? card.tcgPrice : null)
+  const numPrice = priceVal !== null && priceVal !== undefined && priceVal !== '' ? Number(priceVal) : null
+
+  const priceBadge = numPrice !== null && !isNaN(numPrice) ? (
+    <span
+      className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-950/80 backdrop-blur-sm text-xs font-bold text-emerald-400 border border-emerald-500/30 whitespace-nowrap shrink-0 shadow-sm"
+      title={card.tcgPriceUpdatedAt ? `TCGPlayer Market (Act: ${new Date(card.tcgPriceUpdatedAt).toLocaleDateString()})` : 'Precio TCGPlayer'}
+    >
+      ${numPrice.toFixed(2)}
+    </span>
+  ) : null
 
   return (
     <motion.div
@@ -83,12 +94,19 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
       <div className={`relative shrink-0 flex justify-center bg-black/30 ${
         isList ? 'w-24 sm:w-auto sm:h-56' : 'h-56'
       }`}>
-        {/* Badge SOLO en vista 1-columna: fuera de la carta, en la esquina superior derecha del fondo */}
+        {/* Badges en vista 1-columna / desktop */}
         {isGrid1 && !isList && (
-          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end pointer-events-none">
-            {quantityPill}
-            {rarityBadge}
-          </div>
+          <>
+            {priceBadge && (
+              <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                {priceBadge}
+              </div>
+            )}
+            <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end pointer-events-none">
+              {quantityPill}
+              {rarityBadge}
+            </div>
+          </>
         )}
 
         <div 
@@ -160,6 +178,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
             <div className="flex flex-wrap gap-1 items-center mt-0.5">
               {quantityPill}
               {rarityBadge}
+              {priceBadge}
             </div>
           </>
         )}
@@ -180,6 +199,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
             <div className="flex flex-wrap gap-1 items-center mt-0.5">
               {quantityPill}
               {rarityBadge}
+              {priceBadge}
             </div>
           </>
         )}

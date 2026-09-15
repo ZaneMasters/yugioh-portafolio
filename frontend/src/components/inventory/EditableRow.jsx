@@ -4,13 +4,12 @@ import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Select'
 import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal'
-import { CONDITIONS, RARITIES, EDITIONS, LANGUAGES } from '../../utils/constants'
+import { RARITIES, EDITIONS, LANGUAGES } from '../../utils/constants'
 import { motion } from 'framer-motion'
 
 export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inventory', folders = [] }) {
   const [editing, setEditing]   = useState(false)
   const [qty, setQty]           = useState(card.quantity)
-  const [cond, setCond]         = useState(card.condition || 'new')
   const [folderIds, setFolderIds] = useState(card.folderIds || [])
   const [rarity, setRarity]     = useState(card.rarity || 'Common')
   const [deleting, setDeleting] = useState(false)
@@ -28,7 +27,6 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
     let payload = {}
 
     if (mode === 'inventory') {
-      const origCond    = card.condition || 'new'
       const origFolders = card.folderIds || []
       const currentFolders = folderIds || []
       const foldersChanged = origFolders.length !== currentFolders.length || !origFolders.every(f => currentFolders.includes(f))
@@ -36,8 +34,8 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
       const editionChanged = edition !== (card.edition || '')
       const languageChanged = language !== (card.language || '')
       const rarityChanged  = rarity  !== (card.rarity  || 'Common')
-      changed = qtyChanged || cond !== origCond || foldersChanged || setCodeChanged || editionChanged || languageChanged || rarityChanged
-      payload = { quantity: numQty, condition: cond, folderIds: currentFolders, rarity, setCode: setCode || undefined, edition: edition || undefined, language: language || undefined }
+      changed = qtyChanged || foldersChanged || setCodeChanged || editionChanged || languageChanged || rarityChanged
+      payload = { quantity: numQty, folderIds: currentFolders, rarity, setCode: setCode || undefined, edition: edition || undefined, language: language || undefined }
     } else {
       const origRarity = card.rarity || 'Common'
       changed = qtyChanged || rarity !== origRarity
@@ -56,7 +54,6 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
   const handleCancel = () => {
     setEditing(false)
     setQty(card.quantity)
-    setCond(card.condition || 'new')
     setFolderIds(card.folderIds || [])
     setRarity(card.rarity || 'Common')
     setSetCode(card.setCode || '')
@@ -109,19 +106,9 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
           {card.archetype || <span className="text-slate-600">—</span>}
         </td>
 
-        {/* Set Code + Rareza (datos de la versión física) */}
-        <td className="px-4 py-3">
-          {editing && mode !== 'inventory' ? (
-            <div className="flex flex-col gap-1.5">
-              <Select
-                options={RARITIES.filter(r => r.value !== 'Any')}
-                value={rarity}
-                onChange={(e) => setRarity(e.target.value)}
-                className="min-w-[130px]"
-                hidePlaceholderOption
-              />
-            </div>
-          ) : (
+        {/* Set Code + Rareza (datos de la versión física) — solo en inventario */}
+        {mode === 'inventory' && (
+          <td className="px-4 py-3">
             <div className="flex flex-col gap-1">
               {card.setCode && (
                 <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 w-fit">
@@ -131,8 +118,8 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
               {card.rarity && <Badge rarity={card.rarity} />}
               {!card.setCode && !card.rarity && <span className="text-slate-600 text-xs">—</span>}
             </div>
-          )}
-        </td>
+          </td>
+        )}
 
         {/* Cantidad */}
         <td className="px-4 py-3">
@@ -151,7 +138,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
           )}
         </td>
 
-        {/* Condición / Rareza */}
+        {/* Detalles / Rareza */}
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
             {editing ? (
@@ -159,17 +146,10 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     <Select
-                      options={CONDITIONS}
-                      value={cond}
-                      onChange={(e) => setCond(e.target.value)}
-                      className="min-w-[120px]"
-                      hidePlaceholderOption
-                    />
-                    <Select
                       options={[{ value: '', label: 'Idioma...' }, ...LANGUAGES]}
                       value={language}
                       onChange={(e) => setLanguage(e.target.value)}
-                      className="min-w-[100px]"
+                      className="min-w-[120px]"
                       hidePlaceholderOption
                     />
                     {card.edition && (
@@ -203,10 +183,10 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                 </div>
               ) : (
                 <Select
-                  options={RARITIES}
+                  options={RARITIES.filter(r => r.value !== 'Any')}
                   value={rarity}
                   onChange={(e) => setRarity(e.target.value)}
-                  className="min-w-[160px]"
+                  className="min-w-[140px]"
                   hidePlaceholderOption
                 />
               )
@@ -214,10 +194,18 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
               mode === 'inventory'
                 ? (
                   <div className="flex flex-col gap-1">
-                    <Badge condition={card.condition} />
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {card.edition  && <span className="text-[10px] text-slate-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5">{card.edition}</span>}
                       {card.language && <span className="text-[10px] text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5">{card.language}</span>}
+                      {(card.tcgMarketPrice != null || card.tcgPrice) && (
+                        <span
+                          className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 flex items-center gap-1"
+                          title={card.tcgPriceUpdatedAt ? `TCGPlayer Market (Actualizado: ${new Date(card.tcgPriceUpdatedAt).toLocaleDateString()})` : 'Precio TCGPlayer Market'}
+                        >
+                          <span className="text-[9px] text-emerald-500 font-bold">TCG</span> ${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)}
+                        </span>
+                      )}
+                      {!card.edition && !card.language && !card.tcgMarketPrice && !card.tcgPrice && <span className="text-slate-600 text-xs">—</span>}
                     </div>
                   </div>
                 )
@@ -261,7 +249,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
         exit={{ opacity: 0 }}
         className={`md:hidden border-b border-white/5 ${card.isHidden ? 'opacity-60 bg-white/[0.02]' : ''}`}
       >
-        <td colSpan={6} className="p-2.5 max-w-[100vw] sm:max-w-none">
+        <td colSpan={mode === 'inventory' ? 6 : 5} className="p-2.5 max-w-[100vw] sm:max-w-none">
           <div className="flex gap-2.5 w-full">
             {/* Imagen */}
             <img
@@ -307,9 +295,13 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                   {mode === 'inventory' ? (
                     <>
                       {card.setCode && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5">{card.setCode}</span>}
-                      <Badge condition={card.condition} />
                       {card.rarity && <Badge rarity={card.rarity} />}
                       {card.language && <span className="text-[9px] text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5">{card.language}</span>}
+                      {(card.tcgMarketPrice != null || card.tcgPrice) && (
+                        <span className="text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5">
+                          ${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)}
+                        </span>
+                      )}
                     </>
                   ) : (
                     <Badge rarity={card.rarity} />
@@ -326,8 +318,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                   {mode === 'inventory' ? (
                     <div className="flex flex-col gap-1.5 w-full">
                       <div className="flex gap-1.5">
-                        <Select options={CONDITIONS} value={cond} onChange={(e) => setCond(e.target.value)} className="flex-1" triggerClassName="!text-[10px] !h-6 !py-0 !px-1.5" hidePlaceholderOption />
-                        <Select options={[{ value: '', label: 'Idioma' }, ...LANGUAGES]} value={language} onChange={(e) => setLanguage(e.target.value)} className="flex-1" triggerClassName="!text-[10px] !h-6 !py-0 !px-1.5" hidePlaceholderOption />
+                        <Select options={[{ value: '', label: 'Idioma' }, ...LANGUAGES]} value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full" triggerClassName="!text-[10px] !h-6 !py-0 !px-1.5" hidePlaceholderOption />
                       </div>
                       {folders.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-0.5">

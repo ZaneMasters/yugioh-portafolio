@@ -40,7 +40,7 @@ const createCard = async (req, res, next) => {
 // Devuelve las cartas del inventario del administrador autenticado
 const getAllCards = async (req, res, next) => {
   try {
-    const { name, type, archetype, folderId, cursor, limit } = req.query;
+    const { name, type, archetype, folderId, cursor, limit, refresh } = req.query;
     const filters = {};
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
@@ -48,6 +48,10 @@ const getAllCards = async (req, res, next) => {
     if (folderId)  filters.folderId  = folderId;
 
     const userId = req.user.uid;
+
+    if (refresh === 'true') {
+      cardService.invalidateInventoryCache(userId);
+    }
 
     const pagination = {
       paginate: true,
@@ -175,6 +179,24 @@ const deleteCard = async (req, res, next) => {
   }
 };
 
+// ── POST /cards/sync-prices ────────────────────────────────────────────────────
+const syncPrices = async (req, res, next) => {
+  try {
+    const userId = req.user.uid;
+    const forceAll = req.query.force === 'true';
+    const result = await cardService.syncUserCardPrices(userId, forceAll);
+    return res.status(200).json({
+      success: true,
+      message: result.inProgress
+        ? 'La sincronización de precios de TCGPlayer ya está en progreso.'
+        : `Sincronización completada: ${result.updated} cartas actualizadas.`,
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createCard,
   getAllCards,
@@ -182,4 +204,5 @@ module.exports = {
   getPortfolioBySlug,
   updateCard,
   deleteCard,
+  syncPrices,
 };

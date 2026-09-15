@@ -5,7 +5,7 @@ import {
   X, Sword, Shield, Star, Layers, Link2, Sparkles, Tag, DollarSign, Globe, BookOpen, ShoppingCart, Check, ArrowRightLeft
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
-import { CONDITIONS, RARITIES, LANGUAGES } from '../../utils/constants'
+import { RARITIES, LANGUAGES } from '../../utils/constants'
 import { lockScroll, unlockScroll } from '../../utils/scrollLock'
 import { useCartStore } from '../../store/useCartStore'
 import { toast } from 'react-hot-toast'
@@ -45,7 +45,6 @@ const ATTR_COLORS = {
   DIVINE: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.4)', text: '#fbbf24' },
 }
 
-const conditionLabel = (v) => CONDITIONS.find((c) => c.value === v)?.label ?? v
 const rarityLabel    = (v) => RARITIES.find((r)  => r.value === v)?.label ?? v
 
 // ─── Colores de glow por frameType ───────────────────────────────────────────
@@ -460,10 +459,8 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                       <Layers style={{ width: 14, height: 14, color: '#94a3b8' }} />
                       ×{card.quantity} en inventario
                     </span>
-                    {card.rarity ? (
+                    {card.rarity && (
                       <Badge rarity={card.rarity} />
-                    ) : (
-                      <Badge condition={card.condition} />
                     )}
 
                     {isPublic && (
@@ -505,7 +502,7 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                 style={{ borderTop: `1px solid ${glowColor}18` }}
               >
                 {/* Detalles de la versión física del inventario */}
-                {(card.setCode || card.setName || card.rarity || card.edition || card.language || card.setPrice || card.tcgPrice) && (
+                {(card.setCode || card.setName || card.rarity || card.edition || card.language || card.tcgMarketPrice || card.tcgPrice) && (
                   <div style={{ marginTop: '20px' }}>
                     <SectionLabel
                       icon={<Tag style={{ width: 12, height: 12 }} />}
@@ -559,38 +556,26 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                           color="#38bdf8"
                         />
                       )}
-                      {card.setCode ? (
-                        (card.setPrice && card.setPrice !== '0.00' && card.setPrice !== '0') ? (
-                          <InfoChip
-                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
-                            label="Precio Est."
-                            value={`$${card.setPrice} USD`}
-                            color="#34d399"
-                          />
-                        ) : (
-                          <InfoChip
-                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
-                            label="Precio Est."
-                            value="N/D"
-                            color="#f87171"
-                          />
-                        )
-                      ) : (
-                        (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0') ? (
-                          <InfoChip
-                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
-                            label="TCGPlayer"
-                            value={`$${card.tcgPrice} USD`}
-                            color="#34d399"
-                          />
-                        ) : (
-                          <InfoChip
-                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
-                            label="Precio"
-                            value="N/D"
-                            color="#f87171"
-                          />
-                        )
+                      {(card.tcgMarketPrice != null || (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0')) && (
+                        <InfoChip
+                          icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                          label="TCGPlayer Market"
+                          value={`$${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)} USD`}
+                          color="#34d399"
+                        />
+                      )}
+                      {card.tcgLowPrice != null && (
+                        <InfoChip
+                          icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                          label="TCG Low"
+                          value={`$${Number(card.tcgLowPrice).toFixed(2)} USD`}
+                          color="#38bdf8"
+                        />
+                      )}
+                      {card.tcgPriceUpdatedAt && (
+                        <div style={{ width: '100%', fontSize: '10px', color: '#64748b', marginTop: '1px' }}>
+                          Precios actualizados: {new Date(card.tcgPriceUpdatedAt).toLocaleDateString()}
+                        </div>
                       )}
                       {card.setName && (
                         <div style={{ width: '100%', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>

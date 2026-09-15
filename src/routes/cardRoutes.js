@@ -39,6 +39,13 @@ router.get('/', authMiddleware, cardController.getAllCards);
 router.get('/portfolio/:slug/cards', cardController.getPortfolioBySlug);
 
 /**
+ * @route   POST /api/v1/cards/sync-prices
+ * @desc    Sincronizar precios de TCGPlayer de las cartas del usuario
+ * @access  Private (requiere Firebase ID Token)
+ */
+router.post('/sync-prices', authMiddleware, cardController.syncPrices);
+
+/**
  * @route   GET /api/v1/cards/:id
  * @desc    Obtener una carta del inventario por ID de Firestore
  * @access  Public
@@ -51,7 +58,7 @@ router.get(
 
 /**
  * @route   PUT /api/v1/cards/:id
- * @desc    Actualizar quantity y/o condition (solo el propietario)
+ * @desc    Actualizar carta de inventario (solo el propietario)
  * @access  Private (requiere Firebase ID Token)
  */
 router.put(

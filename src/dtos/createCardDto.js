@@ -26,14 +26,6 @@ const createCardSchema = z
       ])
       .optional(),
 
-    condition: z
-      .enum(['new', 'near_mint', 'lightly_played', 'moderately_played', 'heavily_played', 'damaged'], {
-        errorMap: () => ({
-          message:
-            'condition debe ser: new, near_mint, lightly_played, moderately_played, heavily_played o damaged.',
-        }),
-      })
-      .default('new'),
 
     quantity: z
       .number({ invalid_type_error: 'quantity debe ser un número.' })

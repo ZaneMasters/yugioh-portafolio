@@ -33,8 +33,11 @@ export const getCardById = (id) => api.get(`/cards/${id}`)
 /** Registrar carta en inventario (name o cardId) */
 export const createCard = (payload) => api.post('/cards', payload)
 
-/** Actualizar quantity y/o condition */
+/** Actualizar datos de carta en inventario */
 export const updateCard = (id, payload) => api.put(`/cards/${id}`, payload)
 
 /** Eliminar carta */
 export const deleteCard = (id) => api.delete(`/cards/${id}`)
+
+/** Sincronizar precios de TCGPlayer de las cartas del inventario */
+export const syncCardPrices = (force = false) => api.post('/cards/sync-prices', null, { params: { force } })
