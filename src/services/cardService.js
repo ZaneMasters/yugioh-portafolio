@@ -425,27 +425,66 @@ async function searchBySetCode(setCode) {
       }
     });
 
-    // 3. Enriquecer los resultados del catálogo con el set que hizo match y la disponibilidad en comunidad
-    return catalogCards.map((c) => {
-      const matchingSet = c.cardSets?.find((s) => {
-        const sCode = (s.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        return sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode);
-      }) || c.cardSets?.[0] || null;
+    // 3. Enriquecer los resultados del catálogo con precios en vivo y disponibilidad en comunidad
+    const enrichedCards = await Promise.all(
+      catalogCards.map(async (c) => {
+        const matchingSet = c.cardSets?.find((s) => {
+          const sCode = (s.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          return sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode);
+        }) || c.cardSets?.[0] || null;
 
-      const owners = ownersByCardId[c.cardId] || [];
+        const owners = ownersByCardId[c.cardId] || [];
 
-      return {
-        ...c,
-        matchedSet: matchingSet,
-        communityOwners: owners,
-        availableInCommunity: owners.length > 0,
-      };
-    });
+        // Consultar precios oficiales TCGPlayer en vivo para este set code exacto
+        let tcgPrices = { marketPrice: null, lowPrice: null };
+        if (matchingSet?.setCode) {
+          try {
+            tcgPrices = await tcgPlayerService.getPriceForCard(
+              c.name,
+              matchingSet.setCode,
+              matchingSet.rarity,
+              matchingSet.setName
+            );
+          } catch (err) {
+            logger.debug(`No se pudo obtener precio TCGPlayer para "${c.name}" (${matchingSet.setCode}): ${err.message}`);
+          }
+        }
+
+        // Si hay dueños de la comunidad con precio, calcular el precio más bajo en comunidad
+        const communityPrices = owners
+          .map((o) => (typeof o.price === 'number' ? o.price : parseFloat(o.price)))
+          .filter((p) => !isNaN(p) && p > 0);
+        const minCommunityPrice = communityPrices.length > 0 ? Math.min(...communityPrices) : null;
+
+        return {
+          ...c,
+          marketPrice: tcgPrices.marketPrice,
+          lowPrice: tcgPrices.lowPrice,
+          minCommunityPrice,
+          matchedSet: {
+            ...matchingSet,
+            marketPrice: tcgPrices.marketPrice,
+            lowPrice: tcgPrices.lowPrice,
+          },
+          communityOwners: owners,
+          availableInCommunity: owners.length > 0,
+        };
+      })
+    );
+
+    return enrichedCards;
   } catch (err) {
     logger.warn(`Error cruzando disponibilidad en comunidad para set "${setCode}": ${err.message}`);
     return catalogCards.map((c) => ({
       ...c,
-      matchedSet: c.cardSets?.[0] || null,
+      marketPrice: null,
+      lowPrice: null,
+      minCommunityPrice: null,
+      matchedSet:
+        c.cardSets?.find((s) => {
+          const sCode = (s.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          return sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode);
+        }) || c.cardSets?.[0] || null,
       communityOwners: [],
       availableInCommunity: false,
     }));

@@ -56,11 +56,11 @@ export function Navbar() {
     <header className={`sticky top-0 z-40 glass border-b border-white/5 transition-transform duration-300 ${show ? 'translate-y-0' : '-translate-y-full sm:translate-y-0'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
         {/* Brand */}
-        <NavLink to={galleryLink} className="flex items-center gap-3 group shrink-0">
+        <NavLink to="/" className="flex items-center gap-3 group shrink-0" title="Ir al Inicio">
           <img
             src={logo}
             alt="Yu-Gi-Oh!"
-            className="h-8 w-auto object-contain drop-shadow-md"
+            className="h-8 w-auto object-contain drop-shadow-md transition-transform group-hover:scale-105"
           />
           <span className="text-gradient font-black text-lg tracking-wider hidden sm:inline font-display">
             Inventory
