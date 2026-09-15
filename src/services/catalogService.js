@@ -11,9 +11,9 @@ const REFRESH_INTERVAL_MS    = 7 * 24 * 60 * 60 * 1000; // 7 días en ms
 /**
  * Versión del esquema de buildIndex.
  * Incrementar cuando se cambie la estructura de buildIndex para invalidar backups viejos.
- * v2 — añade card_sets, card_images (multi-arte), tcgPrice, race, _searchSets
+ * v3 — los precios se consultan en vivo desde TCGPlayer, se remueven card_prices y set_price
  */
-const CATALOG_SCHEMA_VERSION = 2;
+const CATALOG_SCHEMA_VERSION = 3;
 
 // ── Estado en memoria ────────────────────────────────────────────────────────
 let catalog         = [];
@@ -60,16 +60,13 @@ const buildIndex = (cards) => {
       id: i.id,
       s:  i.image_url_small,
     })),
-    // Todas las versiones físicas de la carta (set code, rareza, precio por expansión)
-    // Claves cortas para minimizar RAM: n=name, c=code, r=rarity, p=price
+    // Versiones físicas de la carta (set code, rareza). Los precios se gestionan vía TCGPlayer.
+    // Claves cortas para minimizar RAM: n=name, c=code, r=rarity
     card_sets: (card.card_sets ?? []).map(s => ({
       n: s.set_name,
       c: s.set_code,
       r: s.set_rarity,
-      p: s.set_price,
     })),
-    // Precio de mercado genérico (TCGPlayer) como referencia rápida
-    tcgPrice: card.card_prices?.[0]?.tcgplayer_price ?? null,
     // Índices de búsqueda
     _searchName:      normalizeString(card.name),
     _searchArchetype: normalizeString(card.archetype),

@@ -106,19 +106,9 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
           {card.archetype || <span className="text-slate-600">—</span>}
         </td>
 
-        {/* Set Code + Rareza (datos de la versión física) */}
-        <td className="px-4 py-3">
-          {editing && mode !== 'inventory' ? (
-            <div className="flex flex-col gap-1.5">
-              <Select
-                options={RARITIES.filter(r => r.value !== 'Any')}
-                value={rarity}
-                onChange={(e) => setRarity(e.target.value)}
-                className="min-w-[130px]"
-                hidePlaceholderOption
-              />
-            </div>
-          ) : (
+        {/* Set Code + Rareza (datos de la versión física) — solo en inventario */}
+        {mode === 'inventory' && (
+          <td className="px-4 py-3">
             <div className="flex flex-col gap-1">
               {card.setCode && (
                 <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 w-fit">
@@ -128,8 +118,8 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
               {card.rarity && <Badge rarity={card.rarity} />}
               {!card.setCode && !card.rarity && <span className="text-slate-600 text-xs">—</span>}
             </div>
-          )}
-        </td>
+          </td>
+        )}
 
         {/* Cantidad */}
         <td className="px-4 py-3">
@@ -193,10 +183,10 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                 </div>
               ) : (
                 <Select
-                  options={RARITIES}
+                  options={RARITIES.filter(r => r.value !== 'Any')}
                   value={rarity}
                   onChange={(e) => setRarity(e.target.value)}
-                  className="min-w-[160px]"
+                  className="min-w-[140px]"
                   hidePlaceholderOption
                 />
               )
@@ -259,7 +249,7 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
         exit={{ opacity: 0 }}
         className={`md:hidden border-b border-white/5 ${card.isHidden ? 'opacity-60 bg-white/[0.02]' : ''}`}
       >
-        <td colSpan={6} className="p-2.5 max-w-[100vw] sm:max-w-none">
+        <td colSpan={mode === 'inventory' ? 6 : 5} className="p-2.5 max-w-[100vw] sm:max-w-none">
           <div className="flex gap-2.5 w-full">
             {/* Imagen */}
             <img

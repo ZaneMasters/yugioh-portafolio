@@ -64,9 +64,9 @@ export default function InventoryPage() {
 
   const handleRefresh = () => {
     if (currentTab === 'inventory') {
-      queryClient.invalidateQueries({ queryKey: queryKeys.cards(activeFilters) })
+      queryClient.invalidateQueries({ queryKey: ['cards'] })
     } else if (currentTab === 'wishlist') {
-      queryClient.invalidateQueries({ queryKey: queryKeys.wishlist(activeFilters) })
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] })
     } else {
       fetchFolders()
     }

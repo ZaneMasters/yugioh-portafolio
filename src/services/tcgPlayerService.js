@@ -78,55 +78,90 @@ async function searchTCGPlayer(cardName) {
 }
 
 /**
- * Obtiene el precio de mercado y precio más bajo de una carta específica en TCGPlayer.
- * Realiza matching exacto por setCode (número de carta), y si no, por rareza/nombre de set.
+ * Realiza una búsqueda directa en TCGPlayer filtrando por el número de carta / set code exacto.
+ * TCGPlayer indexa `customAttributes.number` en mayúsculas (ej: "MP24-EN001", "RA01-EN001").
  *
- * @param {string} cardName - Nombre de la carta (ej: "Nibiru, the Primal Being")
- * @param {string|null} setCode - Código de la expansión (ej: "TN19-EN013" o "RA01-EN001")
- * @param {string|null} rarity - Rareza opcional (ej: "Ultra Rare")
+ * @param {string} setCode
+ * @returns {Promise<Array>} Lista de productos con ese código exacto
+ */
+async function searchBySetCode(setCode) {
+  if (!setCode || typeof setCode !== 'string') return [];
+
+  const cleanCode = setCode.trim().toUpperCase();
+  const cacheKey = `setcode:${cleanCode}`;
+
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.items;
+  }
+
+  try {
+    const payload = {
+      algorithm: '',
+      fromPath: 'search',
+      size: 24,
+      context: { cart: {} },
+      settings: { useTCGStandardSizes: true },
+      sort: {},
+      filters: {
+        term: {
+          Number: [cleanCode],
+        },
+      },
+    };
+
+    const response = await tcgAxios.post(TCG_SEARCH_URL, payload);
+    const items = response.data?.results?.[0]?.results || [];
+
+    searchCache.set(cacheKey, {
+      items,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+
+    return items;
+  } catch (err) {
+    logger.warn(`⚠️  Error al consultar TCGPlayer por código "${setCode}": ${err.message}`);
+    return [];
+  }
+}
+
+/**
+ * Obtiene el precio de mercado y precio más bajo de una carta específica en TCGPlayer.
+ * Exclusivo para cartas que cuentan con setCode (número de expansión).
+ *
+ * @param {string} cardName - Nombre de la carta (ej: "Blue-Eyes White Dragon")
+ * @param {string|null} setCode - Código de la expansión (ej: "MP24-EN001" o "RA01-EN001")
+ * @param {string|null} rarity - Rareza opcional (ej: "Quarter Century Secret Rare")
  * @param {string|null} setName - Nombre de la expansión opcional
  * @returns {Promise<{ marketPrice: number|null, lowPrice: number|null, matchedNumber: string|null }>}
  */
 async function getPriceForCard(cardName, setCode = null, rarity = null, setName = null) {
-  const items = await searchTCGPlayer(cardName);
-  if (!items || items.length === 0) {
+  // Solo se busca precio en TCGPlayer si la carta tiene código de set
+  if (!setCode || typeof setCode !== 'string' || !setCode.trim()) {
     return { marketPrice: null, lowPrice: null, matchedNumber: null };
   }
 
-  const targetCodeNorm = normalize(setCode);
+  const cleanCode = setCode.trim().toUpperCase();
   const targetRarityNorm = normalize(rarity);
-  const targetSetNameNorm = normalize(setName);
+
+  const directItems = await searchBySetCode(cleanCode);
+  if (!directItems || directItems.length === 0) {
+    return { marketPrice: null, lowPrice: null, matchedNumber: null };
+  }
 
   let match = null;
 
-  // 1. Coincidencia exacta por código de set / número (ej: "TN19-EN013")
-  if (targetCodeNorm) {
-    match = items.find(i => normalize(i.customAttributes?.number) === targetCodeNorm);
-  }
-
-  // 2. Coincidencia por prefijo del set y rareza (ej: "TN19" y "Prismatic Secret Rare")
-  if (!match && targetCodeNorm) {
-    const prefix = targetCodeNorm.split(/[0-9]/)[0] || targetCodeNorm.slice(0, 4);
-    match = items.find(i => {
-      const itemNumberNorm = normalize(i.customAttributes?.number);
-      const numberMatches = itemNumberNorm.startsWith(prefix);
-      const rarityMatches = targetRarityNorm ? normalize(i.rarityName).includes(targetRarityNorm) : true;
-      return numberMatches && rarityMatches;
+  // Si hay más de una variante con el mismo código (ej: Rarity Collection), emparejar por rareza
+  if (targetRarityNorm) {
+    match = directItems.find(i => {
+      const rNorm = normalize(i.rarityName);
+      const pNorm = normalize(i.productName);
+      return rNorm === targetRarityNorm || rNorm.includes(targetRarityNorm) || pNorm.includes(targetRarityNorm);
     });
   }
 
-  // 3. Coincidencia por nombre de set y rareza
-  if (!match && targetSetNameNorm) {
-    match = items.find(i => {
-      const setMatches = normalize(i.setName).includes(targetSetNameNorm);
-      const rarityMatches = targetRarityNorm ? normalize(i.rarityName).includes(targetRarityNorm) : true;
-      return setMatches && rarityMatches;
-    });
-  }
-
-  // 4. Si no hubo coincidencia específica, usar el primer ítem que tenga precio de mercado
   if (!match) {
-    match = items.find(i => typeof i.marketPrice === 'number') || items[0];
+    match = directItems.find(i => typeof i.marketPrice === 'number') || directItems[0];
   }
 
   if (!match) {
@@ -139,7 +174,7 @@ async function getPriceForCard(cardName, setCode = null, rarity = null, setName 
   return {
     marketPrice,
     lowPrice,
-    matchedNumber: match.customAttributes?.number || match.setCode || null,
+    matchedNumber: match.customAttributes?.number || match.setCode || cleanCode,
   };
 }
 

@@ -502,7 +502,7 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                 style={{ borderTop: `1px solid ${glowColor}18` }}
               >
                 {/* Detalles de la versión física del inventario */}
-                {(card.setCode || card.setName || card.rarity || card.edition || card.language || card.setPrice || card.tcgPrice) && (
+                {(card.setCode || card.setName || card.rarity || card.edition || card.language || card.tcgMarketPrice || card.tcgPrice) && (
                   <div style={{ marginTop: '20px' }}>
                     <SectionLabel
                       icon={<Tag style={{ width: 12, height: 12 }} />}
@@ -556,21 +556,14 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                           color="#38bdf8"
                         />
                       )}
-                      {(card.tcgMarketPrice != null || (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0')) ? (
+                      {(card.tcgMarketPrice != null || (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0')) && (
                         <InfoChip
                           icon={<DollarSign style={{ width: 11, height: 11 }} />}
                           label="TCGPlayer Market"
                           value={`$${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)} USD`}
                           color="#34d399"
                         />
-                      ) : (card.setPrice && card.setPrice !== '0.00' && card.setPrice !== '0') ? (
-                        <InfoChip
-                          icon={<DollarSign style={{ width: 11, height: 11 }} />}
-                          label="Precio Est."
-                          value={`$${card.setPrice} USD`}
-                          color="#34d399"
-                        />
-                      ) : null}
+                      )}
                       {card.tcgLowPrice != null && (
                         <InfoChip
                           icon={<DollarSign style={{ width: 11, height: 11 }} />}

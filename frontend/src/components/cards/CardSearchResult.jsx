@@ -1,5 +1,5 @@
 import { useState, memo, useMemo, useEffect } from 'react'
-import { Plus, Sword, Shield, Minus, ChevronDown, Tag, DollarSign, Palette } from 'lucide-react'
+import { Plus, Sword, Shield, Minus, ChevronDown, Tag, Palette } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Select'
 import { RARITIES, EDITIONS, LANGUAGES } from '../../utils/constants'
@@ -82,7 +82,6 @@ export const CardSearchResult = memo(function CardSearchResult({
         setCode:         selectedSet?.setCode   ?? undefined,
         setName:         selectedSet?.setName   ?? undefined,
         rarity:          selectedSet?.rarity    ?? undefined,
-        setPrice:        selectedSet?.setPrice  ?? undefined,
         selectedImageId: selectedImageId        ?? undefined,
         edition:         edition || undefined,
         language:        language || undefined,
@@ -142,21 +141,6 @@ export const CardSearchResult = memo(function CardSearchResult({
                 <span className="flex items-center gap-0.5 text-sky-400">
                   <Shield className="w-3 h-3" />{card.def}
                 </span>
-              )}
-            </div>
-          )}
-
-          {/* Precio del set auto-seleccionado o fallback global */}
-          {selectedSet && (
-            <div className="flex items-center gap-1 mt-0.5">
-              <DollarSign className="w-2.5 h-2.5 text-emerald-400" />
-              {(selectedSet.setPrice && selectedSet.setPrice !== '0.00' && selectedSet.setPrice !== '0') ? (
-                <>
-                  <span className="text-[10px] font-bold text-emerald-400">${selectedSet.setPrice}</span>
-                  <span className="text-[10px] text-slate-600">est. set</span>
-                </>
-              ) : (
-                <span className="text-[10px] font-bold text-red-400" title="Precio no disponible para este set">N/D</span>
               )}
             </div>
           )}

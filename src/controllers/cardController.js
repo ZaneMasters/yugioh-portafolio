@@ -40,7 +40,7 @@ const createCard = async (req, res, next) => {
 // Devuelve las cartas del inventario del administrador autenticado
 const getAllCards = async (req, res, next) => {
   try {
-    const { name, type, archetype, folderId, cursor, limit } = req.query;
+    const { name, type, archetype, folderId, cursor, limit, refresh } = req.query;
     const filters = {};
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
@@ -48,6 +48,10 @@ const getAllCards = async (req, res, next) => {
     if (folderId)  filters.folderId  = folderId;
 
     const userId = req.user.uid;
+
+    if (refresh === 'true') {
+      cardService.invalidateInventoryCache(userId);
+    }
 
     const pagination = {
       paginate: true,

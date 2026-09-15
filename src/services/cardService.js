@@ -87,23 +87,23 @@ async function registerCard(dto, userId) {
   const selectedImageUrl = externalCard.cardImages?.find(i => i.id === selectedImageId)?.image
     ?? externalCard.image;
 
-  // Consultar precio oficial en vivo de TCGPlayer
+  // Consultar precio oficial en vivo de TCGPlayer solo si la carta se guarda con código de set
   let livePrice = { marketPrice: null, lowPrice: null };
-  try {
-    livePrice = await tcgPlayerService.getPriceForCard(
-      externalCard.name,
-      dto.setCode,
-      dto.rarity,
-      dto.setName
-    );
-  } catch (err) {
-    logger.warn(`⚠️ Error al consultar precio TCGPlayer para "${externalCard.name}": ${err.message}`);
+  if (dto.setCode && dto.setCode.trim()) {
+    try {
+      livePrice = await tcgPlayerService.getPriceForCard(
+        externalCard.name,
+        dto.setCode,
+        dto.rarity,
+        dto.setName
+      );
+    } catch (err) {
+      logger.warn(`⚠️ Error al consultar precio TCGPlayer para "${externalCard.name}" (${dto.setCode}): ${err.message}`);
+    }
   }
 
-  const tcgMarketPrice = livePrice.marketPrice !== null
-    ? livePrice.marketPrice
-    : (dto.setPrice ? Number(dto.setPrice) : (externalCard.tcgPrice ? Number(externalCard.tcgPrice) : null));
-  const tcgLowPrice    = livePrice.lowPrice ?? null;
+  const tcgMarketPrice    = livePrice.marketPrice ?? null;
+  const tcgLowPrice       = livePrice.lowPrice ?? null;
   const tcgPriceUpdatedAt = livePrice.marketPrice !== null ? new Date().toISOString() : null;
 
   // Guardar la carta inmediatamente con la URL de YGOProdeck (respuesta rápida al usuario)
@@ -123,18 +123,17 @@ async function registerCard(dto, userId) {
     frameType: externalCard.frameType,
     quantity:  quantity  || 1,
     folderIds: Array.isArray(dto.folderIds) ? dto.folderIds : [],
-    // —— Nuevos campos de la versión física ——
+    // —— Campos de la versión física ——
     setCode:           dto.setCode         ?? null,
     setName:           dto.setName         ?? null,
     rarity:            dto.rarity          ?? null,
-    setPrice:          dto.setPrice        ?? null,
     selectedImageId:   selectedImageId,
     edition:           dto.edition         ?? null,
     language:          dto.language        ?? null,
     tcgMarketPrice:    tcgMarketPrice,
     tcgLowPrice:       tcgLowPrice,
     tcgPriceUpdatedAt: tcgPriceUpdatedAt,
-    tcgPrice:          tcgMarketPrice !== null ? String(tcgMarketPrice) : (externalCard.tcgPrice ?? null),
+    tcgPrice:          tcgMarketPrice !== null ? String(tcgMarketPrice) : null,
   });
 
   invalidateInventoryCache(userId);
@@ -183,8 +182,9 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   }
 
   // ── Lazy Sync semanal en segundo plano (fire-and-forget) ──────────────────────
+  // Solo sincronizar cartas que tengan código de expansión (setCode)
   if (userId && !syncingUsers.has(userId) && Array.isArray(rawCards) && rawCards.length > 0) {
-    const hasOutdated = rawCards.some(c => tcgPlayerService.isPriceOutdated(c.tcgPriceUpdatedAt));
+    const hasOutdated = rawCards.some(c => !!c.setCode && tcgPlayerService.isPriceOutdated(c.tcgPriceUpdatedAt));
     if (hasOutdated) {
       setImmediate(() => {
         syncUserCardPrices(userId, false).catch(err => {
@@ -273,7 +273,6 @@ async function updateCard(id, dto, userId) {
   // Campos de la versión física
   if (dto.setCode         !== undefined) updates.setCode         = dto.setCode;
   if (dto.setName         !== undefined) updates.setName         = dto.setName;
-  if (dto.setPrice        !== undefined) updates.setPrice        = dto.setPrice;
   if (dto.selectedImageId !== undefined) updates.selectedImageId = dto.selectedImageId;
   if (dto.edition         !== undefined) updates.edition         = dto.edition;
   if (dto.language        !== undefined) updates.language        = dto.language;
@@ -295,8 +294,10 @@ async function deleteCard(id, userId) {
 
 /**
  * Sincroniza los precios de TCGPlayer de las cartas del inventario de un usuario.
+ * Solo procesa cartas que tengan asignado un código de expansión (setCode).
+ *
  * @param {string} userId - UID del usuario
- * @param {boolean} forceAll - Si es true, actualiza todas las cartas sin importar la fecha
+ * @param {boolean} forceAll - Si es true, actualiza todas las cartas con código sin importar la fecha
  * @returns {Promise<{ total: number, updated: number, errors: number, inProgress?: boolean }>}
  */
 async function syncUserCardPrices(userId, forceAll = false) {
@@ -309,12 +310,14 @@ async function syncUserCardPrices(userId, forceAll = false) {
   syncingUsers.add(userId);
   try {
     const rawCards = await cardRepository.findAllRaw(userId);
+    // Filtrar únicamente cartas que tengan código de expansión (setCode)
+    const cardsWithCode = rawCards.filter(c => !!c.setCode && c.setCode.trim().length > 0);
     const targetCards = forceAll
-      ? rawCards
-      : rawCards.filter(c => tcgPlayerService.isPriceOutdated(c.tcgPriceUpdatedAt));
+      ? cardsWithCode
+      : cardsWithCode.filter(c => tcgPlayerService.isPriceOutdated(c.tcgPriceUpdatedAt));
 
     if (targetCards.length === 0) {
-      logger.info(`✨ Todos los precios de TCGPlayer de ${userId} ya están al día (< 7 días).`);
+      logger.info(`✨ No hay cartas con código de set pendientes de actualizar para ${userId}.`);
       return { total: 0, updated: 0, errors: 0 };
     }
 
@@ -352,9 +355,8 @@ async function syncUserCardPrices(userId, forceAll = false) {
       }
     }
 
-    if (updated > 0) {
-      invalidateInventoryCache(userId);
-    }
+    // Siempre invalidar la caché de inventario al terminar la sincronización
+    invalidateInventoryCache(userId);
 
     logger.info(`✅ Sincronización TCGPlayer completada para ${userId}: ${updated} cartas actualizadas, ${errors} errores.`);
     return { total: targetCards.length, updated, errors };
@@ -370,4 +372,5 @@ module.exports = {
   updateCard,
   deleteCard,
   syncUserCardPrices,
+  invalidateInventoryCache,
 };

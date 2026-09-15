@@ -103,7 +103,6 @@ function mapExternalCard(rawCard) {
       setName:   s.n ?? s.set_name   ?? null,
       setCode:   s.c ?? s.set_code   ?? null,
       rarity:    s.r ?? s.set_rarity ?? null,
-      setPrice:  s.p ?? s.set_price  ?? null,
     }));
   };
 
@@ -122,10 +121,9 @@ function mapExternalCard(rawCard) {
     image:      images[0]?.image      ?? rawCard.card_images?.[0]?.image_url ?? rawCard.image ?? null,
     imageSmall: images[0]?.imageSmall ?? rawCard.card_images?.[0]?.image_url_small ?? rawCard.imageSmall ?? null,
     frameType:  rawCard.frameType ?? null,
-    // Nuevos campos enriquecidos
+    // Versión enriquecida sin precios estáticos (los precios se obtienen en vivo de TCGPlayer)
     cardImages: images,                                // Todas las artes
-    cardSets:   normalizeSets(rawCard.card_sets),      // Todas las expansiones con precio
-    tcgPrice:   rawCard.tcgPrice ?? rawCard.card_prices?.[0]?.tcgplayer_price ?? null,
+    cardSets:   normalizeSets(rawCard.card_sets),      // Todas las expansiones (código, nombre, rareza)
   };
 }
 

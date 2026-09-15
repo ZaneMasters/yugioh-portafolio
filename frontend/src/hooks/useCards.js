@@ -72,7 +72,7 @@ export function useCards(filters = {}) {
   const syncPricesMutation = useMutation({
     mutationFn: (force = true) => cardService.syncCardPrices(force),
     onSuccess: (res) => {
-      toast.success(res.data?.message || 'Precios de TCGPlayer actualizados')
+      toast.success(res?.message || res?.data?.message || 'Precios de TCGPlayer actualizados')
       queryClient.invalidateQueries({ queryKey: ['cards'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
     },
