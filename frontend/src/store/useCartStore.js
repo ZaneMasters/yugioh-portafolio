@@ -1,6 +1,21 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export const getCardPrice = (card) => {
+  if (!card) return null
+  const priceVal =
+    card.tcgMarketPrice ??
+    (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0' ? card.tcgPrice : null) ??
+    (card.price && card.price !== '0.00' && card.price !== '0' ? card.price : null) ??
+    (card.setPrice && card.setPrice !== '0.00' && card.setPrice !== '0' ? card.setPrice : null)
+
+  if (priceVal !== null && priceVal !== undefined && priceVal !== '') {
+    const num = Number(priceVal)
+    return !isNaN(num) && num > 0 ? num : null
+  }
+  return null
+}
+
 export const useCartStore = create(
   persist(
     (set, get) => ({
@@ -52,6 +67,15 @@ export const useCartStore = create(
       
       getTotalItems: () => {
         return get().items.reduce((total, item) => total + item.cartQuantity, 0)
+      },
+
+      getTotalPrice: () => {
+        return get().items
+          .filter((item) => !item.isWishlist)
+          .reduce((total, item) => {
+            const price = getCardPrice(item.card)
+            return price !== null ? total + price * item.cartQuantity : total
+          }, 0)
       }
     }),
     {
@@ -59,3 +83,4 @@ export const useCartStore = create(
     }
   )
 )
+
