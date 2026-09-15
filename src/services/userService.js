@@ -81,6 +81,66 @@ async function cleanupUserData(uid) {
   }
 }
 
+/**
+ * Obtiene la lista de todos los coleccionistas públicos con estadísticas de cartas
+ * @returns {Promise<Array>}
+ */
+async function getPublicUsers() {
+  const cacheKey = 'public_users_summary';
+  const memCache = require('../utils/cache');
+  const cached = memCache.get(cacheKey);
+  if (cached) return cached;
+
+  const db = getFirestore();
+  const usersSnap = await db.collection('users').get();
+
+  // Traer conteo de cartas y wishlist agrupadas por userId
+  const [cardsSnap, wishlistSnap] = await Promise.all([
+    db.collection('cards').select('userId').get(),
+    db.collection('wishlist').select('userId').get()
+  ]);
+
+  const cardsCountMap = {};
+  cardsSnap.forEach((doc) => {
+    const uid = doc.data().userId;
+    if (uid) cardsCountMap[uid] = (cardsCountMap[uid] || 0) + 1;
+  });
+
+  const wishlistCountMap = {};
+  wishlistSnap.forEach((doc) => {
+    const uid = doc.data().userId;
+    if (uid) wishlistCountMap[uid] = (wishlistCountMap[uid] || 0) + 1;
+  });
+
+  const users = [];
+  usersSnap.forEach((doc) => {
+    const data = doc.data();
+    if (data.slug) {
+      const inventoryCount = cardsCountMap[doc.id] || 0;
+      const wishlistCount = wishlistCountMap[doc.id] || 0;
+      users.push({
+        slug: data.slug,
+        displayName: data.slug.charAt(0).toUpperCase() + data.slug.slice(1),
+        inventoryCount,
+        wishlistCount,
+        totalCards: inventoryCount + wishlistCount,
+        hasWhatsapp: !!data.whatsapp,
+        updatedAt: data.updatedAt || null,
+      });
+    }
+  });
+
+  // Ordenar: primero los que tienen más cartas en inventario, luego alfabético
+  users.sort((a, b) => b.inventoryCount - a.inventoryCount || a.slug.localeCompare(b.slug));
+
+  // Guardar en cache por 30 segundos para reflejar cambios rápidos en Firestore
+  memCache.set(cacheKey, users, 30);
+
+  return users;
+}
+
 module.exports = {
-  cleanupUserData
+  cleanupUserData,
+  getPublicUsers,
 };
+
