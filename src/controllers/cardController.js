@@ -175,6 +175,24 @@ const deleteCard = async (req, res, next) => {
   }
 };
 
+// ── POST /cards/sync-prices ────────────────────────────────────────────────────
+const syncPrices = async (req, res, next) => {
+  try {
+    const userId = req.user.uid;
+    const forceAll = req.query.force === 'true';
+    const result = await cardService.syncUserCardPrices(userId, forceAll);
+    return res.status(200).json({
+      success: true,
+      message: result.inProgress
+        ? 'La sincronización de precios de TCGPlayer ya está en progreso.'
+        : `Sincronización completada: ${result.updated} cartas actualizadas.`,
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createCard,
   getAllCards,
@@ -182,4 +200,5 @@ module.exports = {
   getPortfolioBySlug,
   updateCard,
   deleteCard,
+  syncPrices,
 };

@@ -204,10 +204,18 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
               mode === 'inventory'
                 ? (
                   <div className="flex flex-col gap-1">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {card.edition  && <span className="text-[10px] text-slate-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5">{card.edition}</span>}
                       {card.language && <span className="text-[10px] text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5">{card.language}</span>}
-                      {!card.edition && !card.language && <span className="text-slate-600 text-xs">—</span>}
+                      {(card.tcgMarketPrice != null || card.tcgPrice) && (
+                        <span
+                          className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 flex items-center gap-1"
+                          title={card.tcgPriceUpdatedAt ? `TCGPlayer Market (Actualizado: ${new Date(card.tcgPriceUpdatedAt).toLocaleDateString()})` : 'Precio TCGPlayer Market'}
+                        >
+                          <span className="text-[9px] text-emerald-500 font-bold">TCG</span> ${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)}
+                        </span>
+                      )}
+                      {!card.edition && !card.language && !card.tcgMarketPrice && !card.tcgPrice && <span className="text-slate-600 text-xs">—</span>}
                     </div>
                   </div>
                 )
@@ -299,6 +307,11 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                       {card.setCode && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5">{card.setCode}</span>}
                       {card.rarity && <Badge rarity={card.rarity} />}
                       {card.language && <span className="text-[9px] text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5">{card.language}</span>}
+                      {(card.tcgMarketPrice != null || card.tcgPrice) && (
+                        <span className="text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5">
+                          ${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)}
+                        </span>
+                      )}
                     </>
                   ) : (
                     <Badge rarity={card.rarity} />

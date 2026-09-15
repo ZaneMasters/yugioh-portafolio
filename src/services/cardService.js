@@ -1,11 +1,15 @@
 'use strict';
 
-const cardRepository = require('../repositories/cardRepository');
-const ygoService     = require('./ygoService');
-const imageService   = require('./imageService');
-const memCache       = require('../utils/cache');
-const AppError       = require('../utils/AppError');
-const logger         = require('../utils/logger');
+const cardRepository  = require('../repositories/cardRepository');
+const ygoService      = require('./ygoService');
+const imageService    = require('./imageService');
+const tcgPlayerService = require('./tcgPlayerService');
+const memCache        = require('../utils/cache');
+const AppError        = require('../utils/AppError');
+const logger          = require('../utils/logger');
+
+// Conjunto de usuarios con sincronización de precios activa para evitar solapamientos
+const syncingUsers = new Set();
 
 /**
  * Servicio de inventario de cartas — Lógica de negocio.
@@ -83,6 +87,25 @@ async function registerCard(dto, userId) {
   const selectedImageUrl = externalCard.cardImages?.find(i => i.id === selectedImageId)?.image
     ?? externalCard.image;
 
+  // Consultar precio oficial en vivo de TCGPlayer
+  let livePrice = { marketPrice: null, lowPrice: null };
+  try {
+    livePrice = await tcgPlayerService.getPriceForCard(
+      externalCard.name,
+      dto.setCode,
+      dto.rarity,
+      dto.setName
+    );
+  } catch (err) {
+    logger.warn(`⚠️ Error al consultar precio TCGPlayer para "${externalCard.name}": ${err.message}`);
+  }
+
+  const tcgMarketPrice = livePrice.marketPrice !== null
+    ? livePrice.marketPrice
+    : (dto.setPrice ? Number(dto.setPrice) : (externalCard.tcgPrice ? Number(externalCard.tcgPrice) : null));
+  const tcgLowPrice    = livePrice.lowPrice ?? null;
+  const tcgPriceUpdatedAt = livePrice.marketPrice !== null ? new Date().toISOString() : null;
+
   // Guardar la carta inmediatamente con la URL de YGOProdeck (respuesta rápida al usuario)
   const newCard = await cardRepository.create({
     userId,
@@ -101,14 +124,17 @@ async function registerCard(dto, userId) {
     quantity:  quantity  || 1,
     folderIds: Array.isArray(dto.folderIds) ? dto.folderIds : [],
     // —— Nuevos campos de la versión física ——
-    setCode:         dto.setCode         ?? null,
-    setName:         dto.setName         ?? null,
-    rarity:          dto.rarity          ?? null,
-    setPrice:        dto.setPrice        ?? null,
-    selectedImageId: selectedImageId,
-    edition:         dto.edition         ?? null,
-    language:        dto.language        ?? null,
-    tcgPrice:        externalCard.tcgPrice ?? null,
+    setCode:           dto.setCode         ?? null,
+    setName:           dto.setName         ?? null,
+    rarity:            dto.rarity          ?? null,
+    setPrice:          dto.setPrice        ?? null,
+    selectedImageId:   selectedImageId,
+    edition:           dto.edition         ?? null,
+    language:          dto.language        ?? null,
+    tcgMarketPrice:    tcgMarketPrice,
+    tcgLowPrice:       tcgLowPrice,
+    tcgPriceUpdatedAt: tcgPriceUpdatedAt,
+    tcgPrice:          tcgMarketPrice !== null ? String(tcgMarketPrice) : (externalCard.tcgPrice ?? null),
   });
 
   invalidateInventoryCache(userId);
@@ -154,6 +180,18 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
     // Podría ajustarse a 15 min si el caché permite custom TTL, pero el default está bien.
     memCache.set(rawKey, rawCards);
     logger.debug(`💾 Raw Inventory cache SET → ${rawKey} (${rawCards.length} cartas)`);
+  }
+
+  // ── Lazy Sync semanal en segundo plano (fire-and-forget) ──────────────────────
+  if (userId && !syncingUsers.has(userId) && Array.isArray(rawCards) && rawCards.length > 0) {
+    const hasOutdated = rawCards.some(c => tcgPlayerService.isPriceOutdated(c.tcgPriceUpdatedAt));
+    if (hasOutdated) {
+      setImmediate(() => {
+        syncUserCardPrices(userId, false).catch(err => {
+          logger.warn(`⚠️ Error en lazy sync de precios para ${userId}: ${err.message}`);
+        });
+      });
+    }
   }
 
   // 1. Filtrado en memoria
@@ -253,10 +291,83 @@ async function deleteCard(id, userId) {
   return result;
 }
 
+// ── Sincronización de precios TCGPlayer ───────────────────────────────────────
+
+/**
+ * Sincroniza los precios de TCGPlayer de las cartas del inventario de un usuario.
+ * @param {string} userId - UID del usuario
+ * @param {boolean} forceAll - Si es true, actualiza todas las cartas sin importar la fecha
+ * @returns {Promise<{ total: number, updated: number, errors: number, inProgress?: boolean }>}
+ */
+async function syncUserCardPrices(userId, forceAll = false) {
+  if (!userId) return { total: 0, updated: 0, errors: 0 };
+  if (syncingUsers.has(userId)) {
+    logger.info(`⏳ Sincronización TCGPlayer ya en progreso para el usuario ${userId}`);
+    return { total: 0, updated: 0, errors: 0, inProgress: true };
+  }
+
+  syncingUsers.add(userId);
+  try {
+    const rawCards = await cardRepository.findAllRaw(userId);
+    const targetCards = forceAll
+      ? rawCards
+      : rawCards.filter(c => tcgPlayerService.isPriceOutdated(c.tcgPriceUpdatedAt));
+
+    if (targetCards.length === 0) {
+      logger.info(`✨ Todos los precios de TCGPlayer de ${userId} ya están al día (< 7 días).`);
+      return { total: 0, updated: 0, errors: 0 };
+    }
+
+    logger.info(`🔄 Iniciando sincronización TCGPlayer para ${userId}: ${targetCards.length} de ${rawCards.length} cartas.`);
+
+    let updated = 0;
+    let errors = 0;
+
+    for (const card of targetCards) {
+      try {
+        const priceInfo = await tcgPlayerService.getPriceForCard(
+          card.name,
+          card.setCode,
+          card.rarity,
+          card.setName
+        );
+
+        if (priceInfo.marketPrice !== null) {
+          const updates = {
+            tcgMarketPrice: priceInfo.marketPrice,
+            tcgLowPrice: priceInfo.lowPrice ?? null,
+            tcgPrice: String(priceInfo.marketPrice),
+            tcgPriceUpdatedAt: new Date().toISOString(),
+          };
+
+          await cardRepository.update(card.id, updates, userId);
+          updated++;
+        }
+
+        // Breve pausa para no saturar la API
+        await tcgPlayerService.sleep(200);
+      } catch (err) {
+        logger.warn(`⚠️ Error al actualizar precio de carta ${card.id} (${card.name}): ${err.message}`);
+        errors++;
+      }
+    }
+
+    if (updated > 0) {
+      invalidateInventoryCache(userId);
+    }
+
+    logger.info(`✅ Sincronización TCGPlayer completada para ${userId}: ${updated} cartas actualizadas, ${errors} errores.`);
+    return { total: targetCards.length, updated, errors };
+  } finally {
+    syncingUsers.delete(userId);
+  }
+}
+
 module.exports = {
   registerCard,
   listCards,
   getCardById,
   updateCard,
   deleteCard,
+  syncUserCardPrices,
 };

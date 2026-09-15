@@ -556,38 +556,33 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                           color="#38bdf8"
                         />
                       )}
-                      {card.setCode ? (
-                        (card.setPrice && card.setPrice !== '0.00' && card.setPrice !== '0') ? (
-                          <InfoChip
-                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
-                            label="Precio Est."
-                            value={`$${card.setPrice} USD`}
-                            color="#34d399"
-                          />
-                        ) : (
-                          <InfoChip
-                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
-                            label="Precio Est."
-                            value="N/D"
-                            color="#f87171"
-                          />
-                        )
-                      ) : (
-                        (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0') ? (
-                          <InfoChip
-                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
-                            label="TCGPlayer"
-                            value={`$${card.tcgPrice} USD`}
-                            color="#34d399"
-                          />
-                        ) : (
-                          <InfoChip
-                            icon={<DollarSign style={{ width: 11, height: 11 }} />}
-                            label="Precio"
-                            value="N/D"
-                            color="#f87171"
-                          />
-                        )
+                      {(card.tcgMarketPrice != null || (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0')) ? (
+                        <InfoChip
+                          icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                          label="TCGPlayer Market"
+                          value={`$${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)} USD`}
+                          color="#34d399"
+                        />
+                      ) : (card.setPrice && card.setPrice !== '0.00' && card.setPrice !== '0') ? (
+                        <InfoChip
+                          icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                          label="Precio Est."
+                          value={`$${card.setPrice} USD`}
+                          color="#34d399"
+                        />
+                      ) : null}
+                      {card.tcgLowPrice != null && (
+                        <InfoChip
+                          icon={<DollarSign style={{ width: 11, height: 11 }} />}
+                          label="TCG Low"
+                          value={`$${Number(card.tcgLowPrice).toFixed(2)} USD`}
+                          color="#38bdf8"
+                        />
+                      )}
+                      {card.tcgPriceUpdatedAt && (
+                        <div style={{ width: '100%', fontSize: '10px', color: '#64748b', marginTop: '1px' }}>
+                          Precios actualizados: {new Date(card.tcgPriceUpdatedAt).toLocaleDateString()}
+                        </div>
                       )}
                       {card.setName && (
                         <div style={{ width: '100%', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>

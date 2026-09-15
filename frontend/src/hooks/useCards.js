@@ -69,6 +69,16 @@ export function useCards(filters = {}) {
     onError: (err) => toast.error(err.message || 'Error al eliminar'),
   })
 
+  const syncPricesMutation = useMutation({
+    mutationFn: (force = true) => cardService.syncCardPrices(force),
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'Precios de TCGPlayer actualizados')
+      queryClient.invalidateQueries({ queryKey: ['cards'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+    },
+    onError: (err) => toast.error(err.message || 'Error al actualizar precios de TCGPlayer'),
+  })
+
   return {
     cards,
     loading,
@@ -77,8 +87,10 @@ export function useCards(filters = {}) {
     hasNextPage,
     isFetchingNextPage,
     actionLoading: addMutation.isPending || editMutation.isPending || removeMutation.isPending,
+    syncPricesLoading: syncPricesMutation.isPending,
     addCard:    (payload)        => addMutation.mutateAsync(payload),
     editCard:   (id, payload)    => editMutation.mutateAsync({ id, payload }),
     removeCard: (id)             => removeMutation.mutateAsync(id),
+    syncPrices: (force = true)   => syncPricesMutation.mutateAsync(force),
   }
 }
