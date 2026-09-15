@@ -121,7 +121,6 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName }) {
                           <h3 className="text-sm font-bold text-white truncate">{card.name}</h3>
                           <div className="text-xs text-slate-400 mt-0.5 space-x-1 truncate">
                             {card.rarity && <span>{card.rarity}</span>}
-                            {card.condition && <span>• {card.condition}</span>}
                             {card.edition && <span>• {card.edition}</span>}
                           </div>
                           

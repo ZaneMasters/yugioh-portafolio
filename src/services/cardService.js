@@ -42,11 +42,11 @@ function invalidateInventoryCache(userId) {
 
 /**
  * Registra una carta en el inventario del usuario.
- * @param {Object} dto - { name?, cardId?, condition?, quantity? }
+ * @param {Object} dto - { name?, cardId?, quantity? }
  * @param {string} userId - UID de Firebase del propietario
  */
 async function registerCard(dto, userId) {
-  const { name, cardId, condition, quantity, lang = 'en' } = dto;
+  const { name, cardId, quantity, lang = 'en' } = dto;
 
   let externalCard;
   if (cardId) {
@@ -98,7 +98,6 @@ async function registerCard(dto, userId) {
     desc:      externalCard.desc,
     image:     selectedImageUrl,        // URL temporal (arte seleccionado)
     frameType: externalCard.frameType,
-    condition: condition || 'new',
     quantity:  quantity  || 1,
     folderIds: Array.isArray(dto.folderIds) ? dto.folderIds : [],
     // —— Nuevos campos de la versión física ——
@@ -229,7 +228,6 @@ async function updateCard(id, dto, userId) {
     if (dto.quantity < 0) throw new AppError('La cantidad no puede ser negativa.', 400);
     updates.quantity = dto.quantity;
   }
-  if (dto.condition    !== undefined) updates.condition    = dto.condition;
   if (dto.folderIds    !== undefined) updates.folderIds    = dto.folderIds;
   if (dto.isHidden     !== undefined) updates.isHidden     = dto.isHidden;
   if (dto.rarity       !== undefined) updates.rarity       = dto.rarity;

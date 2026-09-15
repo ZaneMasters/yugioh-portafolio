@@ -51,7 +51,7 @@ router.get(
 
 /**
  * @route   PUT /api/v1/cards/:id
- * @desc    Actualizar quantity y/o condition (solo el propietario)
+ * @desc    Actualizar carta de inventario (solo el propietario)
  * @access  Private (requiere Firebase ID Token)
  */
 router.put(

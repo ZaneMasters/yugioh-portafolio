@@ -53,12 +53,10 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
     </span>
   )
 
-  // Badge de rareza o condición
+  // Badge de rareza
   const rarityBadge = card.rarity
     ? <Badge rarity={card.rarity} />
-    : card.condition
-      ? <Badge condition={card.condition} />
-      : null
+    : null
 
   return (
     <motion.div

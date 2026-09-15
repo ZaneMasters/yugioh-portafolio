@@ -5,7 +5,7 @@ import {
   X, Sword, Shield, Star, Layers, Link2, Sparkles, Tag, DollarSign, Globe, BookOpen, ShoppingCart, Check, ArrowRightLeft
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
-import { CONDITIONS, RARITIES, LANGUAGES } from '../../utils/constants'
+import { RARITIES, LANGUAGES } from '../../utils/constants'
 import { lockScroll, unlockScroll } from '../../utils/scrollLock'
 import { useCartStore } from '../../store/useCartStore'
 import { toast } from 'react-hot-toast'
@@ -45,7 +45,6 @@ const ATTR_COLORS = {
   DIVINE: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.4)', text: '#fbbf24' },
 }
 
-const conditionLabel = (v) => CONDITIONS.find((c) => c.value === v)?.label ?? v
 const rarityLabel    = (v) => RARITIES.find((r)  => r.value === v)?.label ?? v
 
 // ─── Colores de glow por frameType ───────────────────────────────────────────
@@ -460,10 +459,8 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                       <Layers style={{ width: 14, height: 14, color: '#94a3b8' }} />
                       ×{card.quantity} en inventario
                     </span>
-                    {card.rarity ? (
+                    {card.rarity && (
                       <Badge rarity={card.rarity} />
-                    ) : (
-                      <Badge condition={card.condition} />
                     )}
 
                     {isPublic && (

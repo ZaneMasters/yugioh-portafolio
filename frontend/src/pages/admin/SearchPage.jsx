@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Search, Loader2, PackagePlus, ChevronLeft, ChevronRight, ServerCrash, RefreshCw, AlertCircle, Info, Sword, Wand2, Shield, LayoutGrid } from 'lucide-react'
+import { Search, Loader2, PackagePlus, ChevronLeft, ChevronRight, ServerCrash, RefreshCw, AlertCircle, Info, Sword, Wand2, Shield, LayoutGrid, Tag } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { CardSearchResult } from '../../components/cards/CardSearchResult'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -116,14 +116,15 @@ export default function SearchPage() {
     }
   }
 
-  const handleAdd = async (card, qty, condOrRarity, folderId, extraPayload = {}) => {
+  const handleAdd = async (card, qty, folderIdOrRarity, extraPayload = {}) => {
     setAddingId(card.cardId)
     if (destination === 'inventory') {
-      const payload = { cardId: card.cardId, condition: condOrRarity, quantity: qty, ...extraPayload }
+      const folderId = folderIdOrRarity
+      const payload = { cardId: card.cardId, quantity: qty, ...extraPayload }
       if (folderId) payload.folderIds = [folderId];
       await addCardInventory(payload)
     } else {
-      await addCardWishlist({ cardId: card.cardId, rarity: condOrRarity, quantity: qty })
+      await addCardWishlist({ cardId: card.cardId, rarity: folderIdOrRarity, quantity: qty })
     }
     setAddingId(null)
   }
@@ -194,13 +195,20 @@ export default function SearchPage() {
             <button
               type="button"
               onClick={() => { setSearchType('set'); setQueryInput(''); setActiveQuery(''); setFilterType('all'); }}
-              className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] ${
+              className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] flex items-center gap-1.5 ${
                 searchType === 'set' 
                   ? 'border-amber-500 text-amber-400' 
                   : 'border-transparent text-slate-500 hover:text-slate-300'
               }`}
             >
-              Por Set
+              <span>Por Set / Código</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
+                searchType === 'set'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  : 'bg-white/5 text-slate-500 border-white/10'
+              }`}>
+                ID / Set
+              </span>
             </button>
           </div>
 
@@ -247,12 +255,28 @@ export default function SearchPage() {
                 ? 'Escribe el nombre en inglés... (ej: Dark Magician)'
                 : searchType === 'archetype'
                   ? 'Escribe el arquetipo en inglés... (ej: Salamangreat)'
-                  : 'Escribe el nombre del set... (ej: Maximum Gold, MAGO)'}
+                  : 'Escribe el código o set...'}
               value={queryInput}
               onChange={(e) => setQueryInput(e.target.value)}
               className="w-full bg-transparent border-none outline-none text-slate-100 text-sm placeholder:text-slate-600 font-medium"
               autoFocus
             />
+
+            {/* Texto informativo minimalista al lado del input */}
+            {searchType === 'set' && (
+              <div className="hidden sm:flex items-center gap-1.5 shrink-0 pl-3 border-l border-white/10 text-xs select-none">
+                <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
+                  <span className="hidden md:inline">Buscar por código o expansión:</span>
+                  <span className="md:hidden">Ej:</span>
+                </span>
+                <span className="font-mono text-amber-400/90 bg-white/5 px-1.5 py-0.5 rounded border border-white/10 text-[11px]">
+                  RA01-EN001
+                </span>
+                <span className="text-slate-300 bg-white/5 px-1.5 py-0.5 rounded border border-white/10 text-[11px] whitespace-nowrap">
+                  Maximum Gold
+                </span>
+              </div>
+            )}
           </div>
         </form>
 
@@ -366,16 +390,24 @@ export default function SearchPage() {
           icon={Search}
           title="Sin resultados"
           description={
-            rawResults.length > 0 
-              ? `No se encontraron cartas del tipo seleccionado para "${activeQuery}".`
-              : `No se encontraron cartas con "${activeQuery}". Intenta con otro nombre.`
+            searchType === 'set'
+              ? `No se encontraron cartas para el código o set "${activeQuery}". Verifica el formato (ej: RA01-EN001, LOB-001 o Maximum Gold).`
+              : rawResults.length > 0 
+                ? `No se encontraron cartas del tipo seleccionado para "${activeQuery}".`
+                : `No se encontraron cartas con "${activeQuery}". Intenta con otro nombre.`
           }
         />
       ) : activeQuery.trim().length === 0 ? (
         <EmptyState
           icon={PackagePlus}
-          title="Escribe para buscar"
-          description="Ingresa al menos 3 caracteres para empezar a buscar cartas."
+          title={searchType === 'set' ? "Buscar por código o expansión" : "Escribe para buscar"}
+          description={
+            searchType === 'set'
+              ? "Ingresa al menos 4 caracteres (ej: código como 'RA01-EN001', 'LOB-001' o nombre como 'Maximum Gold')."
+              : searchType === 'archetype'
+                ? "Ingresa al menos 3 caracteres del arquetipo (ej: 'Salamangreat', 'Blue-Eyes')."
+                : "Ingresa al menos 3 caracteres para empezar a buscar cartas."
+          }
         />
       ) : (
         <div className="space-y-2">

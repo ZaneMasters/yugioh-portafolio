@@ -2,7 +2,7 @@ import { useState, memo, useMemo, useEffect } from 'react'
 import { Plus, Sword, Shield, Minus, ChevronDown, Tag, DollarSign, Palette } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Select'
-import { CONDITIONS, RARITIES, EDITIONS, LANGUAGES } from '../../utils/constants'
+import { RARITIES, EDITIONS, LANGUAGES } from '../../utils/constants'
 
 // Normaliza igual que el backend (elimina todo lo que no sea letras/números)
 const normalizeStr = (str) => (!str ? '' : str.toLowerCase().replace(/[^a-z0-9]/g, ''))
@@ -32,7 +32,6 @@ export const CardSearchResult = memo(function CardSearchResult({
   searchQuery = '',
 }) {
   const [qty,      setQty]      = useState(1)
-  const [cond,     setCond]     = useState('new')
   const [rarity,   setRarity]   = useState('Any')
   const [folderId, setFolderId] = useState('')
   const [expanded, setExpanded] = useState(false)
@@ -88,7 +87,7 @@ export const CardSearchResult = memo(function CardSearchResult({
         edition:         edition || undefined,
         language:        language || undefined,
       }
-      onAdd(card, qty, cond, folderId, payload)
+      onAdd(card, qty, folderId, payload)
     } else {
       onAdd(card, qty, rarity)
     }
@@ -246,31 +245,19 @@ export const CardSearchResult = memo(function CardSearchResult({
       `}>
         {destination === 'inventory' ? (
           <>
-            {/* Fila 1: Condición + Carpeta */}
-            <div className="flex flex-wrap gap-2">
-              <div className="flex-1 min-w-[100px]">
+            {/* Carpeta */}
+            {folders.length > 0 && (
+              <div>
                 <Select
-                  options={CONDITIONS}
-                  value={cond}
-                  onChange={(e) => setCond(e.target.value)}
-                  placeholder="Condición"
+                  options={[{ value: '', label: 'Carpeta: Ninguna' }, ...folders.map(f => ({ value: f.id, label: `Carpeta: ${f.name}` }))]}
+                  value={folderId}
+                  onChange={(e) => setFolderId(e.target.value)}
+                  placeholder="Carpeta"
                   hidePlaceholderOption={true}
-                  title="Condición física de la carta"
+                  title="Carpeta destino (opcional)"
                 />
               </div>
-              {folders.length > 0 && (
-                <div className="flex-1 min-w-[100px]">
-                  <Select
-                    options={[{ value: '', label: 'Ninguna' }, ...folders.map(f => ({ value: f.id, label: f.name }))]}
-                    value={folderId}
-                    onChange={(e) => setFolderId(e.target.value)}
-                    placeholder="Carpeta"
-                    hidePlaceholderOption={true}
-                    title="Carpeta destino (opcional)"
-                  />
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Fila 2: Expansión — read-only si vino de búsqueda por set, editable si no */}
             {hasSets && (
