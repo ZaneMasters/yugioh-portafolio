@@ -197,6 +197,32 @@ const syncPrices = async (req, res, next) => {
   }
 };
 
+// ── GET /cards/search-by-set?code=xxx ──────────────────────────────────────────
+const searchCardsBySet = async (req, res, next) => {
+  try {
+    const { code } = req.query;
+    if (!code || !code.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'El parámetro "code" es requerido.',
+      });
+    }
+
+    const cards = await cardService.searchBySetCode(code.trim());
+
+    // Permite que el navegador y proxy cacheen la búsqueda 2 minutos
+    res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=30');
+
+    return res.status(200).json({
+      success: true,
+      count: cards.length,
+      data: cards,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createCard,
   getAllCards,
@@ -205,4 +231,6 @@ module.exports = {
   updateCard,
   deleteCard,
   syncPrices,
+  searchCardsBySet,
 };
+

@@ -41,3 +41,7 @@ export const deleteCard = (id) => api.delete(`/cards/${id}`)
 
 /** Sincronizar precios de TCGPlayer de las cartas del inventario */
 export const syncCardPrices = (force = false) => api.post('/cards/sync-prices', null, { params: { force } })
+
+/** Buscar cartas exclusivamente por set code (público) */
+export const searchCardsBySet = (code) => publicApi.get('/cards/search-by-set', { params: { code } })
+

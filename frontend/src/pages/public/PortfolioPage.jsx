@@ -27,6 +27,7 @@ export default function PortfolioPage() {
   const [isCartOpen, setIsCartOpen] = useState(false)
   const items = useCartStore(state => state.items)
   const totalCartItems = items.reduce((total, item) => total + item.cartQuantity, 0)
+  const totalCartPrice = useCartStore(state => state.getTotalPrice())
 
   const currentTab = searchParams.get('tab') === 'wishlist' ? 'wishlist' : 'inventory'
 
@@ -225,7 +226,7 @@ export default function PortfolioPage() {
         </div>
       </main>
 
-      {/* Floating Cart Button */}
+      {/* Botón flotante del Carrito */}
       {totalCartItems > 0 && (
         <motion.button
           initial={{ scale: 0, opacity: 0 }}
@@ -234,12 +235,22 @@ export default function PortfolioPage() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsCartOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-amber-500 text-black p-4 rounded-full shadow-[0_8px_32px_rgba(245,158,11,0.4)] flex items-center justify-center hover:bg-amber-400 transition-colors"
+          className={`fixed bottom-6 right-6 z-40 bg-amber-500 text-black shadow-[0_8px_32px_rgba(245,158,11,0.45)] flex items-center justify-center hover:bg-amber-400 transition-all cursor-pointer ${
+            totalCartPrice > 0 ? 'px-4 py-3.5 rounded-full gap-2.5' : 'p-4 rounded-full'
+          }`}
+          title="Ver carrito"
         >
-          <ShoppingCart className="w-6 h-6" />
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-md border-2 border-[#0f1117]">
-            {totalCartItems > 99 ? '99+' : totalCartItems}
-          </span>
+          <div className="relative flex items-center justify-center">
+            <ShoppingCart className="w-6 h-6" />
+            <span className="absolute -top-2.5 -right-2.5 bg-red-500 text-white text-[10px] font-extrabold min-w-4 h-4 px-1 flex items-center justify-center rounded-full shadow-md border-2 border-[#0f1117]">
+              {totalCartItems > 99 ? '99+' : totalCartItems}
+            </span>
+          </div>
+          {totalCartPrice > 0 && (
+            <span className="font-mono font-bold text-sm text-black border-l border-black/20 pl-2">
+              ${totalCartPrice.toFixed(2)}
+            </span>
+          )}
         </motion.button>
       )}
 

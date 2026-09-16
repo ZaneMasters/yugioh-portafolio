@@ -24,4 +24,12 @@ export const queryKeys = {
 
   // Colecciones públicas
   publicFolders: (slug) => ['publicFolders', slug],
+
+  // Coleccionistas públicos
+  publicUsers: () => ['publicUsers'],
+
+  // Búsqueda por set code
+  searchBySet: (code) => ['searchBySet', code],
 }
+
+

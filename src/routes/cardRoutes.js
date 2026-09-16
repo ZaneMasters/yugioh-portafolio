@@ -39,11 +39,20 @@ router.get('/', authMiddleware, cardController.getAllCards);
 router.get('/portfolio/:slug/cards', cardController.getPortfolioBySlug);
 
 /**
+ * @route   GET /api/v1/cards/search-by-set
+ * @desc    Buscar cartas exclusivamente por Set Code con disponibilidad en la comunidad
+ * @query   code
+ * @access  Public
+ */
+router.get('/search-by-set', cardController.searchCardsBySet);
+
+/**
  * @route   POST /api/v1/cards/sync-prices
  * @desc    Sincronizar precios de TCGPlayer de las cartas del usuario
  * @access  Private (requiere Firebase ID Token)
  */
 router.post('/sync-prices', authMiddleware, cardController.syncPrices);
+
 
 /**
  * @route   GET /api/v1/cards/:id

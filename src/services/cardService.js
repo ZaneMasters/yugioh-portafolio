@@ -365,6 +365,132 @@ async function syncUserCardPrices(userId, forceAll = false) {
   }
 }
 
+/**
+ * Busca cartas exclusivamente por código de set / expansión.
+ * Consulta el catálogo general y cruza con las cartas de la comunidad
+ * para mostrar qué coleccionistas la tienen disponible.
+ *
+ * @param {string} setCode
+ * @returns {Promise<Array>}
+ */
+async function searchBySetCode(setCode) {
+  if (!setCode || !setCode.trim()) return [];
+  const query = setCode.trim();
+
+  // 1. Buscar en catálogo general en memoria por set
+  const catalogCards = await ygoService.searchCards(query, 'set');
+
+  // 2. Buscar en Firestore si algún usuario de la comunidad tiene copias registradas
+  const { getFirestore } = require('../config/firebase');
+  const db = getFirestore();
+  const normalizedQuery = query.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  try {
+    const [cardsSnap, usersSnap] = await Promise.all([
+      db.collection('cards').get(),
+      db.collection('users').get(),
+    ]);
+
+    const userMap = {};
+    usersSnap.forEach((u) => {
+      const data = u.data();
+      userMap[u.id] = {
+        slug: data.slug,
+        displayName: data.slug ? data.slug.charAt(0).toUpperCase() + data.slug.slice(1) : 'Coleccionista',
+        whatsapp: data.whatsapp || null,
+      };
+    });
+
+    const ownersByCardId = {};
+    cardsSnap.forEach((doc) => {
+      const cardData = doc.data();
+      const cCode = (cardData.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (cCode && (cCode.includes(normalizedQuery) || normalizedQuery.includes(cCode))) {
+        const owner = userMap[cardData.userId];
+        if (owner) {
+          const cId = cardData.cardId;
+          if (!ownersByCardId[cId]) ownersByCardId[cId] = [];
+          ownersByCardId[cId].push({
+            id: doc.id,
+            slug: owner.slug,
+            displayName: owner.displayName,
+            whatsapp: owner.whatsapp,
+            quantity: cardData.quantity || 1,
+            rarity: cardData.rarity || null,
+            edition: cardData.edition || null,
+            setCode: cardData.setCode,
+            price: cardData.tcgMarketPrice || cardData.tcgPrice || null,
+          });
+        }
+      }
+    });
+
+    // 3. Enriquecer los resultados del catálogo con precios en vivo y disponibilidad en comunidad
+    const enrichedCards = await Promise.all(
+      catalogCards.map(async (c) => {
+        const matchingSet = c.cardSets?.find((s) => {
+          const sCode = (s.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          return sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode);
+        }) || c.cardSets?.[0] || null;
+
+        const owners = ownersByCardId[c.cardId] || [];
+
+        // Consultar precios oficiales TCGPlayer en vivo para este set code exacto
+        let tcgPrices = { marketPrice: null, lowPrice: null };
+        if (matchingSet?.setCode) {
+          try {
+            tcgPrices = await tcgPlayerService.getPriceForCard(
+              c.name,
+              matchingSet.setCode,
+              matchingSet.rarity,
+              matchingSet.setName
+            );
+          } catch (err) {
+            logger.debug(`No se pudo obtener precio TCGPlayer para "${c.name}" (${matchingSet.setCode}): ${err.message}`);
+          }
+        }
+
+        // Si hay dueños de la comunidad con precio, calcular el precio más bajo en comunidad
+        const communityPrices = owners
+          .map((o) => (typeof o.price === 'number' ? o.price : parseFloat(o.price)))
+          .filter((p) => !isNaN(p) && p > 0);
+        const minCommunityPrice = communityPrices.length > 0 ? Math.min(...communityPrices) : null;
+
+        return {
+          ...c,
+          marketPrice: tcgPrices.marketPrice,
+          lowPrice: tcgPrices.lowPrice,
+          minCommunityPrice,
+          matchedSet: {
+            ...matchingSet,
+            marketPrice: tcgPrices.marketPrice,
+            lowPrice: tcgPrices.lowPrice,
+          },
+          communityOwners: owners,
+          availableInCommunity: owners.length > 0,
+        };
+      })
+    );
+
+    return enrichedCards;
+  } catch (err) {
+    logger.warn(`Error cruzando disponibilidad en comunidad para set "${setCode}": ${err.message}`);
+    return catalogCards.map((c) => ({
+      ...c,
+      marketPrice: null,
+      lowPrice: null,
+      minCommunityPrice: null,
+      matchedSet:
+        c.cardSets?.find((s) => {
+          const sCode = (s.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          return sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode);
+        }) || c.cardSets?.[0] || null,
+      communityOwners: [],
+      availableInCommunity: false,
+    }));
+  }
+}
+
 module.exports = {
   registerCard,
   listCards,
@@ -373,4 +499,6 @@ module.exports = {
   deleteCard,
   syncUserCardPrices,
   invalidateInventoryCache,
+  searchBySetCode,
 };
+
