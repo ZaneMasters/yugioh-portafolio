@@ -42,8 +42,9 @@ class MemoryCache {
    * Si se supera maxSize, elimina la entrada más antigua (LRU).
    * @param {string} key
    * @param {any} value
+   * @param {number|null} [customTtlSeconds=null] - TTL opcional en segundos
    */
-  set(key, value) {
+  set(key, value, customTtlSeconds = null) {
     if (this.store.has(key)) {
       this.store.delete(key);
     } else if (this.store.size >= this.maxSize) {
@@ -53,9 +54,10 @@ class MemoryCache {
       logger.debug(`🗑️  Cache LRU: evicted key "${firstKey}"`);
     }
 
+    const ttlMs = customTtlSeconds ? customTtlSeconds * 1000 : this.ttlMs;
     this.store.set(key, {
       value,
-      expiresAt: Date.now() + this.ttlMs,
+      expiresAt: Date.now() + ttlMs,
     });
   }
 

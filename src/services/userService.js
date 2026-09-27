@@ -94,49 +94,57 @@ async function getPublicUsers() {
   const db = getFirestore();
   const usersSnap = await db.collection('users').get();
 
-  // Traer conteo de cartas y wishlist agrupadas por userId
-  const [cardsSnap, wishlistSnap] = await Promise.all([
-    db.collection('cards').select('userId').get(),
-    db.collection('wishlist').select('userId').get()
-  ]);
+  const users = await Promise.all(
+    usersSnap.docs.map(async (doc) => {
+      const data = doc.data();
+      if (!data.slug) return null;
 
-  const cardsCountMap = {};
-  cardsSnap.forEach((doc) => {
-    const uid = doc.data().userId;
-    if (uid) cardsCountMap[uid] = (cardsCountMap[uid] || 0) + 1;
-  });
+      let inventoryCount = data.inventoryCount;
+      let wishlistCount = data.wishlistCount;
 
-  const wishlistCountMap = {};
-  wishlistSnap.forEach((doc) => {
-    const uid = doc.data().userId;
-    if (uid) wishlistCountMap[uid] = (wishlistCountMap[uid] || 0) + 1;
-  });
+      // Si el usuario no tiene los contadores inicializados (migración bajo demanda sin downtime)
+      if (typeof inventoryCount !== 'number' || typeof wishlistCount !== 'number') {
+        try {
+          const [invCountSnap, wishCountSnap] = await Promise.all([
+            db.collection('cards').where('userId', '==', doc.id).count().get(),
+            db.collection('wishlist').where('userId', '==', doc.id).count().get(),
+          ]);
 
-  const users = [];
-  usersSnap.forEach((doc) => {
-    const data = doc.data();
-    if (data.slug) {
-      const inventoryCount = cardsCountMap[doc.id] || 0;
-      const wishlistCount = wishlistCountMap[doc.id] || 0;
-      users.push({
+          inventoryCount = invCountSnap.data().count;
+          wishlistCount = wishCountSnap.data().count;
+
+          // Persistir asíncronamente en el documento de usuario para que futuras consultas no hagan aggregations
+          doc.ref.set({ inventoryCount, wishlistCount }, { merge: true }).catch((err) => {
+            logger.warn(`No se pudo persistir contadores en perfil de usuario ${doc.id}: ${err.message}`);
+          });
+        } catch (err) {
+          logger.warn(`Error calculando count para usuario ${doc.id}: ${err.message}`);
+          inventoryCount = inventoryCount || 0;
+          wishlistCount = wishlistCount || 0;
+        }
+      }
+
+      return {
         slug: data.slug,
         displayName: data.slug.charAt(0).toUpperCase() + data.slug.slice(1),
-        inventoryCount,
-        wishlistCount,
-        totalCards: inventoryCount + wishlistCount,
+        inventoryCount: Math.max(0, inventoryCount),
+        wishlistCount: Math.max(0, wishlistCount),
+        totalCards: Math.max(0, inventoryCount) + Math.max(0, wishlistCount),
         hasWhatsapp: !!data.whatsapp,
         updatedAt: data.updatedAt || null,
-      });
-    }
-  });
+      };
+    })
+  );
+
+  const validUsers = users.filter(Boolean);
 
   // Ordenar: primero los que tienen más cartas en inventario, luego alfabético
-  users.sort((a, b) => b.inventoryCount - a.inventoryCount || a.slug.localeCompare(b.slug));
+  validUsers.sort((a, b) => b.inventoryCount - a.inventoryCount || a.slug.localeCompare(b.slug));
 
-  // Guardar en cache por 30 segundos para reflejar cambios rápidos en Firestore
-  memCache.set(cacheKey, users, 30);
+  // Guardar en cache por 3 minutos (se invalida automáticamente ante cambios en inventario/wishlist)
+  memCache.set(cacheKey, validUsers, 180);
 
-  return users;
+  return validUsers;
 }
 
 module.exports = {

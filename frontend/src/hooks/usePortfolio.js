@@ -4,41 +4,30 @@ import toast from 'react-hot-toast'
 import * as cardService from '../services/cardService'
 import * as wishlistService from '../services/wishlistService'
 import { queryKeys } from '../lib/queryKeys'
-import { useAuth } from '../context/AuthContext'
 
 /**
  * Hook para cargar el portafolio público de un usuario por su slug.
  * Usa useInfiniteQuery para cursor-based pagination.
+ * Sincroniza en tiempo real: polling automático cada 12 segundos y al re-enfocar la ventana.
  *
  * @param {string} slug        - Prefijo del email (ej. 'angel')
  * @param {string} tab         - 'inventory' | 'wishlist'
  * @param {object} filters     - Filtros de búsqueda
  */
 export function usePortfolio(slug, tab = 'inventory', filters = {}) {
-  const { profile } = useAuth()
-  
-  // Clonar filtros para no mutar el original
-  const activeFilters = { ...filters }
-  if (profile?.slug && profile.slug === slug) {
-    const lastUpdate = localStorage.getItem('portfolioLastUpdate')
-    if (lastUpdate) {
-      activeFilters.t = lastUpdate
-    }
-  }
-
   const isInventory = tab === 'inventory'
   const queryKey = isInventory
-    ? queryKeys.portfolio(slug, activeFilters)
-    : queryKeys.publicWishlist(slug, activeFilters)
+    ? queryKeys.portfolio(slug, filters)
+    : queryKeys.publicWishlist(slug, filters)
 
   const fetchFn = ({ pageParam = null }) =>
     isInventory
-      ? cardService.getPortfolioCards(slug, activeFilters, pageParam)
-      : wishlistService.getPublicWishlist(slug, activeFilters, pageParam)
+      ? cardService.getPortfolioCards(slug, filters, pageParam)
+      : wishlistService.getPublicWishlist(slug, filters, pageParam)
 
   const {
     data,
-    isLoading:  loading,
+    isLoading: loading,
     isFetchingNextPage: loadingMore,
     fetchNextPage,
     hasNextPage: hasMore,
@@ -47,7 +36,9 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
     queryKey,
     queryFn: fetchFn,
     enabled: !!slug,
-    staleTime: 2 * 60 * 1000, // 2 minutos para portafolios públicos
+    staleTime: 60 * 1000, // 1 minuto de frescura en cliente
+    refetchOnWindowFocus: false, // Evita spam continuo al alternar de ventana
+    refetchOnReconnect: true,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     select: (data) => ({
       pages: data.pages,
@@ -56,8 +47,7 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
     retry: 1,
   })
 
-  // meta.onError fue eliminado en TanStack Query v5.
-  // Mostramos el toast aqui con un effect que observa el error.
+  // Toast en caso de error
   useEffect(() => {
     if (!error) return
     const is404 =

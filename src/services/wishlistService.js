@@ -1,6 +1,7 @@
 'use strict';
 
 const wishlistRepository = require('../repositories/wishlistRepository');
+const userRepository     = require('../repositories/userRepository');
 const ygoService     = require('./ygoService');
 const imageService   = require('./imageService');
 const memCache       = require('../utils/cache');
@@ -22,6 +23,7 @@ function invalidateWishlistCache(userId) {
       memCache.delete(key);
     }
   }
+  memCache.delete('public_users_summary');
   logger.debug(`🗑️  Wishlist cache invalidated → userId: ${userId || 'global'}`);
 }
 
@@ -66,6 +68,7 @@ async function registerCard(dto, userId) {
     quantity:  quantity  || 1,
   });
 
+  userRepository.adjustCounters(userId, { wishlistDelta: 1 }).catch(() => {});
   invalidateWishlistCache(userId);
 
   setImmediate(() => {
@@ -122,6 +125,7 @@ async function updateCard(id, updates, userId) {
 
 async function deleteCard(id, userId) {
   await wishlistRepository.delete(id, userId);
+  userRepository.adjustCounters(userId, { wishlistDelta: -1 }).catch(() => {});
   invalidateWishlistCache(userId);
 }
 

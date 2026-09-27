@@ -121,9 +121,8 @@ const getPortfolioBySlug = async (req, res, next) => {
 
     const { cards, nextCursor, hasMore, totalCount } = cardResult;
 
-    // Caché agresiva para Serverless/Firestore:
-    // max-age=300 (5 min navegador), s-maxage=1800 (30 min CDN Firebase), stale-while-revalidate=3600 (1h revalidación)
-    res.set('Cache-Control', 'public, max-age=300, s-maxage=1800, stale-while-revalidate=3600');
+    // Caché equilibrada: 30s en navegador, 60s en CDN Firebase, 300s stale-while-revalidate
+    res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
 
     return res.status(200).json({
       success: true,

@@ -10,12 +10,12 @@ import './index.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Datos se consideran frescos por 1 minuto antes de re-fetchear
+      // Datos se consideran frescos por 60 segundos antes de re-fetchear
       staleTime: 60 * 1000,
       // Reintentar 1 vez en caso de error (por defecto son 3)
       retry: 1,
-      // No refetchear al re-enfocar ventana en desarrollo para no spamear
-      refetchOnWindowFocus: import.meta.env.PROD,
+      // Evitar spam de peticiones al alternar entre pestañas
+      refetchOnWindowFocus: false,
     },
   },
 })

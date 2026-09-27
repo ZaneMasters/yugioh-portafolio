@@ -83,6 +83,9 @@ const getPublicWishlist = async (req, res, next) => {
     const { cards, nextCursor, hasMore, totalCount } = wishlistResult;
 
     const visibleCards = cards.filter(c => !c.isHidden);
+    
+    // Caché equilibrada: 30s en navegador, 60s en CDN Firebase, 300s stale-while-revalidate
+    res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
 
     return res.status(200).json({
       success: true,

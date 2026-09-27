@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
-import { Sparkles, Ghost } from 'lucide-react'
+import { Sparkles, Ghost, ShoppingCart } from 'lucide-react'
 import { Navbar } from '../../components/layout/Navbar'
 import { CardGrid } from '../../components/cards/CardGrid'
 import { FiltersPanel } from '../../components/filters/FiltersPanel'
@@ -12,12 +12,11 @@ import { usePublicFolders } from '../../hooks/usePublicFolders'
 import { HeroBackground } from '../../components/ui/HeroBackground'
 import { CartSidebar } from '../../components/cart/CartSidebar'
 import { useCartStore } from '../../store/useCartStore'
-import { ShoppingCart } from 'lucide-react'
 
 /**
  * Página de portafolio público de un usuario.
  * Accesible en: /portfolio/:slug
- * Usa useInfiniteQuery via usePortfolio para paginación cursor-based.
+ * Usa useInfiniteQuery via usePortfolio para paginación cursor-based con sincronización en vivo.
  */
 export default function PortfolioPage() {
   const { slug } = useParams()

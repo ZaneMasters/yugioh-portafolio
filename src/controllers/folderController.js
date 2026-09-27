@@ -39,9 +39,9 @@ const getPublicFoldersBySlug = async (req, res, next) => {
       throw new AppError(`No existe ningún usuario con el slug "${slug}".`, 404);
     }
     const folders = await folderService.listPublicFolders(uid);
-    
-    // Caché agresiva para Serverless/Firestore
-    res.set('Cache-Control', 'public, max-age=300, s-maxage=1800, stale-while-revalidate=3600');
+
+    // Caché equilibrada: 30s en navegador, 60s en CDN Firebase, 300s stale-while-revalidate
+    res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
 
     return res.status(200).json({
       success: true,

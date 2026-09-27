@@ -74,6 +74,22 @@ class UserRepository {
     await this.collection.doc(uid).set(payload, { merge: true });
     return payload;
   }
+
+  /**
+   * Ajusta los contadores agregados de inventario y wishlist de forma atómica.
+   * @param {string} uid
+   * @param {{ inventoryDelta?: number, wishlistDelta?: number }} deltas
+   */
+  async adjustCounters(uid, { inventoryDelta = 0, wishlistDelta = 0 }) {
+    if (!uid) return;
+    const { FieldValue } = require('firebase-admin/firestore');
+    const updates = {};
+    if (inventoryDelta !== 0) updates.inventoryCount = FieldValue.increment(inventoryDelta);
+    if (wishlistDelta !== 0) updates.wishlistCount = FieldValue.increment(wishlistDelta);
+    if (Object.keys(updates).length > 0) {
+      await this.collection.doc(uid).set(updates, { merge: true });
+    }
+  }
 }
 
 module.exports = new UserRepository();
