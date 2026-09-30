@@ -4,26 +4,42 @@ import toast from 'react-hot-toast'
 import * as cardService from '../services/cardService'
 import * as wishlistService from '../services/wishlistService'
 import { queryKeys } from '../lib/queryKeys'
+import { useAuth } from '../context/AuthContext'
 
 /**
  * Hook para cargar el portafolio público de un usuario por su slug.
  * Usa useInfiniteQuery para cursor-based pagination.
- * Sincroniza en tiempo real: polling automático cada 12 segundos y al re-enfocar la ventana.
  *
  * @param {string} slug        - Prefijo del email (ej. 'angel')
  * @param {string} tab         - 'inventory' | 'wishlist'
  * @param {object} filters     - Filtros de búsqueda
  */
 export function usePortfolio(slug, tab = 'inventory', filters = {}) {
+  const { user, profile } = useAuth()
+  const isOwner = Boolean(
+    slug && (
+      (profile?.slug && profile.slug.toLowerCase() === slug.toLowerCase()) ||
+      (user?.email && user.email.split('@')[0].toLowerCase() === slug.toLowerCase())
+    )
+  )
+
+  const activeFilters = { ...filters }
+  if (isOwner) {
+    const lastUpdate = localStorage.getItem('portfolioLastUpdate')
+    if (lastUpdate) {
+      activeFilters.t = lastUpdate
+    }
+  }
+
   const isInventory = tab === 'inventory'
   const queryKey = isInventory
-    ? queryKeys.portfolio(slug, filters)
-    : queryKeys.publicWishlist(slug, filters)
+    ? queryKeys.portfolio(slug, activeFilters)
+    : queryKeys.publicWishlist(slug, activeFilters)
 
   const fetchFn = ({ pageParam = null }) =>
     isInventory
-      ? cardService.getPortfolioCards(slug, filters, pageParam)
-      : wishlistService.getPublicWishlist(slug, filters, pageParam)
+      ? cardService.getPortfolioCards(slug, activeFilters, pageParam)
+      : wishlistService.getPublicWishlist(slug, activeFilters, pageParam)
 
   const {
     data,
@@ -36,7 +52,7 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
     queryKey,
     queryFn: fetchFn,
     enabled: !!slug,
-    staleTime: 60 * 1000, // 1 minuto de frescura en cliente
+    staleTime: isOwner ? 0 : 5 * 60 * 1000, // 5 minutos para visitantes, instantáneo para el dueño
     refetchOnWindowFocus: false, // Evita spam continuo al alternar de ventana
     refetchOnReconnect: true,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

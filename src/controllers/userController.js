@@ -9,6 +9,7 @@ const userService = require('../services/userService');
 const getPublicUsers = async (req, res, next) => {
   try {
     const users = await userService.getPublicUsers();
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
     return res.status(200).json({
       success: true,
       data: users,

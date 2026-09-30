@@ -40,8 +40,8 @@ const getPublicFoldersBySlug = async (req, res, next) => {
     }
     const folders = await folderService.listPublicFolders(uid);
 
-    // Caché equilibrada: 30s en navegador, 60s en CDN Firebase, 300s stale-while-revalidate
-    res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
+    // Caché optimizada: 5 min en CDN Firebase (s-maxage=300), 1 min en navegador
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 
     return res.status(200).json({
       success: true,

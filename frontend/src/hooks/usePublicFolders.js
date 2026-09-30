@@ -12,7 +12,7 @@ export function usePublicFolders(slug) {
     queryFn: () => folderService.getPublicFolders(slug),
     select: (res) => res.data ?? res ?? [],
     enabled: !!slug,
-    staleTime: 60 * 1000,
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   })
 

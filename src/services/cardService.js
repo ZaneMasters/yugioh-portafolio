@@ -177,11 +177,9 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   let rawCards = memCache.get(rawKey);
 
   if (!rawCards) {
-    rawCards = await cardRepository.findAllRaw(userId);
-    // Nota: memCache.set() usa su TTL por defecto que está sincronizado con el env.
-    // Podría ajustarse a 15 min si el caché permite custom TTL, pero el default está bien.
-    memCache.set(rawKey, rawCards);
-    logger.debug(`💾 Raw Inventory cache SET → ${rawKey} (${rawCards.length} cartas)`);
+    // 15 minutos en RAM (se invalida automáticamente en cualquier mutación CUD)
+    memCache.set(rawKey, rawCards, 900);
+    logger.debug(`💾 Raw Inventory cache SET → ${rawKey} (${rawCards.length} cartas, 15 min TTL)`);
   }
 
   // ── Lazy Sync semanal en segundo plano (fire-and-forget) ──────────────────────

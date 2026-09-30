@@ -83,8 +83,13 @@ const getPublicWishlist = async (req, res, next) => {
 
     const { cards, nextCursor, hasMore, totalCount, totalQuantity } = wishlistResult;
 
-    // Caché equilibrada: 30s en navegador, 60s en CDN Firebase, 300s stale-while-revalidate
-    res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
+    // Caché optimizada: 5 min en CDN Firebase (s-maxage=300) para visitantes externos
+    // Si viene con parámetro 't' (ej. dueño actualizando su wishlist), se bypassa la CDN
+    if (req.query.t) {
+      res.set('Cache-Control', 'private, no-cache, max-age=0');
+    } else {
+      res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+    }
 
     return res.status(200).json({
       success: true,
