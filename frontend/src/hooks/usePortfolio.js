@@ -61,6 +61,7 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
   // Aplanar todas las páginas en un solo array
   const cards = data?.pages.flatMap((page) => page.data ?? []) ?? []
   const totalCount = data?.pages[0]?.totalCount ?? cards.length
+  const totalQuantity = data?.pages[0]?.totalQuantity ?? cards.reduce((acc, c) => acc + (Number(c.quantity) || 1), 0)
   const whatsapp = data?.pages[0]?.whatsapp ?? null
   const notFound = !!error && (
     error.message?.includes('404') ||
@@ -75,6 +76,7 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
     notFound,
     hasMore: !!hasMore,
     totalCount,
+    totalQuantity,
     fetchNextPage,
   }
 }

@@ -24,11 +24,11 @@ const getOgImage = async (req, res, next) => {
     let cards = [];
     
     if (type === 'wishlist') {
-      const result = await wishlistService.listCards({}, uid, pagination);
-      cards = result.cards;
+      const result = await wishlistService.listCards({ onlyPublic: true }, uid, pagination);
+      cards = (result.cards || []).filter(c => !c.isHidden);
     } else {
       const result = await cardService.listCards({}, uid, pagination);
-      cards = result.cards;
+      cards = (result.cards || []).filter(c => !c.isHidden);
     }
 
     if (!cards || cards.length === 0) {
@@ -37,8 +37,8 @@ const getOgImage = async (req, res, next) => {
 
     const imageBuffer = await ogImageService.generateOGImage(cards, type);
 
-    // Set cache control for 24 hours
-    res.set('Cache-Control', 'public, max-age=86400');
+    // Cache equilibrada en CDN y cliente para reflejar cambios rápidos en la colección/wishlist
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
     res.set('Content-Type', 'image/jpeg');
     return res.status(200).send(imageBuffer);
   } catch (err) {

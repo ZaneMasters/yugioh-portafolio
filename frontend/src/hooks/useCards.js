@@ -29,6 +29,8 @@ export function useCards(filters = {}) {
   })
 
   const cards = data?.pages.flatMap(page => page.data) ?? []
+  const totalCount = data?.pages[0]?.totalCount ?? cards.length
+  const totalQuantity = data?.pages[0]?.totalQuantity ?? cards.reduce((sum, c) => sum + (Number(c.quantity) || 1), 0)
 
   // ── Mutaciones ─────────────────────────────────────────────────────────────
   const addMutation = useMutation({
@@ -81,6 +83,8 @@ export function useCards(filters = {}) {
 
   return {
     cards,
+    totalCount,
+    totalQuantity,
     loading,
     isFetching,
     fetchNextPage,

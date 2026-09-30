@@ -233,9 +233,10 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   });
 
   const totalCount = cards.length;
+  const totalQuantity = cards.reduce((acc, c) => acc + (Number(c.quantity) || 1), 0);
 
   if (!paginate) {
-    return { cards, nextCursor: null, hasMore: false, totalCount };
+    return { cards, nextCursor: null, hasMore: false, totalCount, totalQuantity };
   }
 
   // 3. Paginación visual en memoria basada en cursor
@@ -251,7 +252,7 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   const hasMore = startIndex + limit < cards.length;
   const nextCursor = hasMore && pageDocs.length > 0 ? pageDocs[pageDocs.length - 1].id : null;
 
-  return { cards: pageDocs, nextCursor, hasMore, totalCount };
+  return { cards: pageDocs, nextCursor, hasMore, totalCount, totalQuantity };
 }
 
 // ── Obtener carta por ID ───────────────────────────────────────────────────────

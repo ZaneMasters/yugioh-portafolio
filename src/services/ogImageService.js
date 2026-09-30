@@ -55,15 +55,15 @@ async function generateOGImage(cards, type) {
 
   // Center the cards horizontally
   const totalCardsWidth = (cards.length * CARD_WIDTH) + ((cards.length - 1) * GAP);
-  const startX = (WIDTH - totalCardsWidth) / 2;
+  const startX = Math.round((WIDTH - totalCardsWidth) / 2);
   const startY = 100; // Leave space at top/bottom
 
   let svgOverlays = `<svg width="${WIDTH}" height="${HEIGHT}">`;
 
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
-    const x = startX + i * (CARD_WIDTH + GAP);
-    const y = startY;
+    const x = Math.round(startX + i * (CARD_WIDTH + GAP));
+    const y = Math.round(startY);
 
     // 1. Download card image
     if (card.image) {
@@ -88,8 +88,8 @@ async function generateOGImage(cards, type) {
 
     // 2. Add SVG Badges (Quantity, Set, Rarity) over the card
     const badgeWidth = 140;
-    const badgeX = x + (CARD_WIDTH - badgeWidth) / 2;
-    let badgeY = y + CARD_HEIGHT - 15; // Start placing badges at the bottom edge of the card
+    const badgeX = Math.round(x + (CARD_WIDTH - badgeWidth) / 2);
+    let badgeY = Math.round(y + CARD_HEIGHT - 15); // Start placing badges at the bottom edge of the card
 
     const qtyText = type === 'wishlist' ? `BUSCO x${card.quantity}` : `TENGO x${card.quantity}`;
     const qtyBg = type === 'wishlist' ? '#f97316' : '#10b981'; // Orange / Emerald

@@ -59,7 +59,7 @@ const getAllCards = async (req, res, next) => {
       cursor: cursor || null,
     };
 
-    const { cards, nextCursor, hasMore, totalCount } = await cardService.listCards(filters, userId, pagination);
+    const { cards, nextCursor, hasMore, totalCount, totalQuantity } = await cardService.listCards(filters, userId, pagination);
 
     res.set('Cache-Control', 'private, max-age=0, no-cache');
 
@@ -69,6 +69,7 @@ const getAllCards = async (req, res, next) => {
       nextCursor,
       hasMore,
       totalCount,
+      totalQuantity,
       data: cards,
     });
   } catch (err) {
@@ -119,7 +120,7 @@ const getPortfolioBySlug = async (req, res, next) => {
       });
     }
 
-    const { cards, nextCursor, hasMore, totalCount } = cardResult;
+    const { cards, nextCursor, hasMore, totalCount, totalQuantity } = cardResult;
 
     // Caché equilibrada: 30s en navegador, 60s en CDN Firebase, 300s stale-while-revalidate
     res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
@@ -130,6 +131,7 @@ const getPortfolioBySlug = async (req, res, next) => {
       whatsapp: profile?.whatsapp || null,
       count: cards.length,
       totalCount,
+      totalQuantity,
       hasMore,
       nextCursor,
       data: cards,

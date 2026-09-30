@@ -47,7 +47,7 @@ export default function PortfolioPage() {
   }
 
   const {
-    cards, whatsapp, loading, loadingMore, notFound, hasMore, totalCount, fetchNextPage,
+    cards, whatsapp, loading, loadingMore, notFound, hasMore, totalCount, totalQuantity, fetchNextPage,
   } = usePortfolio(slug, currentTab, activeFilters)
 
   const displayName = slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : ''
@@ -155,7 +155,9 @@ export default function PortfolioPage() {
                 {loading
                   ? 'Consultando los registros del milenio...'
                   : totalCount > 0
-                  ? `${totalCount} carta${totalCount === 1 ? '' : 's'} en su ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
+                  ? totalQuantity > totalCount
+                    ? `${totalCount} cartas distintas (${totalQuantity} en total) en su ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
+                    : `${totalCount} carta${totalCount === 1 ? '' : 's'} en su ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
                   : currentTab === 'inventory'
                     ? 'Esta colección está vacía por ahora'
                     : 'No hay cartas en la wishlist'}
@@ -165,7 +167,7 @@ export default function PortfolioPage() {
         </div>
 
         {/* Pestañas (Tabs) */}
-        <div className="flex justify-center border-b border-white/10 mb-8 max-w-lg mx-auto">
+        <div className="flex justify-center border-b border-white/10 mb-8 max-w-xs mx-auto">
           {['inventory', 'wishlist'].map((tab) => (
             <button
               key={tab}

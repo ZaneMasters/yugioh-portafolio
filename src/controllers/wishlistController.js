@@ -40,7 +40,7 @@ const getAllCards = async (req, res, next) => {
       cursor: cursor || null,
     };
 
-    const { cards, nextCursor, hasMore, totalCount } = await wishlistService.listCards(filters, userId, pagination);
+    const { cards, nextCursor, hasMore, totalCount, totalQuantity } = await wishlistService.listCards(filters, userId, pagination);
 
     return res.status(200).json({
       success: true,
@@ -48,6 +48,7 @@ const getAllCards = async (req, res, next) => {
       nextCursor,
       hasMore,
       totalCount,
+      totalQuantity,
       data: cards,
     });
   } catch (err) {
@@ -59,7 +60,7 @@ const getPublicWishlist = async (req, res, next) => {
   try {
     const { slug } = req.params;
     const { name, type, archetype, cursor, limit } = req.query;
-    const filters = {};
+    const filters = { onlyPublic: true };
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
     if (archetype) filters.archetype = archetype;
@@ -80,21 +81,20 @@ const getPublicWishlist = async (req, res, next) => {
       require('../repositories/userRepository').getProfile(targetUid),
     ]);
 
-    const { cards, nextCursor, hasMore, totalCount } = wishlistResult;
+    const { cards, nextCursor, hasMore, totalCount, totalQuantity } = wishlistResult;
 
-    const visibleCards = cards.filter(c => !c.isHidden);
-    
     // Caché equilibrada: 30s en navegador, 60s en CDN Firebase, 300s stale-while-revalidate
     res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
 
     return res.status(200).json({
       success: true,
       whatsapp: profile?.whatsapp || null,
-      count: visibleCards.length,
+      count: cards.length,
       totalCount,
+      totalQuantity,
       hasMore,
       nextCursor,
-      data: visibleCards,
+      data: cards,
     });
   } catch (err) {
     next(err);
