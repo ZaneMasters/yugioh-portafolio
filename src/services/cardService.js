@@ -177,6 +177,7 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   let rawCards = memCache.get(rawKey);
 
   if (!rawCards) {
+    rawCards = await cardRepository.findAllRaw(userId);
     // 15 minutos en RAM (se invalida automáticamente en cualquier mutación CUD)
     memCache.set(rawKey, rawCards, 900);
     logger.debug(`💾 Raw Inventory cache SET → ${rawKey} (${rawCards.length} cartas, 15 min TTL)`);

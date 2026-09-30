@@ -163,20 +163,31 @@ export default function HomePage() {
           
           {/* Fondo de Arte: Monstruos Legendarios (Ojos Azules, Mago Oscuro, Ojos Rojos) */}
           <div className="absolute inset-0 pointer-events-none select-none overflow-hidden flex items-center justify-center">
-            <img
-              src="/hero-yugioh.webp"
-              alt="Yu-Gi-Oh! Legendaries"
-              className="w-full max-w-5xl h-full object-cover object-center opacity-45 filter saturate-150 contrast-110 drop-shadow-[0_0_50px_rgba(245,158,11,0.2)]"
-            />
-            {/* Gradientes sutiles para fundir bordes sin apagar la imagen */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#080a11] via-[#080a11]/60 to-[#080a11]/70" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#080a11] via-transparent to-[#080a11]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_30%,_#080a11_85%)]" />
+            {/* Imagen de fondo con máscara elíptica para difuminado perimetral natural */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img
+                src="/hero-yugioh.webp"
+                alt="Yu-Gi-Oh! Legendaries"
+                className="w-full h-full object-cover object-top sm:object-center opacity-40 filter saturate-150 contrast-110 scale-105 [mask-image:radial-gradient(ellipse_75%_65%_at_50%_45%,black_30%,transparent_100%)] [-webkit-mask-image:radial-gradient(ellipse_75%_65%_at_50%_45%,black_30%,transparent_100%)]"
+              />
+            </div>
+
+            {/* Fundido superior suave hacia el Navbar */}
+            <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-b from-[#080a11] via-[#080a11]/70 to-transparent" />
+
+            {/* Fundido inferior profundo hacia las siguientes secciones */}
+            <div className="absolute bottom-0 inset-x-0 h-44 sm:h-56 bg-gradient-to-t from-[#080a11] via-[#080a11]/85 to-transparent" />
+
+            {/* Viñeta lateral para pantallas ultra-anchas */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#080a11] via-transparent to-[#080a11] opacity-75" />
+
+            {/* Tinte oscuro ambiental */}
+            <div className="absolute inset-0 bg-[#080a11]/25" />
             
-            {/* Luces mágicas (Azul relámpago izquierda, Púrpura centro, Fuego ámbar derecha) */}
-            <div className="absolute top-1/3 left-10 w-72 h-72 bg-sky-500/15 blur-[90px] rounded-full" />
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-80 h-80 bg-purple-500/15 blur-[100px] rounded-full" />
-            <div className="absolute top-1/3 right-10 w-72 h-72 bg-amber-500/15 blur-[90px] rounded-full" />
+            {/* Luces mágicas / Ambilight (Azul relámpago izquierda, Púrpura centro, Fuego ámbar derecha) */}
+            <div className="absolute top-1/3 -left-10 w-80 h-80 bg-sky-500/20 blur-[110px] rounded-full" />
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-purple-500/15 blur-[120px] rounded-full" />
+            <div className="absolute top-1/3 -right-10 w-80 h-80 bg-amber-500/20 blur-[110px] rounded-full" />
           </div>
 
           <div className="relative z-10 w-full max-w-4xl flex flex-col items-center text-center">
