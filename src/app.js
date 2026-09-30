@@ -124,8 +124,12 @@ app.get('/portfolio/:slug', async (req, res, next) => {
     return res.status(200).send(html);
   }
 
-  // Si no es un bot, servimos el index.html de React
+  // Si no es un bot, servimos el index.html de React sin permitir cache del documento HTML
   try {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     const indexPath = path.join(__dirname, '../frontend/dist/index.html');
     if (fs.existsSync(indexPath)) {
       return res.sendFile(indexPath);

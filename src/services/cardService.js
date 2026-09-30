@@ -1,6 +1,7 @@
 'use strict';
 
 const cardRepository  = require('../repositories/cardRepository');
+const userRepository  = require('../repositories/userRepository');
 const ygoService      = require('./ygoService');
 const imageService    = require('./imageService');
 const tcgPlayerService = require('./tcgPlayerService');
@@ -39,6 +40,7 @@ function invalidateInventoryCache(userId) {
       memCache.delete(key);
     }
   }
+  memCache.delete('public_users_summary');
   logger.debug(`🗑️  Inventory cache invalidated → userId: ${userId || 'global'}`);
 }
 
@@ -136,6 +138,7 @@ async function registerCard(dto, userId) {
     tcgPrice:          tcgMarketPrice !== null ? String(tcgMarketPrice) : null,
   });
 
+  userRepository.adjustCounters(userId, { inventoryDelta: 1 }).catch(() => {});
   invalidateInventoryCache(userId);
 
   // ── Subida de imagen en segundo plano (fire-and-forget) ────────────────────────
@@ -175,10 +178,9 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
 
   if (!rawCards) {
     rawCards = await cardRepository.findAllRaw(userId);
-    // Nota: memCache.set() usa su TTL por defecto que está sincronizado con el env.
-    // Podría ajustarse a 15 min si el caché permite custom TTL, pero el default está bien.
-    memCache.set(rawKey, rawCards);
-    logger.debug(`💾 Raw Inventory cache SET → ${rawKey} (${rawCards.length} cartas)`);
+    // 15 minutos en RAM (se invalida automáticamente en cualquier mutación CUD)
+    memCache.set(rawKey, rawCards, 900);
+    logger.debug(`💾 Raw Inventory cache SET → ${rawKey} (${rawCards.length} cartas, 15 min TTL)`);
   }
 
   // ── Lazy Sync semanal en segundo plano (fire-and-forget) ──────────────────────
@@ -230,9 +232,10 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   });
 
   const totalCount = cards.length;
+  const totalQuantity = cards.reduce((acc, c) => acc + (Number(c.quantity) || 1), 0);
 
   if (!paginate) {
-    return { cards, nextCursor: null, hasMore: false, totalCount };
+    return { cards, nextCursor: null, hasMore: false, totalCount, totalQuantity };
   }
 
   // 3. Paginación visual en memoria basada en cursor
@@ -248,7 +251,7 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   const hasMore = startIndex + limit < cards.length;
   const nextCursor = hasMore && pageDocs.length > 0 ? pageDocs[pageDocs.length - 1].id : null;
 
-  return { cards: pageDocs, nextCursor, hasMore, totalCount };
+  return { cards: pageDocs, nextCursor, hasMore, totalCount, totalQuantity };
 }
 
 // ── Obtener carta por ID ───────────────────────────────────────────────────────
@@ -286,6 +289,7 @@ async function updateCard(id, dto, userId) {
 
 async function deleteCard(id, userId) {
   const result = await cardRepository.delete(id, userId);
+  userRepository.adjustCounters(userId, { inventoryDelta: -1 }).catch(() => {});
   invalidateInventoryCache(userId);
   return result;
 }
@@ -376,54 +380,71 @@ async function syncUserCardPrices(userId, forceAll = false) {
 async function searchBySetCode(setCode) {
   if (!setCode || !setCode.trim()) return [];
   const query = setCode.trim();
+  const normalizedQuery = query.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  const cacheKey = `search_by_set:${normalizedQuery}`;
+  const cached = memCache.get(cacheKey);
+  if (cached) return cached;
 
   // 1. Buscar en catálogo general en memoria por set
   const catalogCards = await ygoService.searchCards(query, 'set');
 
   // 2. Buscar en Firestore si algún usuario de la comunidad tiene copias registradas
+  // Optimización: Consulta indexada por prefijo para evitar escanear toda la colección
   const { getFirestore } = require('../config/firebase');
   const db = getFirestore();
-  const normalizedQuery = query.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   try {
-    const [cardsSnap, usersSnap] = await Promise.all([
-      db.collection('cards').get(),
-      db.collection('users').get(),
-    ]);
-
-    const userMap = {};
-    usersSnap.forEach((u) => {
-      const data = u.data();
-      userMap[u.id] = {
-        slug: data.slug,
-        displayName: data.slug ? data.slug.charAt(0).toUpperCase() + data.slug.slice(1) : 'Coleccionista',
-        whatsapp: data.whatsapp || null,
-      };
-    });
+    const cleanUpper = query.toUpperCase();
+    const cardsSnap = await db.collection('cards')
+      .where('setCode', '>=', cleanUpper)
+      .where('setCode', '<=', cleanUpper + '\uf8ff')
+      .get();
 
     const ownersByCardId = {};
-    cardsSnap.forEach((doc) => {
-      const cardData = doc.data();
-      const cCode = (cardData.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (cCode && (cCode.includes(normalizedQuery) || normalizedQuery.includes(cCode))) {
-        const owner = userMap[cardData.userId];
-        if (owner) {
-          const cId = cardData.cardId;
-          if (!ownersByCardId[cId]) ownersByCardId[cId] = [];
-          ownersByCardId[cId].push({
-            id: doc.id,
-            slug: owner.slug,
-            displayName: owner.displayName,
-            whatsapp: owner.whatsapp,
-            quantity: cardData.quantity || 1,
-            rarity: cardData.rarity || null,
-            edition: cardData.edition || null,
-            setCode: cardData.setCode,
-            price: cardData.tcgMarketPrice || cardData.tcgPrice || null,
-          });
+
+    if (!cardsSnap.empty) {
+      // Obtener perfiles únicamente para los dueños que coinciden
+      const uniqueUserIds = [...new Set(cardsSnap.docs.map(d => d.data().userId).filter(Boolean))];
+      const userDocs = await Promise.all(
+        uniqueUserIds.map(uid => db.collection('users').doc(uid).get())
+      );
+
+      const userMap = {};
+      userDocs.forEach((uDoc) => {
+        if (uDoc.exists) {
+          const uData = uDoc.data();
+          userMap[uDoc.id] = {
+            slug: uData.slug,
+            displayName: uData.slug ? uData.slug.charAt(0).toUpperCase() + uData.slug.slice(1) : 'Coleccionista',
+            whatsapp: uData.whatsapp || null,
+          };
         }
-      }
-    });
+      });
+
+      cardsSnap.forEach((doc) => {
+        const cardData = doc.data();
+        const cCode = (cardData.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cCode && (cCode.includes(normalizedQuery) || normalizedQuery.includes(cCode))) {
+          const owner = userMap[cardData.userId];
+          if (owner) {
+            const cId = cardData.cardId;
+            if (!ownersByCardId[cId]) ownersByCardId[cId] = [];
+            ownersByCardId[cId].push({
+              id: doc.id,
+              slug: owner.slug,
+              displayName: owner.displayName,
+              whatsapp: owner.whatsapp,
+              quantity: cardData.quantity || 1,
+              rarity: cardData.rarity || null,
+              edition: cardData.edition || null,
+              setCode: cardData.setCode,
+              price: cardData.tcgMarketPrice || cardData.tcgPrice || null,
+            });
+          }
+        }
+      });
+    }
 
     // 3. Enriquecer los resultados del catálogo con precios en vivo y disponibilidad en comunidad
     const enrichedCards = await Promise.all(
@@ -471,6 +492,9 @@ async function searchBySetCode(setCode) {
         };
       })
     );
+
+    // Guardar en caché en memoria por 2 minutos para evitar consultas masivas repetidas a Firestore
+    memCache.set(cacheKey, enrichedCards, 120);
 
     return enrichedCards;
   } catch (err) {

@@ -1,6 +1,7 @@
 'use strict';
 
 const folderRepository = require('../repositories/folderRepository');
+const cardService = require('./cardService');
 const AppError = require('../utils/AppError');
 
 async function createFolder(data, userId) {
@@ -28,11 +29,15 @@ async function updateFolder(id, data, userId) {
   if (data.name !== undefined) updates.name = data.name.trim();
   if (data.isPublic !== undefined) updates.isPublic = Boolean(data.isPublic);
 
-  return folderRepository.update(id, updates, userId);
+  const updated = await folderRepository.update(id, updates, userId);
+  cardService.invalidateInventoryCache(userId);
+  return updated;
 }
 
 async function deleteFolder(id, userId) {
-  return folderRepository.delete(id, userId);
+  const deleted = await folderRepository.delete(id, userId);
+  cardService.invalidateInventoryCache(userId);
+  return deleted;
 }
 
 module.exports = {

@@ -10,7 +10,8 @@ export function usePublicUsers() {
     queryKey: queryKeys.publicUsers(),
     queryFn: () => userService.getPublicUsers(),
     select: (res) => res.data ?? res ?? [],
-    staleTime: 30 * 1000, // 30 segundos
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 
   return { users, loading, error }

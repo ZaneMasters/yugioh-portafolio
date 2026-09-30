@@ -59,7 +59,7 @@ const getAllCards = async (req, res, next) => {
       cursor: cursor || null,
     };
 
-    const { cards, nextCursor, hasMore, totalCount } = await cardService.listCards(filters, userId, pagination);
+    const { cards, nextCursor, hasMore, totalCount, totalQuantity } = await cardService.listCards(filters, userId, pagination);
 
     res.set('Cache-Control', 'private, max-age=0, no-cache');
 
@@ -69,6 +69,7 @@ const getAllCards = async (req, res, next) => {
       nextCursor,
       hasMore,
       totalCount,
+      totalQuantity,
       data: cards,
     });
   } catch (err) {
@@ -119,11 +120,15 @@ const getPortfolioBySlug = async (req, res, next) => {
       });
     }
 
-    const { cards, nextCursor, hasMore, totalCount } = cardResult;
+    const { cards, nextCursor, hasMore, totalCount, totalQuantity } = cardResult;
 
-    // Caché agresiva para Serverless/Firestore:
-    // max-age=300 (5 min navegador), s-maxage=1800 (30 min CDN Firebase), stale-while-revalidate=3600 (1h revalidación)
-    res.set('Cache-Control', 'public, max-age=300, s-maxage=1800, stale-while-revalidate=3600');
+    // Caché optimizada: 5 min en CDN Firebase (s-maxage=300) para visitantes externos
+    // Si viene con parámetro 't' (ej. dueño actualizando su inventario), se bypassa la CDN
+    if (req.query.t) {
+      res.set('Cache-Control', 'private, no-cache, max-age=0');
+    } else {
+      res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+    }
 
     return res.status(200).json({
       success: true,
@@ -131,6 +136,7 @@ const getPortfolioBySlug = async (req, res, next) => {
       whatsapp: profile?.whatsapp || null,
       count: cards.length,
       totalCount,
+      totalQuantity,
       hasMore,
       nextCursor,
       data: cards,

@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw, TrendingUp } from 'lucide-react'
+import { RefreshCw, TrendingUp, Share2, ExternalLink } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'react-hot-toast'
+import { useAuth } from '../../context/AuthContext'
 import { InventoryTable } from '../../components/inventory/InventoryTable'
 import { FiltersPanel } from '../../components/filters/FiltersPanel'
 import { FoldersPanel } from '../../components/folders/FoldersPanel'
@@ -46,7 +48,18 @@ export default function InventoryPage() {
           createFolder, updateFolder, deleteFolder, fetchFolders } = useFolders()
 
   const currentHook = currentTab === 'inventory' ? invHook : wishHook
-  const { cards = [], loading, actionLoading, editCard, removeCard, fetchNextPage, hasNextPage, isFetchingNextPage } = currentHook
+  const { 
+    cards = [], 
+    totalCount = 0, 
+    totalQuantity = 0, 
+    loading, 
+    actionLoading, 
+    editCard, 
+    removeCard, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = currentHook
 
   const observerTarget = useRef(null)
   useEffect(() => {
@@ -61,6 +74,24 @@ export default function InventoryPage() {
     if (observerTarget.current) observer.observe(observerTarget.current)
     return () => observer.disconnect()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  const { user, profile } = useAuth()
+  const userSlug = profile?.slug || user?.email?.split('@')[0] || ''
+
+  const handleSharePortfolio = (tab = 'inventory') => {
+    if (!userSlug) {
+      toast.error('No se pudo identificar la URL de tu portafolio.')
+      return
+    }
+    const tabParam = tab === 'wishlist' ? '?tab=wishlist' : ''
+    const publicUrl = `${window.location.origin}/portfolio/${userSlug}${tabParam}`
+    navigator.clipboard.writeText(publicUrl)
+    toast.success(
+      tab === 'wishlist'
+        ? '¡Enlace de tu Wishlist copiado! (Solo mostrará tus cartas públicas)'
+        : '¡Enlace de tu Colección pública copiado!'
+    )
+  }
 
   const handleRefresh = () => {
     if (currentTab === 'inventory') {
@@ -81,11 +112,43 @@ export default function InventoryPage() {
           <p className="text-slate-400 text-sm">
             {currentTab === 'folders'
               ? (foldersLoading ? 'Cargando...' : `${folders.length} colección${folders.length !== 1 ? 'es' : ''}`)
-              : (loading ? 'Cargando...' : `${cards.length} carta${cards.length !== 1 ? 's' : ''} en ${currentTab === 'inventory' ? 'el inventario' : 'la wishlist'}`)
+              : (loading 
+                  ? 'Cargando...' 
+                  : totalQuantity > totalCount
+                    ? `${totalCount} cartas distintas (${totalQuantity} copias en total) en ${currentTab === 'inventory' ? 'el inventario' : 'la wishlist'}`
+                    : `${totalCount} carta${totalCount !== 1 ? 's' : ''} en ${currentTab === 'inventory' ? 'el inventario' : 'la wishlist'}`
+                )
             }
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {userSlug && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Share2}
+                onClick={() => handleSharePortfolio(currentTab)}
+                title={
+                  currentTab === 'wishlist'
+                    ? 'Copiar enlace directo de tu wishlist pública'
+                    : 'Copiar enlace directo de tu colección pública'
+                }
+              >
+                {currentTab === 'wishlist' ? 'Compartir Wishlist' : 'Compartir Colección'}
+              </Button>
+              <a
+                href={`/portfolio/${userSlug}${currentTab === 'wishlist' ? '?tab=wishlist' : ''}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-white/10 text-slate-300 hover:text-white hover:bg-white/5 transition-all"
+                title="Abrir tu portafolio público en una pestaña nueva"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Ver Pública
+              </a>
+            </>
+          )}
           {currentTab === 'inventory' && (
             <Button
               variant="outline"

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
-import { Sparkles, Ghost } from 'lucide-react'
+import { Sparkles, Ghost, ShoppingCart } from 'lucide-react'
 import { Navbar } from '../../components/layout/Navbar'
 import { CardGrid } from '../../components/cards/CardGrid'
 import { FiltersPanel } from '../../components/filters/FiltersPanel'
@@ -12,12 +12,11 @@ import { usePublicFolders } from '../../hooks/usePublicFolders'
 import { HeroBackground } from '../../components/ui/HeroBackground'
 import { CartSidebar } from '../../components/cart/CartSidebar'
 import { useCartStore } from '../../store/useCartStore'
-import { ShoppingCart } from 'lucide-react'
 
 /**
  * Página de portafolio público de un usuario.
  * Accesible en: /portfolio/:slug
- * Usa useInfiniteQuery via usePortfolio para paginación cursor-based.
+ * Usa useInfiniteQuery via usePortfolio para paginación cursor-based con sincronización en vivo.
  */
 export default function PortfolioPage() {
   const { slug } = useParams()
@@ -48,7 +47,7 @@ export default function PortfolioPage() {
   }
 
   const {
-    cards, whatsapp, loading, loadingMore, notFound, hasMore, totalCount, fetchNextPage,
+    cards, whatsapp, loading, loadingMore, notFound, hasMore, totalCount, totalQuantity, fetchNextPage,
   } = usePortfolio(slug, currentTab, activeFilters)
 
   const displayName = slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : ''
@@ -156,7 +155,9 @@ export default function PortfolioPage() {
                 {loading
                   ? 'Consultando los registros del milenio...'
                   : totalCount > 0
-                  ? `${totalCount} carta${totalCount === 1 ? '' : 's'} en su ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
+                  ? totalQuantity > totalCount
+                    ? `${totalCount} cartas distintas (${totalQuantity} en total) en su ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
+                    : `${totalCount} carta${totalCount === 1 ? '' : 's'} en su ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
                   : currentTab === 'inventory'
                     ? 'Esta colección está vacía por ahora'
                     : 'No hay cartas en la wishlist'}
@@ -166,7 +167,7 @@ export default function PortfolioPage() {
         </div>
 
         {/* Pestañas (Tabs) */}
-        <div className="flex justify-center border-b border-white/10 mb-8 max-w-lg mx-auto">
+        <div className="flex justify-center border-b border-white/10 mb-8 max-w-xs mx-auto">
           {['inventory', 'wishlist'].map((tab) => (
             <button
               key={tab}

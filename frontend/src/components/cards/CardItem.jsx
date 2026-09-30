@@ -91,8 +91,8 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
       `}
     >
       {/* ── Imagen ── */}
-      <div className={`relative shrink-0 flex justify-center bg-black/30 ${
-        isList ? 'w-24 sm:w-auto sm:h-56' : 'h-56'
+      <div className={`relative shrink-0 flex items-center justify-center bg-black/30 overflow-hidden ${
+        isList ? 'w-24 min-w-[6rem] max-w-[6rem] self-stretch' : 'h-56'
       }`}>
         {/* Badges en vista 1-columna / desktop */}
         {isGrid1 && !isList && (
@@ -110,14 +110,14 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
         )}
 
         <div 
-          className={`relative h-full aspect-[400/580] foil-wrapper overflow-hidden ${foilClass}`}
+          className={`relative h-full aspect-[400/580] foil-wrapper overflow-hidden flex items-center justify-center ${foilClass}`}
         >
           <img
             src={card.imageSmall || card.image}
             alt={card.name}
             loading="lazy"
             onLoad={() => setImgLoaded(true)}
-            className={`w-full h-full object-fill transition-all duration-500 group-hover:scale-105 relative z-0 ${
+            className={`w-full h-full object-contain transition-all duration-500 group-hover:scale-105 relative z-0 ${
               imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'
             }`}
             onError={(e) => { e.target.onerror = null; e.target.src = '/card-placeholder.png'; setImgLoaded(true); }}
@@ -219,8 +219,8 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
 
         <p className="text-xs text-slate-500 line-clamp-1">{card.type}</p>
 
-        {card.archetype && (
-          <p className="text-xs text-purple-400/80">
+        {!isList && card.archetype && (
+          <p className="text-xs text-purple-400/80 line-clamp-1">
             <span className="text-slate-600">Arquetipo:</span> {card.archetype}
           </p>
         )}

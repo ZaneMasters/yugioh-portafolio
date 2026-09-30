@@ -31,70 +31,55 @@ class WishlistRepository {
    */
   async findAll(filters = {}, userId = null, pagination = {}) {
     const { limit = 20, cursor = null, paginate = false } = pagination;
-    const requiresMemorySort = !!(filters.name || filters.archetype || filters.type);
 
-    if (!paginate || requiresMemorySort) {
-      let query = this.collection;
-      if (userId) query = query.where('userId', '==', userId);
-
-      // Aplicar filtros nativos primero para traer menos documentos a memoria
-      if (filters.type) query = query.where('type', '==', filters.type);
-
-      const snapshot = await query.get();
-      let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
-      if (filters.archetype) {
-        const archLower = filters.archetype.toLowerCase();
-        cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
-      }
-      if (filters.name) {
-        const nameLower = filters.name.toLowerCase();
-        cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
-      }
-      cards.sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      });
-
-      return { cards, nextCursor: null, hasMore: false, totalCount: cards.length };
-    }
-
-    // ── Paginación real ──────────────────────────────────────────────────────
     let query = this.collection;
     if (userId) query = query.where('userId', '==', userId);
 
-    // Filtros Nativos
+    // Aplicar filtros nativos primero si los hay
     if (filters.type) query = query.where('type', '==', filters.type);
 
-    // Ejecutar count y query en paralelo — son independientes entre si
-    let countQuery = query;
-    query = query.orderBy('createdAt', 'desc').orderBy(this.db.collection(COLLECTION).firestore.constructor.FieldPath.documentId(), 'desc');
-    
-    if (cursor) {
-      const [createdAt, docId] = cursor.split('_');
-      if (createdAt && docId) {
-        query = query.startAfter(createdAt, docId);
-      } else {
-        query = query.startAfter(cursor);
-      }
+    const snapshot = await query.get();
+    let cards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    // Filtrar cartas públicas si se solicita explícitamente (ignorar las que tengan isHidden === true)
+    if (filters.onlyPublic) {
+      cards = cards.filter((c) => c.isHidden !== true);
     }
-    query = query.limit(limit + 1);
 
-    const [countSnapshot, snapshot] = await Promise.all([
-      countQuery.count().get(),
-      query.get(),
-    ]);
+    if (filters.archetype) {
+      const archLower = filters.archetype.toLowerCase();
+      cards = cards.filter((c) => c.archetype && c.archetype.toLowerCase().includes(archLower));
+    }
+    if (filters.name) {
+      const nameLower = filters.name.toLowerCase();
+      cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
+    }
+    cards.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
 
-    const totalCount = countSnapshot.data().count;
-    const docs = snapshot.docs;
-    const hasMore = docs.length > limit;
-    const pageDocs = hasMore ? docs.slice(0, limit) : docs;
+    const totalCount = cards.length;
+    const totalQuantity = cards.reduce((acc, c) => acc + (Number(c.quantity) || 1), 0);
 
-    const cards = pageDocs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    const nextCursor = hasMore ? `${pageDocs[pageDocs.length - 1].data().createdAt}_${pageDocs[pageDocs.length - 1].id}` : null;
+    if (paginate) {
+      let startIndex = 0;
+      if (cursor) {
+        const [createdAt, docId] = cursor.split('_');
+        const foundIdx = cards.findIndex(c => (c.createdAt === createdAt && c.id === docId) || c.id === docId);
+        if (foundIdx !== -1) startIndex = foundIdx + 1;
+      }
+      const pageDocs = cards.slice(startIndex, startIndex + limit);
+      const hasMore = (startIndex + limit) < totalCount;
+      const nextCursor = hasMore && pageDocs.length > 0
+        ? `${pageDocs[pageDocs.length - 1].createdAt}_${pageDocs[pageDocs.length - 1].id}`
+        : null;
 
-    return { cards, nextCursor, hasMore, totalCount };
+      return { cards: pageDocs, nextCursor, hasMore, totalCount, totalQuantity };
+    }
+
+    return { cards, nextCursor: null, hasMore: false, totalCount, totalQuantity };
   }
 
   /**

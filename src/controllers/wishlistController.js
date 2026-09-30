@@ -40,7 +40,7 @@ const getAllCards = async (req, res, next) => {
       cursor: cursor || null,
     };
 
-    const { cards, nextCursor, hasMore, totalCount } = await wishlistService.listCards(filters, userId, pagination);
+    const { cards, nextCursor, hasMore, totalCount, totalQuantity } = await wishlistService.listCards(filters, userId, pagination);
 
     return res.status(200).json({
       success: true,
@@ -48,6 +48,7 @@ const getAllCards = async (req, res, next) => {
       nextCursor,
       hasMore,
       totalCount,
+      totalQuantity,
       data: cards,
     });
   } catch (err) {
@@ -59,7 +60,7 @@ const getPublicWishlist = async (req, res, next) => {
   try {
     const { slug } = req.params;
     const { name, type, archetype, cursor, limit } = req.query;
-    const filters = {};
+    const filters = { onlyPublic: true };
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
     if (archetype) filters.archetype = archetype;
@@ -80,18 +81,25 @@ const getPublicWishlist = async (req, res, next) => {
       require('../repositories/userRepository').getProfile(targetUid),
     ]);
 
-    const { cards, nextCursor, hasMore, totalCount } = wishlistResult;
+    const { cards, nextCursor, hasMore, totalCount, totalQuantity } = wishlistResult;
 
-    const visibleCards = cards.filter(c => !c.isHidden);
+    // Caché optimizada: 5 min en CDN Firebase (s-maxage=300) para visitantes externos
+    // Si viene con parámetro 't' (ej. dueño actualizando su wishlist), se bypassa la CDN
+    if (req.query.t) {
+      res.set('Cache-Control', 'private, no-cache, max-age=0');
+    } else {
+      res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+    }
 
     return res.status(200).json({
       success: true,
       whatsapp: profile?.whatsapp || null,
-      count: visibleCards.length,
+      count: cards.length,
       totalCount,
+      totalQuantity,
       hasMore,
       nextCursor,
-      data: visibleCards,
+      data: cards,
     });
   } catch (err) {
     next(err);

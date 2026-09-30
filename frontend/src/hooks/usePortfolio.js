@@ -15,11 +15,16 @@ import { useAuth } from '../context/AuthContext'
  * @param {object} filters     - Filtros de búsqueda
  */
 export function usePortfolio(slug, tab = 'inventory', filters = {}) {
-  const { profile } = useAuth()
-  
-  // Clonar filtros para no mutar el original
+  const { user, profile } = useAuth()
+  const isOwner = Boolean(
+    slug && (
+      (profile?.slug && profile.slug.toLowerCase() === slug.toLowerCase()) ||
+      (user?.email && user.email.split('@')[0].toLowerCase() === slug.toLowerCase())
+    )
+  )
+
   const activeFilters = { ...filters }
-  if (profile?.slug && profile.slug === slug) {
+  if (isOwner) {
     const lastUpdate = localStorage.getItem('portfolioLastUpdate')
     if (lastUpdate) {
       activeFilters.t = lastUpdate
@@ -38,7 +43,7 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
 
   const {
     data,
-    isLoading:  loading,
+    isLoading: loading,
     isFetchingNextPage: loadingMore,
     fetchNextPage,
     hasNextPage: hasMore,
@@ -47,7 +52,9 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
     queryKey,
     queryFn: fetchFn,
     enabled: !!slug,
-    staleTime: 2 * 60 * 1000, // 2 minutos para portafolios públicos
+    staleTime: isOwner ? 0 : 5 * 60 * 1000, // 5 minutos para visitantes, instantáneo para el dueño
+    refetchOnWindowFocus: false, // Evita spam continuo al alternar de ventana
+    refetchOnReconnect: true,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     select: (data) => ({
       pages: data.pages,
@@ -56,8 +63,7 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
     retry: 1,
   })
 
-  // meta.onError fue eliminado en TanStack Query v5.
-  // Mostramos el toast aqui con un effect que observa el error.
+  // Toast en caso de error
   useEffect(() => {
     if (!error) return
     const is404 =
@@ -71,6 +77,7 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
   // Aplanar todas las páginas en un solo array
   const cards = data?.pages.flatMap((page) => page.data ?? []) ?? []
   const totalCount = data?.pages[0]?.totalCount ?? cards.length
+  const totalQuantity = data?.pages[0]?.totalQuantity ?? cards.reduce((acc, c) => acc + (Number(c.quantity) || 1), 0)
   const whatsapp = data?.pages[0]?.whatsapp ?? null
   const notFound = !!error && (
     error.message?.includes('404') ||
@@ -85,6 +92,7 @@ export function usePortfolio(slug, tab = 'inventory', filters = {}) {
     notFound,
     hasMore: !!hasMore,
     totalCount,
+    totalQuantity,
     fetchNextPage,
   }
 }

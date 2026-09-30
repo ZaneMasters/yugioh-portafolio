@@ -4,7 +4,7 @@ import { queryKeys } from '../lib/queryKeys'
 
 /**
  * Hook para cargar las colecciones públicas de un usuario por su slug.
- * Los datos públicos se cachean 5 minutos (raramente cambian).
+ * Sincroniza automáticamente en tiempo real.
  */
 export function usePublicFolders(slug) {
   const { data: folders = [], isLoading: loading } = useQuery({
@@ -12,7 +12,8 @@ export function usePublicFolders(slug) {
     queryFn: () => folderService.getPublicFolders(slug),
     select: (res) => res.data ?? res ?? [],
     enabled: !!slug,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 
   return { folders, loading }
