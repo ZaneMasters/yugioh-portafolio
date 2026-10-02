@@ -40,12 +40,13 @@ const createCard = async (req, res, next) => {
 // Devuelve las cartas del inventario del administrador autenticado
 const getAllCards = async (req, res, next) => {
   try {
-    const { name, type, archetype, folderId, cursor, limit, refresh } = req.query;
+    const { name, type, archetype, folderId, setCode, cursor, limit, refresh } = req.query;
     const filters = {};
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
     if (archetype) filters.archetype = archetype;
     if (folderId)  filters.folderId  = folderId;
+    if (setCode)   filters.setCode   = setCode;
 
     const userId = req.user.uid;
 
@@ -53,8 +54,9 @@ const getAllCards = async (req, res, next) => {
       cardService.invalidateInventoryCache(userId);
     }
 
+    const shouldPaginate = req.query.paginate === 'false' ? false : true;
     const pagination = {
-      paginate: true,
+      paginate: shouldPaginate,
       limit: Math.min(parseInt(limit) || 20, 100),
       cursor: cursor || null,
     };
@@ -85,8 +87,8 @@ const getAllCards = async (req, res, next) => {
 const getPortfolioBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const { name, type, archetype, folderId, cursor, limit } = req.query;
-
+    const { name, type, archetype, folderId, setCode, cursor, limit } = req.query;
+ 
     const uid = await slugToUid(slug);
     if (!uid) {
       throw new AppError(`No existe ningún usuario con el slug "${slug}".`, 404);
@@ -97,6 +99,7 @@ const getPortfolioBySlug = async (req, res, next) => {
     if (type)      filters.type      = type;
     if (archetype) filters.archetype = archetype;
     if (folderId)  filters.folderId  = folderId;
+    if (setCode)   filters.setCode   = setCode;
 
     const pagination = {
       paginate: true,
@@ -203,6 +206,21 @@ const syncPrices = async (req, res, next) => {
   }
 };
 
+// ── POST /cards/:id/sync-price ────────────────────────────────────────────────
+const syncSingleCardPrice = async (req, res, next) => {
+  try {
+    const userId = req.user.uid;
+    const card = await cardService.syncSingleCardPrice(req.params.id, userId);
+    return res.status(200).json({
+      success: true,
+      message: `Precio TCGPlayer actualizado: $${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)} USD`,
+      data: card,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── GET /cards/search-by-set?code=xxx ──────────────────────────────────────────
 const searchCardsBySet = async (req, res, next) => {
   try {
@@ -237,6 +255,8 @@ module.exports = {
   updateCard,
   deleteCard,
   syncPrices,
+  syncSingleCardPrice,
   searchCardsBySet,
 };
+
 

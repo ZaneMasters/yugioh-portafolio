@@ -1,22 +1,42 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Trash2, AlertTriangle, X } from 'lucide-react'
+import { Trash2, AlertTriangle, AlertCircle, CheckCircle2, X } from 'lucide-react'
 import { Button } from './Button'
 import { lockScroll, unlockScroll } from '../../utils/scrollLock'
 
 /**
- * Modal de confirmación de eliminación.
+ * Modal de confirmación genérico / eliminación.
  * Se monta en document.body mediante portal para evitar problemas con z-index.
  *
- * @param {boolean}  open      — Si el modal está visible
- * @param {string}   cardName  — Nombre de la carta a eliminar
- * @param {string}   cardImage — URL de la imagen de la carta
- * @param {boolean}  loading   — Si la eliminación está en progreso
- * @param {Function} onConfirm — Callback al confirmar
- * @param {Function} onCancel  — Callback al cancelar
+ * @param {boolean}  open        — Si el modal está visible
+ * @param {string}   cardName    — Nombre de la carta a eliminar (opcional)
+ * @param {string}   cardImage   — URL de la imagen de la carta (opcional)
+ * @param {boolean}  loading     — Si la acción está en progreso
+ * @param {Function} onConfirm   — Callback al confirmar
+ * @param {Function} onCancel    — Callback al cancelar
+ * @param {string}   title       — Título del modal
+ * @param {string}   description — Descripción o advertencia
+ * @param {string}   type        — 'danger' | 'success' | 'warning' (default: 'danger')
+ * @param {string}   confirmText — Texto del botón confirmar
+ * @param {string}   cancelText  — Texto del botón cancelar
+ * @param {Component} confirmIcon — Icono del botón confirmar
  */
-export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfirm, onCancel, title, description }) {
+export function ConfirmDeleteModal({
+  open,
+  cardName,
+  cardImage,
+  loading,
+  onConfirm,
+  onCancel,
+  title,
+  description,
+  type = 'danger',
+  confirmText,
+  cancelText = 'Cancelar',
+  confirmIcon,
+  children,
+}) {
   // Cerrar con Escape
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape' && !loading) onCancel() }
@@ -30,6 +50,28 @@ export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfi
     else unlockScroll()
     return () => unlockScroll()
   }, [open])
+
+  // Configuración según tipo
+  const isSuccess = type === 'success'
+  const isWarning = type === 'warning'
+  const isDanger = type === 'danger' || (!isSuccess && !isWarning)
+
+  const HeaderIcon = isSuccess ? CheckCircle2 : (isWarning ? AlertCircle : AlertTriangle)
+  const headerIconBg = isSuccess
+    ? 'bg-emerald-500/15 text-emerald-400'
+    : isWarning
+      ? 'bg-amber-500/15 text-amber-400'
+      : 'bg-red-500/15 text-red-400'
+
+  const defaultTitle = isSuccess ? 'Confirmar acción' : (isWarning ? 'Atención' : 'Eliminar carta')
+  const defaultConfirmText = isSuccess ? 'Confirmar' : (isWarning ? 'Aceptar' : 'Eliminar')
+  const DefaultConfirmIcon = isSuccess ? CheckCircle2 : (isWarning ? AlertCircle : Trash2)
+
+  const confirmBtnClass = isSuccess
+    ? 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-500 font-semibold shadow-lg shadow-emerald-500/20'
+    : isWarning
+      ? 'bg-amber-500 hover:bg-amber-400 text-black border-amber-500 font-semibold shadow-lg shadow-amber-500/20'
+      : 'bg-red-500/80 hover:bg-red-500 text-white border-red-500/40 font-semibold shadow-lg shadow-red-500/20'
 
   return createPortal(
     <AnimatePresence>
@@ -57,13 +99,13 @@ export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfi
           >
             <div className="pointer-events-auto w-full max-w-sm bg-[#131c2e] border border-white/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
 
-              {/* Header rojo */}
+              {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/5">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/15">
-                    <AlertTriangle className="w-4 h-4 text-red-400" />
+                  <span className={`flex items-center justify-center w-8 h-8 rounded-full ${headerIconBg}`}>
+                    <HeaderIcon className="w-4 h-4" />
                   </span>
-                  <h2 className="text-sm font-semibold text-white">{title || 'Eliminar carta'}</h2>
+                  <h2 className="text-sm font-semibold text-white">{title || defaultTitle}</h2>
                 </div>
                 <button
                   onClick={() => !loading && onCancel()}
@@ -75,26 +117,38 @@ export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfi
               </div>
 
               {/* Body */}
-              <div className="px-5 py-4 flex items-center gap-4">
-                {cardImage && (
-                  <img
-                    src={cardImage}
-                    alt={cardName}
-                    loading="lazy"
-                    className="w-12 h-[68px] object-contain rounded-lg bg-black/30 shrink-0"
-                    onError={(e) => { e.target.style.display = 'none' }}
-                  />
+              <div className="px-5 py-4">
+                {children ? (
+                  children
+                ) : cardName ? (
+                  <div className="flex items-center gap-4">
+                    {cardImage && (
+                      <img
+                        src={cardImage}
+                        alt={cardName}
+                        loading="lazy"
+                        className="w-12 h-[68px] object-contain rounded-lg bg-black/30 shrink-0"
+                        onError={(e) => { e.target.style.display = 'none' }}
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm text-slate-300 leading-relaxed">
+                        ¿Seguro que quieres eliminar{' '}
+                        <span className="text-white font-semibold break-words">&ldquo;{cardName}&rdquo;</span>
+                        {title ? '?' : ' de tu inventario?'}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                        {description || 'Esta acción no se puede deshacer.'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      {description || '¿Deseas continuar con esta acción?'}
+                    </p>
+                  </div>
                 )}
-                <div className="min-w-0">
-                  <p className="text-sm text-slate-300 leading-relaxed">
-                    ¿Seguro que quieres eliminar{' '}
-                    <span className="text-white font-semibold break-words">&ldquo;{cardName}&rdquo;</span>
-                    {title ? '?' : ' de tu inventario?'}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    {description || 'Esta acción no se puede deshacer.'}
-                  </p>
-                </div>
               </div>
 
               {/* Footer */}
@@ -105,17 +159,17 @@ export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfi
                   onClick={onCancel}
                   disabled={loading}
                 >
-                  Cancelar
+                  {cancelText}
                 </Button>
                 <Button
-                  variant="danger"
+                  variant={isSuccess ? 'success' : isDanger ? 'danger' : 'primary'}
                   size="sm"
-                  icon={Trash2}
+                  icon={confirmIcon || DefaultConfirmIcon}
                   loading={loading}
                   onClick={onConfirm}
-                  className="bg-red-500/80 hover:bg-red-500 text-white border-red-500/40 font-semibold"
+                  className={confirmBtnClass}
                 >
-                  Eliminar
+                  {confirmText || defaultConfirmText}
                 </Button>
               </div>
 
@@ -127,3 +181,6 @@ export function ConfirmDeleteModal({ open, cardName, cardImage, loading, onConfi
     document.body,
   )
 }
+
+export { ConfirmDeleteModal as ConfirmModal }
+

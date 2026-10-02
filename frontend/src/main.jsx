@@ -28,6 +28,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Toaster
           position="top-right"
           toastOptions={{
+            duration: 5000,
             style: {
               background: '#1f2937',
               color: '#f1f5f9',
@@ -35,8 +36,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
             },
-            success: { iconTheme: { primary: '#22c55e', secondary: '#1f2937' } },
-            error: { iconTheme: { primary: '#ef4444', secondary: '#1f2937' } },
+            success: {
+              duration: 5000,
+              iconTheme: { primary: '#22c55e', secondary: '#1f2937' },
+            },
+            error: {
+              duration: 6000,
+              iconTheme: { primary: '#ef4444', secondary: '#1f2937' },
+            },
           }}
         />
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />}

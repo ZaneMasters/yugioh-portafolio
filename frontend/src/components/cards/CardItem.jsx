@@ -1,7 +1,7 @@
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { FRAME_TYPE_COLORS } from '../../utils/constants'
-import { Sword, Shield, Star, Layers, Eye, ShoppingCart, Check, ArrowRightLeft } from 'lucide-react'
+import { Sword, Shield, Star, Layers, Eye, ShoppingCart, Check, ArrowRightLeft, Clock } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { useCartStore } from '../../store/useCartStore'
 import { toast } from 'react-hot-toast'
@@ -14,11 +14,23 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
   const [imgLoaded, setImgLoaded] = useState(false)
   const { items, addItem, removeItem } = useCartStore()
   
+  const totalQty = Number(card.quantity) || 1
+  const reservedQty = Number(card.reservedQuantity) || 0
+  const availableQty = Math.max(0, totalQty - reservedQty)
+  const isFullyReserved = !isWishlist && availableQty === 0 && reservedQty > 0
+
   const inCartItem = items.find(i => i.card.id === card.id && i.isWishlist === isWishlist)
-  const isMaxInCart = isWishlist ? !!inCartItem : (inCartItem && inCartItem.cartQuantity >= card.quantity)
+  const isMaxInCart = isWishlist ? !!inCartItem : (inCartItem && inCartItem.cartQuantity >= availableQty)
 
   const handleAddToCart = (e) => {
     e.stopPropagation()
+    if (isFullyReserved) {
+      toast.error('Esta carta ya se encuentra reservada en un pedido en proceso.', {
+        icon: '⏳',
+        style: { background: '#333', color: '#fff' }
+      })
+      return
+    }
     if (isMaxInCart) {
       removeItem(card.id, isWishlist)
       toast.success(isWishlist ? 'Removido de trades' : 'Removido del carrito', {
@@ -46,12 +58,29 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
 
   const foilClass = getFoilClass(card.rarity)
 
-  // Pill de cantidad
+  // Pill de cantidad disponible
   const quantityPill = (
     <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-bold border border-white/10 whitespace-nowrap shrink-0">
       <Layers className="w-3 h-3 shrink-0" /> ×{card.quantity}
     </span>
   )
+
+  // Badge de Reservada
+  const reservedBadge = isFullyReserved ? (
+    <span
+      className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 backdrop-blur-sm text-[11px] font-bold text-amber-300 border border-amber-500/40 whitespace-nowrap shrink-0 shadow-sm"
+      title="Esta carta está actualmente apartada en un pedido en proceso"
+    >
+      <Clock className="w-3 h-3 text-amber-400 shrink-0" /> Reservada
+    </span>
+  ) : reservedQty > 0 && !isWishlist ? (
+    <span
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 backdrop-blur-sm text-[10px] font-semibold text-amber-300 border border-amber-500/30 whitespace-nowrap shrink-0"
+      title={`${reservedQty} copias apartadas en pedido`}
+    >
+      {availableQty} disp. ({reservedQty} res.)
+    </span>
+  ) : null
 
   // Badge de rareza
   const rarityBadge = card.rarity
@@ -97,11 +126,10 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
         {/* Badges en vista 1-columna / desktop */}
         {isGrid1 && !isList && (
           <>
-            {priceBadge && (
-              <div className="absolute top-2 left-2 z-10 pointer-events-none">
-                {priceBadge}
-              </div>
-            )}
+            <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 pointer-events-none">
+              {priceBadge}
+              {reservedBadge}
+            </div>
             <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end pointer-events-none">
               {quantityPill}
               {rarityBadge}
@@ -136,24 +164,30 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
               <Eye className="w-3.5 h-3.5" /> Ver detalles
             </span>
             {isPublic && (
-              <button 
-                onClick={handleAddToCart}
-                className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-sm text-xs font-bold border ${
-                  isMaxInCart 
-                    ? 'bg-green-500/20 hover:bg-green-500/40 text-green-400 border-green-500/30' 
-                    : isWishlist 
-                      ? 'bg-purple-500 hover:bg-purple-400 text-white border-purple-500'
-                      : 'bg-amber-500 hover:bg-amber-400 text-black border-amber-500'
-                }`}
-              >
-                {isMaxInCart ? (
-                  <><Check className="w-3.5 h-3.5" /> {isWishlist ? 'Añadido' : 'Máximo añadido'}</>
-                ) : isWishlist ? (
-                  <><ArrowRightLeft className="w-3.5 h-3.5" /> Ofrecer</>
-                ) : (
-                  <><ShoppingCart className="w-3.5 h-3.5" /> Añadir al Carrito</>
-                )}
-              </button>
+              isFullyReserved ? (
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-950/80 backdrop-blur-sm text-xs font-bold text-amber-400 border border-amber-500/40 select-none shadow-md">
+                  <Clock className="w-3.5 h-3.5" /> Reservada
+                </span>
+              ) : (
+                <button 
+                  onClick={handleAddToCart}
+                  className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-sm text-xs font-bold border ${
+                    isMaxInCart 
+                      ? 'bg-green-500/20 hover:bg-green-500/40 text-green-400 border-green-500/30' 
+                      : isWishlist 
+                        ? 'bg-purple-500 hover:bg-purple-400 text-white border-purple-500'
+                        : 'bg-amber-500 hover:bg-amber-400 text-black border-amber-500'
+                  }`}
+                >
+                  {isMaxInCart ? (
+                    <><Check className="w-3.5 h-3.5" /> {isWishlist ? 'Añadido' : 'Máximo añadido'}</>
+                  ) : isWishlist ? (
+                    <><ArrowRightLeft className="w-3.5 h-3.5" /> Ofrecer</>
+                  ) : (
+                    <><ShoppingCart className="w-3.5 h-3.5" /> Añadir al Carrito</>
+                  )}
+                </button>
+              )
             )}
           </div>
         </div>
@@ -177,6 +211,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
             </div>
             <div className="flex flex-wrap gap-1 items-center mt-0.5">
               {quantityPill}
+              {reservedBadge}
               {rarityBadge}
               {priceBadge}
             </div>
@@ -198,6 +233,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
             </div>
             <div className="flex flex-wrap gap-1 items-center mt-0.5">
               {quantityPill}
+              {reservedBadge}
               {rarityBadge}
               {priceBadge}
             </div>
@@ -248,18 +284,24 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
 
           {/* Mini-botón para móvil fuera de la imagen */}
           {isPublic && (
-            <button
-              onClick={handleAddToCart}
-              className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md sm:hidden border shrink-0 transition-all active:scale-90 ${
-                isMaxInCart 
-                  ? 'bg-green-500/20 text-green-400 border-green-500/40' 
-                  : isWishlist 
-                    ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
-                    : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-              }`}
-            >
-              {isMaxInCart ? <Check className="w-4 h-4" /> : isWishlist ? <ArrowRightLeft className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
-            </button>
+            isFullyReserved ? (
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/30 sm:hidden select-none">
+                Reservada
+              </span>
+            ) : (
+              <button
+                onClick={handleAddToCart}
+                className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md sm:hidden border shrink-0 transition-all active:scale-90 ${
+                  isMaxInCart 
+                    ? 'bg-green-500/20 text-green-400 border-green-500/40' 
+                    : isWishlist 
+                      ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
+                      : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                }`}
+              >
+                {isMaxInCart ? <Check className="w-4 h-4" /> : isWishlist ? <ArrowRightLeft className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
+              </button>
+            )
           )}
         </div>
 

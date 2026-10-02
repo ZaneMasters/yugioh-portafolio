@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Filter, Search, X, Sword, Zap, Star, Layers, Link2, Scroll, GitMerge, Sparkles, ShieldAlert, ChevronDown, Folder } from 'lucide-react'
+import { Filter, Search, X, Sword, Zap, Star, Layers, Link2, Scroll, GitMerge, Sparkles, ShieldAlert, ChevronDown, Folder, Tag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CARD_TYPES } from '../../utils/constants'
 import { Select } from '../ui/Select'
@@ -21,18 +21,19 @@ const TYPE_META = {
 export function FiltersPanel({ filters, onChange, folders = [] }) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const hasAdvancedFilters = filters.type || filters.archetype || filters.folderId
-  const hasAnyFilter = filters.name || hasAdvancedFilters
+  const hasAnyFilter = filters.name || filters.setCode || hasAdvancedFilters
 
   function clearAll() {
-    onChange({ name: '', type: '', archetype: '', folderId: '' })
+    onChange({ name: '', setCode: '', type: '', archetype: '', folderId: '' })
     setShowAdvanced(false)
   }
 
   return (
     <div className="flex flex-col gap-4">
 
-      {/* Row 1: Buscador principal + botón filtros mobile */}
+      {/* Row 1: Buscador principal + código + colección + arquetipo + filtros */}
       <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center">
+        {/* Buscador por nombre */}
         <div className="relative flex-1 min-w-[150px] group">
           <Search
             className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-amber-400 transition-colors pointer-events-none"
@@ -40,7 +41,7 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
           <input
             type="text"
             placeholder="Buscar carta por nombre…"
-            value={filters.name}
+            value={filters.name || ''}
             onChange={(e) => onChange({ ...filters, name: e.target.value })}
             className="
               w-full bg-black/30 border border-white/8 rounded-xl text-slate-100 text-sm
@@ -52,6 +53,33 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
           {filters.name && (
             <button
               onClick={() => onChange({ ...filters, name: '' })}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Buscador por Set / Código */}
+        <div className="relative group w-full sm:w-48 shrink-0">
+          <Tag
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-amber-400 transition-colors pointer-events-none"
+          />
+          <input
+            type="text"
+            placeholder="Set / Código (ej: RA01)…"
+            value={filters.setCode || ''}
+            onChange={(e) => onChange({ ...filters, setCode: e.target.value })}
+            className="
+              w-full bg-black/30 border border-white/8 rounded-xl text-slate-100 text-sm
+              pl-9 pr-4 py-2.5 outline-none transition-all font-mono text-xs
+              placeholder:text-slate-600 placeholder:font-sans
+              focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 focus:bg-black/50
+            "
+          />
+          {filters.setCode && (
+            <button
+              onClick={() => onChange({ ...filters, setCode: '' })}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
             >
               <X size={14} />
@@ -74,14 +102,14 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
         )}
 
         {/* Botón arquetipo inline — solo desktop */}
-        <div className="relative hidden sm:block group order-2 sm:order-none">
+        <div className="relative hidden lg:block group order-2 lg:order-none">
           <input
             type="text"
             placeholder="Arquetipo…"
-            value={filters.archetype}
+            value={filters.archetype || ''}
             onChange={(e) => onChange({ ...filters, archetype: e.target.value })}
             className="
-              w-44 bg-black/30 border border-white/8 rounded-xl text-slate-100 text-sm
+              w-36 bg-black/30 border border-white/8 rounded-xl text-slate-100 text-sm
               px-4 py-2.5 outline-none transition-all
               placeholder:text-slate-600
               focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/10 focus:bg-black/50
@@ -130,8 +158,8 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
 
       {/* Row 2: Chips de tipo — colapsable en todas las pantallas */}
       <div className={`${showAdvanced ? 'flex' : 'hidden'} flex-col gap-3`}>
-        {/* Arquetipo — solo mobile */}
-        <div className="relative sm:hidden">
+        {/* Arquetipo — pantallas medianas y móviles */}
+        <div className="relative lg:hidden">
           <input
             type="text"
             placeholder="Arquetipo…"

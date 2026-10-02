@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Search, Loader2, PackagePlus, ChevronLeft, ChevronRight, ServerCrash, RefreshCw, AlertCircle, Info, Sword, Wand2, Shield, LayoutGrid, Tag } from 'lucide-react'
+import { Search, Loader2, PackagePlus, ChevronLeft, ChevronRight, ServerCrash, RefreshCw, AlertCircle, Info, Sword, Wand2, Shield, LayoutGrid, Tag, Package } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { CardSearchResult } from '../../components/cards/CardSearchResult'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -47,7 +48,7 @@ const CARD_TYPE_FILTERS = [
 export default function SearchPage() {
   const [queryInput, setQueryInput] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
-  const [searchType, setSearchType] = useState('name') // 'name' | 'archetype' | 'set'
+  const [searchType, setSearchType] = useState('set') // 'set' | 'name' | 'archetype'
   const [filterType, setFilterType] = useState('all') // 'all' | 'monster' | 'spell' | 'trap'
 
   const [addingId, setAddingId] = useState(null)
@@ -78,8 +79,8 @@ export default function SearchPage() {
   }, [debouncedQueryInput, searchType])
 
   const { results: rawResults, searching, searchError } = useSearchCards(activeQuery, searchType)
-  const { addCard: addCardInventory }         = useCards()
-  const { addCard: addCardWishlist }          = useWishlist()
+  const { addCard: addCardInventory }         = useCards(null)
+  const { addCard: addCardWishlist }          = useWishlist(null)
   const { folders }                           = useFolders()
   const queryClient                           = useQueryClient()
 
@@ -138,28 +139,38 @@ export default function SearchPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-1">Buscar Cartas</h1>
-        <div className="text-slate-400 text-sm flex flex-col gap-1">
-          {catalogStatus ? (
-            <div className="flex flex-col gap-0.5 mt-1">
-              <span className="text-emerald-500/80 font-medium flex items-center gap-1.5">
-                <Info className="w-4 h-4" />
-                Motor de Búsqueda Local Activo
-              </span>
-              <span className="text-xs text-slate-400">
-                Última actualización: {new Date(catalogStatus.lastUpdated).toLocaleString()} 
-                {' '}• Origen: {catalogStatus.source} 
-                {' '}• Cartas: {catalogStatus.totalCards.toLocaleString()}
-              </span>
-            </div>
-          ) : (
-            <span>Conectando con el catálogo local...</span>
-          )}
-          <span className="text-amber-500/90 text-xs font-medium mt-1">
-            Nota: Las búsquedas deben realizarse con el nombre de la carta en Inglés.
-          </span>
+      <div className="mb-4 md:mb-8 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-white mb-0 md:mb-1">Buscar Cartas</h1>
+          <div className="hidden md:flex text-slate-400 text-sm flex-col gap-1">
+            {catalogStatus ? (
+              <div className="flex flex-col gap-0.5 mt-1">
+                <span className="text-emerald-500/80 font-medium flex items-center gap-1.5">
+                  <Info className="w-4 h-4" />
+                  Motor de Búsqueda Local Activo
+                </span>
+                <span className="text-xs text-slate-400">
+                  Última actualización: {new Date(catalogStatus.lastUpdated).toLocaleString()} 
+                  {' '}• Origen: {catalogStatus.source} 
+                  {' '}• Cartas: {catalogStatus.totalCards.toLocaleString()}
+                </span>
+              </div>
+            ) : (
+              <span>Conectando con el catálogo local...</span>
+            )}
+            <span className="text-amber-500/90 text-xs font-medium mt-1">
+              Nota: Las búsquedas deben realizarse con el nombre de la carta en Inglés.
+            </span>
+          </div>
         </div>
+
+        <Link
+          to="/admin/inventory"
+          className="flex items-center gap-1.5 text-xs font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-2 rounded-xl border border-amber-500/20 transition-all shrink-0 shadow-sm"
+        >
+          <Package className="w-4 h-4" />
+          <span>Ver Inventario</span>
+        </Link>
       </div>
 
       {/* Caja Principal Unificada */}
@@ -168,8 +179,26 @@ export default function SearchPage() {
         {/* Fila Superior: Modos y Destino */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           
-          {/* Tabs Minimalistas (Nombre vs Arquetipo vs Set) */}
+          {/* Tabs Minimalistas (Set vs Nombre vs Arquetipo) */}
           <div className="flex items-center gap-6 border-b border-white/5 px-2">
+            <button
+              type="button"
+              onClick={() => { setSearchType('set'); setQueryInput(''); setActiveQuery(''); setFilterType('all'); }}
+              className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] flex items-center gap-1.5 ${
+                searchType === 'set' 
+                  ? 'border-amber-500 text-amber-400' 
+                  : 'border-transparent text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <span>Por Set / Código</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
+                searchType === 'set'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  : 'bg-white/5 text-slate-500 border-white/10'
+              }`}>
+                ID / Set
+              </span>
+            </button>
             <button
               type="button"
               onClick={() => { setSearchType('name'); setQueryInput(''); setActiveQuery(''); setFilterType('all'); }}
@@ -192,51 +221,33 @@ export default function SearchPage() {
             >
               Por Arquetipo
             </button>
-            <button
-              type="button"
-              onClick={() => { setSearchType('set'); setQueryInput(''); setActiveQuery(''); setFilterType('all'); }}
-              className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] flex items-center gap-1.5 ${
-                searchType === 'set' 
-                  ? 'border-amber-500 text-amber-400' 
-                  : 'border-transparent text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              <span>Por Set / Código</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
-                searchType === 'set'
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                  : 'bg-white/5 text-slate-500 border-white/10'
-              }`}>
-                ID / Set
-              </span>
-            </button>
           </div>
 
           {/* Toggle Inventario / Wishlist */}
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Destino:</span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Añadir a:</span>
             <div className="flex bg-black/40 rounded-lg p-1 border border-white/5">
               <button
                 type="button"
                 onClick={() => setDestination('inventory')}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
                   destination === 'inventory'
                     ? 'bg-amber-500/20 text-amber-400 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 }`}
               >
-                Inventario
+                + Mi Inventario
               </button>
               <button
                 type="button"
                 onClick={() => setDestination('wishlist')}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
                   destination === 'wishlist'
                     ? 'bg-amber-500/20 text-amber-400 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 }`}
               >
-                Wishlist
+                + Mi Wishlist
               </button>
             </div>
           </div>
@@ -259,7 +270,6 @@ export default function SearchPage() {
               value={queryInput}
               onChange={(e) => setQueryInput(e.target.value)}
               className="w-full bg-transparent border-none outline-none text-slate-100 text-sm placeholder:text-slate-600 font-medium"
-              autoFocus
             />
 
             {/* Texto informativo minimalista al lado del input */}
@@ -271,9 +281,6 @@ export default function SearchPage() {
                 </span>
                 <span className="font-mono text-amber-400/90 bg-white/5 px-1.5 py-0.5 rounded border border-white/10 text-[11px]">
                   RA01-EN001
-                </span>
-                <span className="text-slate-300 bg-white/5 px-1.5 py-0.5 rounded border border-white/10 text-[11px] whitespace-nowrap">
-                  Maximum Gold
                 </span>
               </div>
             )}

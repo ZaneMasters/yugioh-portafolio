@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  X, Sword, Shield, Star, Layers, Link2, Sparkles, Tag, DollarSign, Globe, BookOpen, ShoppingCart, Check, ArrowRightLeft
+  X, Sword, Shield, Star, Layers, Link2, Sparkles, Tag, DollarSign, Globe, BookOpen, ShoppingCart, Check, ArrowRightLeft, Clock
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { RARITIES, LANGUAGES } from '../../utils/constants'
@@ -245,10 +245,22 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
 
   const { items, addItem, removeItem } = useCartStore()
   const inCartItem = card ? items.find(i => i.card.id === card.id && i.isWishlist === isWishlist) : null
-  const isMaxInCart = isWishlist ? !!inCartItem : (inCartItem && inCartItem.cartQuantity >= card?.quantity)
+  
+  const totalQty = Number(card?.quantity) || 1
+  const reservedQty = Number(card?.reservedQuantity) || 0
+  const availableQty = Math.max(0, totalQty - reservedQty)
+  const isFullyReserved = !isWishlist && availableQty === 0 && reservedQty > 0
+  const isMaxInCart = isWishlist ? !!inCartItem : (inCartItem && inCartItem.cartQuantity >= availableQty)
 
   const handleAddToCart = (e) => {
     e.stopPropagation()
+    if (isFullyReserved) {
+      toast.error('Esta carta ya se encuentra reservada en un pedido en proceso.', {
+        icon: '⏳',
+        style: { background: '#333', color: '#fff' }
+      })
+      return
+    }
     if (isMaxInCart && card) {
       removeItem(card.id, isWishlist)
       toast.success(isWishlist ? 'Removido de trades' : 'Removido del carrito', {
@@ -464,24 +476,30 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                     )}
 
                     {isPublic && (
-                      <button 
-                        onClick={handleAddToCart}
-                        className={`ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-lg font-bold text-xs transition-colors border ${
-                          isMaxInCart 
-                            ? 'bg-green-500/20 hover:bg-green-500/40 text-green-400 border-green-500/30 cursor-pointer' 
-                            : isWishlist 
-                              ? 'bg-purple-500 hover:bg-purple-400 text-white border-purple-500 cursor-pointer'
-                              : 'bg-amber-500 hover:bg-amber-400 text-black border-amber-500 cursor-pointer'
-                        }`}
-                      >
-                        {isMaxInCart ? (
-                          <><Check style={{ width: 14, height: 14 }} /> {isWishlist ? 'Añadido' : 'Máximo añadido'}</>
-                        ) : isWishlist ? (
-                          <><ArrowRightLeft style={{ width: 14, height: 14 }} /> Ofrecer</>
-                        ) : (
-                          <><ShoppingCart style={{ width: 14, height: 14 }} /> Añadir</>
-                        )}
-                      </button>
+                      isFullyReserved ? (
+                        <span className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs bg-amber-500/15 text-amber-300 border border-amber-500/30 select-none">
+                          <Clock style={{ width: 14, height: 14 }} /> Reservada
+                        </span>
+                      ) : (
+                        <button 
+                          onClick={handleAddToCart}
+                          className={`ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-lg font-bold text-xs transition-colors border ${
+                            isMaxInCart 
+                              ? 'bg-green-500/20 hover:bg-green-500/40 text-green-400 border-green-500/30 cursor-pointer' 
+                              : isWishlist 
+                                ? 'bg-purple-500 hover:bg-purple-400 text-white border-purple-500 cursor-pointer'
+                                : 'bg-amber-500 hover:bg-amber-400 text-black border-amber-500 cursor-pointer'
+                          }`}
+                        >
+                          {isMaxInCart ? (
+                            <><Check style={{ width: 14, height: 14 }} /> {isWishlist ? 'Añadido' : 'Máximo añadido'}</>
+                          ) : isWishlist ? (
+                            <><ArrowRightLeft style={{ width: 14, height: 14 }} /> Ofrecer</>
+                          ) : (
+                            <><ShoppingCart style={{ width: 14, height: 14 }} /> Añadir</>
+                          )}
+                        </button>
+                      )
                     )}
                   </div>
                 </div>

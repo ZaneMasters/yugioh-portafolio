@@ -30,6 +30,9 @@ export const queryKeys = {
 
   // Búsqueda por set code
   searchBySet: (code) => ['searchBySet', code],
+
+  // Admin: pedidos
+  orders: () => ['orders'],
 }
 
 

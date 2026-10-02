@@ -4,7 +4,17 @@ import { TableRowSkeleton } from '../ui/Skeleton'
 import { EmptyState } from '../ui/EmptyState'
 import { Package } from 'lucide-react'
 
-export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading, mode = 'inventory', folders = [] }) {
+export function InventoryTable({
+  cards,
+  loading,
+  onEdit,
+  onDelete,
+  onSyncPrice,
+  syncingCardId,
+  actionLoading,
+  mode = 'inventory',
+  folders = []
+}) {
   const HEADERS = mode === 'inventory'
     ? ['Carta', 'Arquetipo', 'Expansión/Rareza', 'Cantidad', 'Detalles', 'Acciones']
     : ['Carta', 'Arquetipo', 'Cantidad', 'Rareza', 'Acciones']
@@ -44,6 +54,8 @@ export function InventoryTable({ cards, loading, onEdit, onDelete, actionLoading
                   card={card}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  onSyncPrice={onSyncPrice}
+                  syncingCardId={syncingCardId}
                   actionLoading={actionLoading}
                   mode={mode}
                   folders={folders}
