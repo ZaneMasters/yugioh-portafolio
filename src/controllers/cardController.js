@@ -206,6 +206,21 @@ const syncPrices = async (req, res, next) => {
   }
 };
 
+// ── POST /cards/:id/sync-price ────────────────────────────────────────────────
+const syncSingleCardPrice = async (req, res, next) => {
+  try {
+    const userId = req.user.uid;
+    const card = await cardService.syncSingleCardPrice(req.params.id, userId);
+    return res.status(200).json({
+      success: true,
+      message: `Precio TCGPlayer actualizado: $${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)} USD`,
+      data: card,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── GET /cards/search-by-set?code=xxx ──────────────────────────────────────────
 const searchCardsBySet = async (req, res, next) => {
   try {
@@ -240,6 +255,8 @@ module.exports = {
   updateCard,
   deleteCard,
   syncPrices,
+  syncSingleCardPrice,
   searchCardsBySet,
 };
+
 

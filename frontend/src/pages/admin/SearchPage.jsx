@@ -79,8 +79,8 @@ export default function SearchPage() {
   }, [debouncedQueryInput, searchType])
 
   const { results: rawResults, searching, searchError } = useSearchCards(activeQuery, searchType)
-  const { addCard: addCardInventory }         = useCards()
-  const { addCard: addCardWishlist }          = useWishlist()
+  const { addCard: addCardInventory }         = useCards(null)
+  const { addCard: addCardWishlist }          = useWishlist(null)
   const { folders }                           = useFolders()
   const queryClient                           = useQueryClient()
 

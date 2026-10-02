@@ -18,10 +18,11 @@ export async function createOrder(payload) {
 
 /**
  * Obtiene la lista de pedidos y métricas del vendedor autenticado.
- * @param {string} [status] - 'all' | 'pending' | 'completed' | 'cancelled'
+ * @param {string|null} [status] - 'all' | 'pending' | 'completed' | 'cancelled'
  */
 export async function getOrders(status = null) {
-  const params = status ? { status } : {}
+  const cleanStatus = typeof status === 'string' && status !== 'all' ? status : null
+  const params = cleanStatus ? { status: cleanStatus } : {}
   const res = await api.get('/orders', { params })
   return res.data
 }

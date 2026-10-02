@@ -32,7 +32,9 @@ class OrderController {
   async getOrders(req, res, next) {
     try {
       const sellerId = req.user.uid;
-      const { status } = req.query;
+      const rawStatus = req.query.status;
+      const validStatuses = ['pending', 'completed', 'cancelled', 'expired'];
+      const status = typeof rawStatus === 'string' && validStatuses.includes(rawStatus) ? rawStatus : null;
       const data = await orderService.getOrders(sellerId, status);
       return res.status(200).json({
         success: true,

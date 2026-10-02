@@ -16,19 +16,14 @@ import {
   User,
   ShoppingBag
 } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getOrders, updateOrderStatus } from '../../services/orderService'
 import { ConfirmModal } from '../../components/ui/ConfirmDeleteModal'
+import { queryKeys } from '../../lib/queryKeys'
 import toast from 'react-hot-toast'
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState([])
-  const [metrics, setMetrics] = useState({
-    pendingCount: 0,
-    completedCount: 0,
-    totalSalesAmount: 0,
-    totalSoldCards: 0
-  })
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('pending') // 'pending' | 'completed' | 'cancelled'
   const [actionLoadingId, setActionLoadingId] = useState(null)
   const [confirmModal, setConfirmModal] = useState({
@@ -43,22 +38,22 @@ export default function OrdersPage() {
     confirmIcon: null,
   })
 
-  const fetchOrdersData = async (silent = false) => {
-    if (!silent) setLoading(true)
-    try {
-      const data = await getOrders()
-      setOrders(data.orders || [])
-      if (data.metrics) setMetrics(data.metrics)
-    } catch (err) {
-      toast.error(err.message || 'Error al cargar los pedidos')
-    } finally {
-      if (!silent) setLoading(false)
-    }
-  }
+  // Consulta en caché con TanStack Query (1 minuto de staleTime evita peticiones repetitivas al cambiar de pestaña)
+  const { data, isLoading: loading, isFetching, refetch } = useQuery({
+    queryKey: queryKeys.orders(),
+    queryFn: () => getOrders(),
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
 
-  useEffect(() => {
-    fetchOrdersData()
-  }, [])
+  const orders = data?.orders || []
+  const metrics = data?.metrics || {
+    pendingCount: 0,
+    completedCount: 0,
+    totalSalesAmount: 0,
+    totalSoldCards: 0
+  }
 
   const handleOpenCancelModal = (order) => {
     setConfirmModal({
@@ -101,7 +96,10 @@ export default function OrdersPage() {
           : `Pedido #${orderNumber} cancelado y cartas liberadas.`
       )
       setConfirmModal((prev) => ({ ...prev, open: false }))
-      await fetchOrdersData(true)
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders() })
+      queryClient.invalidateQueries({ queryKey: ['cards'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-lookup'] })
     } catch (err) {
       toast.error(err.message || 'Error al actualizar el estado del pedido')
     } finally {
@@ -146,11 +144,11 @@ export default function OrdersPage() {
         </div>
 
         <button
-          onClick={() => fetchOrdersData()}
-          disabled={loading}
+          onClick={() => refetch()}
+          disabled={isFetching}
           className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold border border-white/10 transition-colors self-start sm:self-auto"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
           <span>Actualizar</span>
         </button>
       </div>

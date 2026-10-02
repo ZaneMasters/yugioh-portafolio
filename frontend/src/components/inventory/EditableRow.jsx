@@ -1,5 +1,5 @@
 import { useState, memo } from 'react'
-import { Pencil, Trash2, Check, X, Eye, EyeOff } from 'lucide-react'
+import { Pencil, Trash2, Check, X, Eye, EyeOff, RefreshCw } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Select'
@@ -7,7 +7,17 @@ import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal'
 import { RARITIES, EDITIONS, LANGUAGES } from '../../utils/constants'
 import { motion } from 'framer-motion'
 
-export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, actionLoading, mode = 'inventory', folders = [] }) {
+export const EditableRow = memo(function EditableRow({
+  card,
+  onEdit,
+  onDelete,
+  onSyncPrice,
+  syncingCardId,
+  actionLoading,
+  mode = 'inventory',
+  folders = [],
+}) {
+  const isSyncing = syncingCardId === card.id
   const [editing, setEditing]   = useState(false)
   const [qty, setQty]           = useState(card.quantity)
   const [folderIds, setFolderIds] = useState(card.folderIds || [])
@@ -197,15 +207,40 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                     <div className="flex flex-wrap items-center gap-1.5">
                       {card.edition  && <span className="text-[10px] text-slate-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5">{card.edition}</span>}
                       {card.language && <span className="text-[10px] text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5">{card.language}</span>}
-                      {(card.tcgMarketPrice != null || card.tcgPrice) && (
-                        <span
-                          className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 flex items-center gap-1"
-                          title={card.tcgPriceUpdatedAt ? `TCGPlayer Market (Actualizado: ${new Date(card.tcgPriceUpdatedAt).toLocaleDateString()})` : 'Precio TCGPlayer Market'}
+                      {(card.tcgMarketPrice != null || card.tcgPrice) ? (
+                        <div className="flex items-center gap-1">
+                          <span
+                            className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 flex items-center gap-1"
+                            title={card.tcgPriceUpdatedAt ? `TCGPlayer Market (Actualizado: ${new Date(card.tcgPriceUpdatedAt).toLocaleDateString()})` : 'Precio TCGPlayer Market'}
+                          >
+                            <span className="text-[9px] text-emerald-500 font-bold">TCG</span> ${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)}
+                          </span>
+                          {card.setCode && onSyncPrice && (
+                            <button
+                              type="button"
+                              disabled={isSyncing}
+                              onClick={() => onSyncPrice(card.id)}
+                              className="p-1 rounded text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-40"
+                              title="Actualizar precio de esta carta con TCGPlayer"
+                            >
+                              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-emerald-400' : ''}`} />
+                            </button>
+                          )}
+                        </div>
+                      ) : card.setCode && onSyncPrice ? (
+                        <button
+                          type="button"
+                          disabled={isSyncing}
+                          onClick={() => onSyncPrice(card.id)}
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded px-1.5 py-0.5 transition-colors disabled:opacity-40"
+                          title="Consultar precio en TCGPlayer para esta carta"
                         >
-                          <span className="text-[9px] text-emerald-500 font-bold">TCG</span> ${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)}
-                        </span>
+                          <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                          <span>{isSyncing ? 'Buscando...' : 'Obtener precio TCG'}</span>
+                        </button>
+                      ) : (
+                        !card.edition && !card.language && <span className="text-slate-600 text-xs">—</span>
                       )}
-                      {!card.edition && !card.language && !card.tcgMarketPrice && !card.tcgPrice && <span className="text-slate-600 text-xs">—</span>}
                     </div>
                   </div>
                 )
@@ -297,11 +332,39 @@ export const EditableRow = memo(function EditableRow({ card, onEdit, onDelete, a
                       {card.setCode && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5">{card.setCode}</span>}
                       {card.rarity && <Badge rarity={card.rarity} />}
                       {card.language && <span className="text-[9px] text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5">{card.language}</span>}
-                      {(card.tcgMarketPrice != null || card.tcgPrice) && (
-                        <span className="text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5">
-                          ${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)}
+                      {(card.tcgMarketPrice != null || card.tcgPrice) ? (
+                        <span className="text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 inline-flex items-center gap-1">
+                          <span>${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)}</span>
+                          {card.setCode && onSyncPrice && (
+                            <button
+                              type="button"
+                              disabled={isSyncing}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onSyncPrice(card.id)
+                              }}
+                              className="text-slate-400 hover:text-emerald-400 disabled:opacity-40"
+                              title="Actualizar precio con TCGPlayer"
+                            >
+                              <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? 'animate-spin text-emerald-400' : ''}`} />
+                            </button>
+                          )}
                         </span>
-                      )}
+                      ) : card.setCode && onSyncPrice ? (
+                        <button
+                          type="button"
+                          disabled={isSyncing}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onSyncPrice(card.id)
+                          }}
+                          className="text-[9px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 inline-flex items-center gap-1 disabled:opacity-40"
+                          title="Consultar precio en TCGPlayer"
+                        >
+                          <RefreshCw className={`w-2 h-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                          <span>{isSyncing ? '...' : 'Precio TCG'}</span>
+                        </button>
+                      ) : null}
                     </>
                   ) : (
                     <Badge rarity={card.rarity} />

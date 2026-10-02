@@ -53,6 +53,18 @@ router.get('/search-by-set', cardController.searchCardsBySet);
  */
 router.post('/sync-prices', authMiddleware, cardController.syncPrices);
 
+/**
+ * @route   POST /api/v1/cards/:id/sync-price
+ * @desc    Sincronizar el precio TCGPlayer de una sola carta bajo demanda
+ * @access  Private (requiere Firebase ID Token)
+ */
+router.post(
+  '/:id/sync-price',
+  authMiddleware,
+  validate({ params: idParamSchema }),
+  cardController.syncSingleCardPrice,
+);
+
 
 /**
  * @route   GET /api/v1/cards/:id

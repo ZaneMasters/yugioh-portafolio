@@ -387,6 +387,46 @@ async function syncUserCardPrices(userId, forceAll = false) {
 }
 
 /**
+ * Sincroniza el precio de TCGPlayer de una sola carta bajo demanda.
+ * @param {string} id - ID de la carta en Firestore
+ * @param {string} userId - UID del usuario
+ * @returns {Promise<Object>}
+ */
+async function syncSingleCardPrice(id, userId) {
+  const card = await cardRepository.findById(id);
+  if (!card || card.userId !== userId) {
+    throw new AppError('Carta no encontrada en tu inventario.', 404);
+  }
+  if (!card.setCode) {
+    throw new AppError('La carta no tiene asignado un código de set (setCode) para consultar precios.', 400);
+  }
+
+  const priceInfo = await tcgPlayerService.getPriceForCard(
+    card.name,
+    card.setCode,
+    card.rarity,
+    card.setName
+  );
+
+  if (priceInfo.marketPrice === null && priceInfo.lowPrice === null) {
+    throw new AppError(`No se encontró precio en TCGPlayer para "${card.name}" (${card.setCode}).`, 404);
+  }
+
+  const chosenPrice = priceInfo.marketPrice ?? priceInfo.lowPrice;
+  const updates = {
+    tcgMarketPrice: chosenPrice,
+    tcgLowPrice: priceInfo.lowPrice ?? null,
+    tcgPrice: String(chosenPrice),
+    tcgPriceUpdatedAt: new Date().toISOString(),
+  };
+
+  const updatedCard = await cardRepository.update(id, updates, userId);
+  invalidateInventoryCache(userId);
+  logger.info(`💲 Precio TCGPlayer actualizado para carta "${card.name}": $${chosenPrice} USD`);
+  return updatedCard;
+}
+
+/**
  * Busca cartas exclusivamente por código de set / expansión.
  * Consulta el catálogo general y cruza con las cartas de la comunidad
  * para mostrar qué coleccionistas la tienen disponible.
@@ -539,6 +579,7 @@ module.exports = {
   updateCard,
   deleteCard,
   syncUserCardPrices,
+  syncSingleCardPrice,
   invalidateInventoryCache,
   searchBySetCode,
 };

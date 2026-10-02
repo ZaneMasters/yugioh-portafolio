@@ -56,9 +56,11 @@ export default function InventoryPage() {
     totalCount = 0, 
     totalQuantity = 0, 
     loading, 
-    actionLoading, 
+    actionLoading,
     editCard, 
     removeCard, 
+    syncSingleCardPrice,
+    syncingCardId,
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage 
@@ -152,18 +154,6 @@ export default function InventoryPage() {
               </a>
             </>
           )}
-          {currentTab === 'inventory' && (
-            <Button
-              variant="outline"
-              size="sm"
-              icon={TrendingUp}
-              loading={invHook.syncPricesLoading}
-              onClick={() => invHook.syncPrices(true)}
-              title="Forzar actualización de precios con TCGPlayer"
-            >
-              Actualizar Precios TCG
-            </Button>
-          )}
           <Button
             variant="secondary"
             size="sm"
@@ -233,6 +223,8 @@ export default function InventoryPage() {
               loading={loading && cards.length === 0}
               onEdit={editCard}
               onDelete={removeCard}
+              onSyncPrice={currentTab === 'inventory' ? syncSingleCardPrice : null}
+              syncingCardId={syncingCardId}
               actionLoading={actionLoading}
               mode={currentTab}
               folders={folders}

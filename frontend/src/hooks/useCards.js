@@ -84,6 +84,17 @@ export function useCards(filters = {}) {
     onError: (err) => toast.error(err.message || 'Error al actualizar precios de TCGPlayer'),
   })
 
+  const syncSingleCardMutation = useMutation({
+    mutationFn: (id) => cardService.syncSingleCardPrice(id),
+    onSuccess: (res) => {
+      toast.success(res?.message || 'Precio TCGPlayer actualizado con éxito')
+      queryClient.invalidateQueries({ queryKey: ['cards'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-lookup'] })
+    },
+    onError: (err) => toast.error(err.message || 'Error al consultar TCGPlayer'),
+  })
+
   return {
     cards,
     totalCount,
@@ -95,9 +106,11 @@ export function useCards(filters = {}) {
     isFetchingNextPage,
     actionLoading: addMutation.isPending || editMutation.isPending || removeMutation.isPending,
     syncPricesLoading: syncPricesMutation.isPending,
-    addCard:    (payload)        => addMutation.mutateAsync(payload),
-    editCard:   (id, payload)    => editMutation.mutateAsync({ id, payload }),
-    removeCard: (id)             => removeMutation.mutateAsync(id),
-    syncPrices: (force = true)   => syncPricesMutation.mutateAsync(force),
+    syncingCardId: syncSingleCardMutation.isPending ? syncSingleCardMutation.variables : null,
+    addCard:             (payload)      => addMutation.mutateAsync(payload),
+    editCard:            (id, payload)  => editMutation.mutateAsync({ id, payload }),
+    removeCard:          (id)           => removeMutation.mutateAsync(id),
+    syncPrices:          (force = true) => syncPricesMutation.mutateAsync(force),
+    syncSingleCardPrice: (id)           => syncSingleCardMutation.mutateAsync(id),
   }
 }
