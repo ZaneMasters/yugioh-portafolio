@@ -36,12 +36,13 @@ export function useCards(filters = {}) {
   const addMutation = useMutation({
     mutationFn: (payload) => cardService.createCard(payload),
     onSuccess: (res) => {
-      toast.success(res.message || 'Carta agregada al inventario')
+      toast.success(res.message || 'Carta agregada al inventario', { duration: 5000 })
       localStorage.setItem('portfolioLastUpdate', Date.now().toString())
       queryClient.invalidateQueries({ queryKey: ['cards'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-lookup'] })
     },
-    onError: (err) => toast.error(err.message || 'Error al agregar la carta'),
+    onError: (err) => toast.error(err.message || 'Error al agregar la carta', { duration: 5000 }),
   })
 
   const editMutation = useMutation({
@@ -55,6 +56,7 @@ export function useCards(filters = {}) {
       localStorage.setItem('portfolioLastUpdate', Date.now().toString())
       queryClient.invalidateQueries({ queryKey: ['cards'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-lookup'] })
       toast.success('Carta actualizada')
     },
     onError: (err) => toast.error(err.message || 'Error al actualizar'),
@@ -67,6 +69,7 @@ export function useCards(filters = {}) {
       localStorage.setItem('portfolioLastUpdate', Date.now().toString())
       queryClient.invalidateQueries({ queryKey: ['cards'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-lookup'] })
     },
     onError: (err) => toast.error(err.message || 'Error al eliminar'),
   })

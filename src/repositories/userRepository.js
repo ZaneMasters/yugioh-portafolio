@@ -56,13 +56,14 @@ class UserRepository {
   }
 
   /**
-   * Actualiza el perfil (incluyendo el slug y whatsapp)
+   * Actualiza el perfil (incluyendo slug, whatsapp y reservationHoursLimit)
    * @param {string} uid 
    * @param {string} email 
    * @param {string} slug 
-   * @param {string} whatsapp 
+   * @param {string|null} whatsapp 
+   * @param {number|null} reservationHoursLimit 
    */
-  async updateProfile(uid, email, slug, whatsapp = null) {
+  async updateProfile(uid, email, slug, whatsapp = null, reservationHoursLimit = null) {
     const payload = {
       email,
       slug,
@@ -70,6 +71,9 @@ class UserRepository {
     };
     if (whatsapp !== null) {
       payload.whatsapp = whatsapp;
+    }
+    if (reservationHoursLimit !== null && !isNaN(Number(reservationHoursLimit))) {
+      payload.reservationHoursLimit = Number(reservationHoursLimit);
     }
     await this.collection.doc(uid).set(payload, { merge: true });
     return payload;

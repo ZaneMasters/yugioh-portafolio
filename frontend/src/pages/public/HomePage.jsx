@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search,
@@ -23,6 +23,7 @@ import {
 import { Helmet } from 'react-helmet-async'
 import { usePublicUsers } from '../../hooks/usePublicUsers'
 import { useSearchBySet } from '../../hooks/useSearchBySet'
+import { useAuth } from '../../context/AuthContext'
 import { CardDetailModal } from '../../components/cards/CardDetailModal'
 import logo from '../../assets/logo.webp'
 
@@ -71,6 +72,7 @@ export default function HomePage() {
 
   const { users, loading: loadingUsers } = usePublicUsers()
   const { cards: searchResults, loading: loadingSearch } = useSearchBySet(activeSetQuery)
+  const { user, profile } = useAuth()
 
   const handleSearch = (e) => {
     e?.preventDefault()
@@ -147,13 +149,23 @@ export default function HomePage() {
                 <Users className="w-3.5 h-3.5" />
                 Coleccionistas
               </a>
-              <a
-                href="/login"
-                className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-all shadow-[0_0_15px_rgba(245,158,11,0.08)] hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] active:scale-95"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span>Panel Admin</span>
-              </a>
+              {user ? (
+                <Link
+                  to="/admin/search"
+                  className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-all shadow-[0_0_15px_rgba(245,158,11,0.08)] hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] active:scale-95"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Panel Admin</span>
+                </Link>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all active:scale-95"
+                >
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Acceder</span>
+                </Link>
+              )}
             </nav>
           </div>
         </header>
@@ -499,20 +511,27 @@ export default function HomePage() {
                                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                                     <span>Disponible con:</span>
                                   </span>
-                                  {card.communityOwners.map((owner) => (
-                                    <button
-                                      key={owner.id || owner.slug}
-                                      type="button"
-                                      onClick={() => navigate(`/portfolio/${owner.slug}`)}
-                                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/25 border border-emerald-500/30 text-[11px] sm:text-xs font-medium text-emerald-300 transition-all cursor-pointer"
-                                      title={`Ver portafolio de ${owner.displayName}`}
-                                    >
-                                      <span className="font-semibold">{owner.displayName}</span>
-                                      <span className="font-mono text-emerald-400/90 text-[10px] sm:text-[11px]">
-                                        ({owner.quantity}x{owner.price ? ` • $${owner.price}` : ''})
-                                      </span>
-                                    </button>
-                                  ))}
+                                  {card.communityOwners.map((owner) => {
+                                    const isMe = profile?.slug && owner.slug === profile.slug;
+                                    return (
+                                      <button
+                                        key={owner.id || owner.slug}
+                                        type="button"
+                                        onClick={() => navigate(`/portfolio/${owner.slug}`)}
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] sm:text-xs font-medium transition-all cursor-pointer ${
+                                          isMe
+                                            ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/40 text-amber-300 font-bold shadow-sm'
+                                            : 'bg-emerald-500/10 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-300'
+                                        }`}
+                                        title={isMe ? 'Ver tu propio portafolio' : `Ver portafolio de ${owner.displayName}`}
+                                      >
+                                        <span className="font-semibold">{owner.displayName}{isMe ? ' (Tú)' : ''}</span>
+                                        <span className={`font-mono text-[10px] sm:text-[11px] ${isMe ? 'text-amber-400' : 'text-emerald-400/90'}`}>
+                                          ({owner.quantity}x{owner.price ? ` • $${owner.price}` : ''})
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               ) : (
                                 <span className="text-[11px] sm:text-xs text-slate-500 italic">

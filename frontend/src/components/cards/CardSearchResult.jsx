@@ -1,8 +1,9 @@
 import { useState, memo, useMemo, useEffect } from 'react'
-import { Plus, Sword, Shield, Minus, ChevronDown, Tag, Palette } from 'lucide-react'
+import { Plus, Sword, Shield, Minus, ChevronDown, Tag, Palette, Check } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Select'
 import { RARITIES, EDITIONS, LANGUAGES } from '../../utils/constants'
+import { useInventoryLookup } from '../../hooks/useInventoryLookup'
 
 // Normaliza igual que el backend (elimina todo lo que no sea letras/números)
 const normalizeStr = (str) => (!str ? '' : str.toLowerCase().replace(/[^a-z0-9]/g, ''))
@@ -43,15 +44,67 @@ export const CardSearchResult = memo(function CardSearchResult({
   const [edition,         setEdition]         = useState('')
   const [language,        setLanguage]        = useState('')
 
-  // ── Auto-seleccionar set cuando la búsqueda es por set ──────────────────────
-  useEffect(() => {
-    if (searchType !== 'set' || !searchQuery || !card.cardSets?.length) return
+  // Consulta de inventario del usuario para indicar posesión de la carta / set
+  const { getSetInventory, getCardInventory } = useInventoryLookup()
+  const cardOwnership = getCardInventory(card.cardId, card.name)
 
-    const match = findMatchingSet(card.cardSets, searchQuery)
+  // ── Auto-seleccionar set cuando la búsqueda coincide o cuando el usuario ya tiene este set ──
+  useEffect(() => {
+    if (!card.cardSets?.length) return
+
+    // 1. Si la query de búsqueda coincide con algún set (ej: MP16-EN057, LOB-001 o AMDE-EN046)
+    if (searchQuery) {
+      const match = findMatchingSet(card.cardSets, searchQuery)
+      if (match) {
+        setSelectedSet(match)
+        setRarity(match.rarity || 'Common')
+        return
+      }
+    }
+
+    // 2. Si el usuario ya posee esta carta en su inventario con algún set, auto-seleccionar ese set por defecto
+    if (cardOwnership?.sets?.size > 0 && !selectedSet) {
+      const ownedMatch = card.cardSets.find(s => s.setCode && cardOwnership.sets.has(s.setCode.trim().toUpperCase()))
+      if (ownedMatch) {
+        setSelectedSet(ownedMatch)
+        setRarity(ownedMatch.rarity || 'Common')
+      }
+    }
+  }, [searchType, searchQuery, card.cardSets, cardOwnership])
+
+  // Rarezas disponibles para el setCode seleccionado actualmente (ej: AMDE-EN046 tiene Rare y Collector's Rare)
+  const availableRaritiesForSet = useMemo(() => {
+    if (!selectedSet?.setCode || !card.cardSets?.length) return []
+    const codeNorm = normalizeStr(selectedSet.setCode)
+    const matches = card.cardSets.filter(s => normalizeStr(s.setCode) === codeNorm)
+    const seen = new Set()
+    const rarities = []
+    for (const s of matches) {
+      if (s.rarity && !seen.has(s.rarity)) {
+        seen.add(s.rarity)
+        rarities.push(s.rarity)
+      }
+    }
+    return rarities
+  }, [selectedSet?.setCode, card.cardSets])
+
+  const handleRarityChange = (newRarity) => {
+    setRarity(newRarity)
+    if (!selectedSet?.setCode) return
+    const codeNorm = normalizeStr(selectedSet.setCode)
+    const match = card.cardSets.find(
+      s => normalizeStr(s.setCode) === codeNorm && s.rarity === newRarity
+    )
     if (match) {
       setSelectedSet(match)
+    } else {
+      setSelectedSet(prev => prev ? { ...prev, rarity: newRarity } : null)
     }
-  }, [searchType, searchQuery, card.cardSets])
+  }
+
+  const setOwnership = selectedSet?.setCode
+    ? getSetInventory(selectedSet.setCode, selectedSet.rarity || rarity)
+    : null
 
   // Imagen actualmente mostrada (preview del arte seleccionado)
   const previewImage = useMemo(() => {
@@ -81,14 +134,14 @@ export const CardSearchResult = memo(function CardSearchResult({
       const payload = {
         setCode:         selectedSet?.setCode   ?? undefined,
         setName:         selectedSet?.setName   ?? undefined,
-        rarity:          selectedSet?.rarity    ?? undefined,
+        rarity:          selectedSet?.rarity    ?? (rarity !== 'Any' ? rarity : undefined),
         selectedImageId: selectedImageId        ?? undefined,
         edition:         edition || undefined,
         language:        language || undefined,
       }
       onAdd(card, qty, folderId, payload)
     } else {
-      onAdd(card, qty, rarity)
+      onAdd(card, qty, selectedSet?.rarity ?? rarity)
     }
   }
 
@@ -96,7 +149,13 @@ export const CardSearchResult = memo(function CardSearchResult({
   const hasSets         = (card.cardSets?.length ?? 0) > 0
 
   return (
-    <div className="rounded-xl bg-[#1a2235] border border-white/5 group hover:border-amber-500/20 transition-all overflow-hidden">
+    <div className={`rounded-xl border transition-all overflow-hidden ${
+      setOwnership
+        ? 'bg-[#0e2722]/85 border-emerald-500/50 shadow-md shadow-emerald-950/40 ring-1 ring-emerald-500/30'
+        : cardOwnership
+          ? 'bg-[#15233c]/85 border-sky-500/35 ring-1 ring-sky-500/20'
+          : 'bg-[#1a2235] border-white/5 group hover:border-amber-500/20'
+    }`}>
 
       {/* ── Fila principal (siempre visible) ── */}
       <div className="flex items-center gap-2.5 p-2.5">
@@ -126,9 +185,28 @@ export const CardSearchResult = memo(function CardSearchResult({
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-white leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors">
-            {card.name}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-sm text-white leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors">
+              {card.name}
+            </p>
+            {setOwnership ? (
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/25 border border-emerald-500/50 text-emerald-300 text-xs font-bold shrink-0 shadow-sm"
+                title={`Tienes ${setOwnership.quantity} copia(s) con este código exacto (${selectedSet.setCode})`}
+              >
+                <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
+                En inventario (×{setOwnership.quantity})
+              </span>
+            ) : cardOwnership ? (
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-500/40 text-sky-200 text-xs font-semibold shrink-0 shadow-sm"
+                title={`Tienes ${cardOwnership.quantity} copia(s) de esta carta en tu inventario`}
+              >
+                <Check className="w-3.5 h-3.5 text-sky-400 stroke-[2.5]" />
+                En inventario (×{cardOwnership.quantity}){cardOwnership.sets?.size > 0 ? ` • ${Array.from(cardOwnership.sets).join(', ')}` : ''}
+              </span>
+            ) : null}
+          </div>
           <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{card.type}</p>
           {(card.atk !== null || card.def !== null) && (
             <div className="hidden sm:flex gap-2 text-xs font-stat mt-0.5">
@@ -147,13 +225,68 @@ export const CardSearchResult = memo(function CardSearchResult({
 
           {/* Badges de set auto-seleccionado (visibles sin abrir el panel) */}
           {selectedSet && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-500/10 border border-amber-500/20 text-amber-400">
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono">
                 {selectedSet.setCode}
               </span>
-              <span className="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-purple-500/10 border border-purple-500/20 text-purple-300">
-                {selectedSet.rarity}
-              </span>
+
+              {/* Selector interactivo de rarezas si la búsqueda es por set y hay múltiples rarezas para este código */}
+              {searchType === 'set' && availableRaritiesForSet.length > 1 ? (
+                <div className="flex flex-wrap items-center gap-1 bg-purple-500/10 border border-purple-500/25 px-1.5 py-0.5 rounded-lg">
+                  <span className="text-[10px] font-semibold text-purple-300/80 mr-0.5">Rareza:</span>
+                  {availableRaritiesForSet.length <= 3 ? (
+                    availableRaritiesForSet.map((r) => {
+                      const isSelected = (selectedSet.rarity || rarity) === r
+                      return (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRarityChange(r)
+                          }}
+                          className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-300'
+                              : 'bg-white/5 hover:bg-white/10 text-purple-200 border border-white/10'
+                          }`}
+                        >
+                          {r}
+                        </button>
+                      )
+                    })
+                  ) : (
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={selectedSet.rarity || rarity}
+                        onChange={(e) => handleRarityChange(e.target.value)}
+                        className="text-[10px] font-bold rounded bg-purple-500/20 border border-purple-500/40 text-purple-200 pl-1.5 pr-5 py-0.5 outline-none hover:border-purple-400 focus:ring-1 focus:ring-purple-400 cursor-pointer appearance-none"
+                      >
+                        {availableRaritiesForSet.map((r) => (
+                          <option key={r} value={r} className="bg-[#1a2235] text-white">
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3 h-3 text-purple-300 absolute right-1 pointer-events-none" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-purple-500/10 border border-purple-500/20 text-purple-300">
+                  {selectedSet.rarity}
+                </span>
+              )}
+
+              {setOwnership ? (
+                <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                  ✓ Ya tienes {setOwnership.quantity} copia{setOwnership.quantity > 1 ? 's' : ''} de esta versión ({selectedSet.rarity})
+                </span>
+              ) : cardOwnership ? (
+                <span className="text-[11px] font-medium text-sky-300 flex items-center gap-1">
+                  ℹ Tienes otra versión en inventario ({Array.from(cardOwnership.sets).join(', ')})
+                </span>
+              ) : null}
             </div>
           )}
         </div>
@@ -251,27 +384,55 @@ export const CardSearchResult = memo(function CardSearchResult({
                 </label>
 
                 {searchType === 'set' ? (
-                  /* ── Solo lectura: la expansión viene fijada por la búsqueda ── */
-                  <div className="flex flex-wrap gap-1.5">
+                  /* ── Solo lectura: la expansión viene fijada por la búsqueda, pero permite elegir rareza si hay varias ── */
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {selectedSet ? (
                       <>
-                        <span className="px-2 py-1 text-[10px] font-bold rounded bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                        <span className="px-2 py-1 text-[10px] font-bold rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono">
                           {selectedSet.setCode}
                         </span>
-                        <span className="px-2 py-1 text-[10px] font-semibold rounded bg-purple-500/10 border border-purple-500/20 text-purple-300">
-                          {selectedSet.rarity}
-                        </span>
-                        {(selectedSet.setPrice && selectedSet.setPrice !== '0.00' && selectedSet.setPrice !== '0') ? (
+
+                        {availableRaritiesForSet.length > 1 ? (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[10px] font-semibold text-purple-300">Seleccionar Rareza:</span>
+                            {availableRaritiesForSet.map((r) => {
+                              const isSelected = (selectedSet.rarity || rarity) === r
+                              return (
+                                <button
+                                  key={r}
+                                  type="button"
+                                  onClick={() => handleRarityChange(r)}
+                                  className={`px-2 py-0.5 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30 ring-1 ring-purple-300'
+                                      : 'bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 border border-purple-500/30'
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                  <span>{r}</span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <span className="px-2 py-1 text-[10px] font-semibold rounded bg-purple-500/10 border border-purple-500/20 text-purple-300">
+                            {selectedSet.rarity}
+                          </span>
+                        )}
+
+                        {setOwnership && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">
+                            <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />
+                            Ya tienes {setOwnership.quantity} copia{setOwnership.quantity > 1 ? 's' : ''} en inventario ({selectedSet.rarity})
+                          </span>
+                        )}
+                        {(selectedSet.setPrice && selectedSet.setPrice !== '0.00' && selectedSet.setPrice !== '0') && (
                           <span className="px-2 py-1 text-[10px] font-bold rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                             ${selectedSet.setPrice} USD
                           </span>
-                        ) : (
-                          <span className="px-2 py-1 text-[10px] font-bold rounded bg-red-500/10 border border-red-500/20 text-red-400" title="Precio de este set no disponible">
-                            No disponible
-                          </span>
                         )}
                         {selectedSet.setName && (
-                          <span className="px-2 py-1 text-[10px] rounded bg-white/5 border border-white/10 text-slate-500">
+                          <span className="px-2 py-1 text-[10px] rounded bg-white/5 border border-white/10 text-slate-400">
                             {selectedSet.setName}
                           </span>
                         )}
@@ -294,34 +455,38 @@ export const CardSearchResult = memo(function CardSearchResult({
                       <option value="">— Sin especificar —</option>
                       {card.cardSets?.map((s, i) => {
                         const hasSetPrice = s.setPrice && s.setPrice !== '0.00' && s.setPrice !== '0';
+                        const setInv = getSetInventory(s.setCode);
                         return (
                           <option key={`${s.setCode}-${i}`} value={s.setCode}>
                             {s.setCode} | {s.rarity}
-                            {hasSetPrice ? ` | $${s.setPrice}` : ' | N/D'}
+                            {hasSetPrice ? ` | $${s.setPrice}` : ''}
+                            {setInv ? ` [✓ TIENES ×${setInv.quantity} EN INVENTARIO]` : ''}
                             {' '}— {s.setName}
                           </option>
                         );
                       })}
                     </select>
                     {selectedSet && (
-                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/10 border border-amber-500/20 text-amber-400">
                           {selectedSet.setCode}
                         </span>
                         <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-purple-500/10 border border-purple-500/20 text-purple-300">
                           {selectedSet.rarity}
                         </span>
-                        {(selectedSet.setPrice && selectedSet.setPrice !== '0.00' && selectedSet.setPrice !== '0') ? (
+                        {setOwnership && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">
+                            <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />
+                            Ya tienes {setOwnership.quantity} copia{setOwnership.quantity > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {(selectedSet.setPrice && selectedSet.setPrice !== '0.00' && selectedSet.setPrice !== '0') && (
                           <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                             ${selectedSet.setPrice} USD
                           </span>
-                        ) : (
-                          <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-red-500/10 border border-red-500/20 text-red-400" title="Precio de este set no disponible">
-                            No disponible
-                          </span>
                         )}
                         {selectedSet.setName && (
-                          <span className="px-2 py-0.5 text-[10px] rounded bg-white/5 border border-white/10 text-slate-500">
+                          <span className="px-2 py-0.5 text-[10px] rounded bg-white/5 border border-white/10 text-slate-400">
                             {selectedSet.setName}
                           </span>
                         )}

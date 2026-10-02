@@ -1,16 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
-import { Shield, Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { Shield, Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { user, loading: authLoading, login } = useAuth()
   const navigate  = useNavigate()
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [showPwd, setShowPwd]   = useState(false)
   const [loading, setLoading]   = useState(false)
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/admin/search', { replace: true })
+    }
+  }, [user, authLoading, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -18,6 +24,14 @@ export default function LoginPage() {
     const ok = await login(email, password)
     if (ok) navigate('/admin/search', { replace: true })
     setLoading(false)
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#080a11] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+      </div>
+    )
   }
 
   return (

@@ -177,6 +177,14 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   let rawCards = memCache.get(rawKey);
 
   if (!rawCards) {
+    if (userId) {
+      try {
+        const orderService = require('./orderService');
+        await orderService.expireOutdatedOrders(userId);
+      } catch (err) {
+        logger.warn(`⚠️ Error al verificar pedidos expirados en listCards: ${err.message}`);
+      }
+    }
     rawCards = await cardRepository.findAllRaw(userId);
     // 15 minutos en RAM (se invalida automáticamente en cualquier mutación CUD)
     memCache.set(rawKey, rawCards, 900);
@@ -209,6 +217,15 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   if (filters.name) {
     const nameLower = filters.name.toLowerCase();
     cards = cards.filter((c) => c.name.toLowerCase().includes(nameLower));
+  }
+  if (filters.setCode) {
+    const setCodeClean = filters.setCode.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const setQueryLower = filters.setCode.toLowerCase().trim();
+    cards = cards.filter((c) => {
+      const codeMatch = c.setCode && c.setCode.toLowerCase().replace(/[^a-z0-9]/g, '').includes(setCodeClean);
+      const nameMatch = c.setName && c.setName.toLowerCase().includes(setQueryLower);
+      return Boolean(codeMatch || nameMatch);
+    });
   }
   if (filters.type) {
     const typeLower = filters.type.toLowerCase();

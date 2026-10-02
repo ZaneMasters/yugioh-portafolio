@@ -14,6 +14,7 @@ const InventoryPage = lazy(() => import('../pages/admin/InventoryPage'))
 const RecoverPasswordPage = lazy(() => import('../pages/auth/RecoverPasswordPage'))
 const ProfilePage = lazy(() => import('../pages/admin/ProfilePage'))
 const StoreSettingsPage = lazy(() => import('../pages/admin/StoreSettingsPage'))
+const OrdersPage = lazy(() => import('../pages/admin/OrdersPage'))
 
 
 // Fallback visual mientras se descargan los chunks de las páginas
@@ -54,6 +55,7 @@ export default function AppRouter() {
               <Route index element={<Navigate to="search" replace />} />
               <Route path="search" element={<SearchPage />} />
               <Route path="inventory" element={<InventoryPage />} />
+              <Route path="orders" element={<OrdersPage />} />
               <Route path="store" element={<StoreSettingsPage />} />
               <Route path="profile" element={<ProfilePage />} />
             </Route>

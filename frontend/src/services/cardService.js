@@ -7,8 +7,10 @@ export const getCards = (filters = {}) => {
   if (filters.type) params.type = filters.type
   if (filters.archetype) params.archetype = filters.archetype
   if (filters.folderId) params.folderId = filters.folderId
+  if (filters.setCode) params.setCode = filters.setCode
   if (filters.cursor) params.cursor = filters.cursor
   if (filters.limit) params.limit = filters.limit
+  if (filters.paginate !== undefined) params.paginate = String(filters.paginate)
   return api.get('/cards', { params })
 }
 
@@ -22,6 +24,7 @@ export const getPortfolioCards = (slug, filters = {}, cursor = null) => {
   if (filters.type) params.type = filters.type
   if (filters.archetype) params.archetype = filters.archetype
   if (filters.folderId) params.folderId = filters.folderId
+  if (filters.setCode) params.setCode = filters.setCode
   if (filters.t) params.t = filters.t
   if (cursor) params.cursor = cursor
   return publicApi.get(`/cards/portfolio/${slug}/cards`, { params })

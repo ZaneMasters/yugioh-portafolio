@@ -146,7 +146,7 @@ const getProfile = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
   try {
     const { uid, email } = req.user;
-    let { slug, whatsapp } = req.body;
+    let { slug, whatsapp, reservationHoursLimit } = req.body;
 
     if (!slug || slug.trim() === '') {
       return res.status(400).json({ success: false, message: 'El nombre de usuario (slug) es requerido.' });
@@ -166,6 +166,11 @@ const updateProfile = async (req, res, next) => {
       }
     }
 
+    let parsedHours = null;
+    if (reservationHoursLimit !== undefined && reservationHoursLimit !== null) {
+      parsedHours = Math.max(1, Math.min(168, Number(reservationHoursLimit) || 48));
+    }
+
     const isTaken = await userRepository.isSlugTaken(slug, uid);
     if (isTaken) {
       return res.status(400).json({ success: false, message: 'Ese nombre de usuario ya está en uso. Por favor elige otro.' });
@@ -179,7 +184,7 @@ const updateProfile = async (req, res, next) => {
     // Tambien limpiar el fallback basado en email
     invalidateSlugCache(email.split('@')[0]);
 
-    const updatedProfile = await userRepository.updateProfile(uid, email, slug, whatsapp);
+    const updatedProfile = await userRepository.updateProfile(uid, email, slug, whatsapp, parsedHours);
 
     return res.status(200).json({
       success: true,

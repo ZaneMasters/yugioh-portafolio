@@ -1,9 +1,16 @@
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ShoppingCart, Trash2, Plus, Minus } from 'lucide-react'
+import { X, ShoppingCart, Trash2, Plus, Minus, Loader2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCartStore, getCardPrice } from '../../store/useCartStore'
+import { createOrder } from '../../services/orderService'
+import toast from 'react-hot-toast'
 
-export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName }) {
+export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName, sellerSlug }) {
+  const queryClient = useQueryClient()
   const { items, removeItem, updateQuantity, clearCart } = useCartStore()
+  const [buyerName, setBuyerName] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const totalItems = items.reduce((total, item) => total + item.cartQuantity, 0)
   const inventoryItems = items.filter(i => !i.isWishlist)
@@ -19,10 +26,32 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName }) {
     .filter(i => getCardPrice(i.card) === null)
     .reduce((acc, i) => acc + i.cartQuantity, 0)
 
-  const handleSendWhatsApp = () => {
-    if (!whatsappNumber) return
-    
-    let message = `Hola ${sellerName}, vi tu portafolio.\n\n`
+  const handleSendWhatsApp = async () => {
+    if (!whatsappNumber || isSubmitting) return
+    setIsSubmitting(true)
+
+    let orderData = null
+    try {
+      if (inventoryItems.length > 0 && sellerSlug) {
+        orderData = await createOrder({
+          sellerSlug,
+          buyerName: buyerName.trim() || undefined,
+          items: inventoryItems.map(item => ({
+            cardId: item.card.id,
+            quantity: item.cartQuantity,
+          })),
+        })
+        queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+        toast.success(`¡Pedido #${orderData.orderNumber} registrado!`, { duration: 3500 })
+      }
+    } catch (err) {
+      toast.error(err.message || 'Error al procesar el pedido')
+      setIsSubmitting(false)
+      return
+    }
+
+    const greetingName = buyerName.trim() ? `, soy ${buyerName.trim()}` : ''
+    let message = `Hola ${sellerName}${greetingName}, vi tu portafolio.\n\n`
     
     if (inventoryItems.length > 0) {
       message += `Estoy interesado en adquirir las siguientes cartas de tu inventario:\n`
@@ -76,6 +105,7 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName }) {
     
     window.open(waUrl, '_blank')
     clearCart()
+    setIsSubmitting(false)
     onClose()
   }
 
@@ -307,6 +337,21 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName }) {
                   )}
                 </div>
 
+                {/* Campo Nombre / Apodo (Opcional) */}
+                <div className="mb-4">
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Tu Nombre o Apodo (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={buyerName}
+                    onChange={(e) => setBuyerName(e.target.value)}
+                    placeholder="Ej: Juan Pérez"
+                    disabled={isSubmitting}
+                    className="w-full bg-[#111827] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
+                  />
+                </div>
+
                 {!whatsappNumber ? (
                   <div className="p-3 mb-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
                     El vendedor no ha configurado su número de WhatsApp.
@@ -315,11 +360,20 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName }) {
                 
                 <button
                   onClick={handleSendWhatsApp}
-                  disabled={!whatsappNumber}
+                  disabled={!whatsappNumber || isSubmitting}
                   className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 border border-emerald-400/30 text-white transition-all shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:shadow-[0_0_25px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
                 >
-                  <img src="/whatsapp.svg" alt="WhatsApp" className="w-6 h-6 drop-shadow-md" />
-                  Enviar pedido por WhatsApp
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Apartando cartas...</span>
+                    </>
+                  ) : (
+                    <>
+                      <img src="/whatsapp.svg" alt="WhatsApp" className="w-6 h-6 drop-shadow-md" />
+                      <span>Enviar pedido por WhatsApp</span>
+                    </>
+                  )}
                 </button>
                 <div className="text-center mt-3">
                   <button 

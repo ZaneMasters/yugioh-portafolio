@@ -21,7 +21,7 @@ import { useCartStore } from '../../store/useCartStore'
 export default function PortfolioPage() {
   const { slug } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [filters, setFilters] = useState({ name: '', type: '', archetype: '', folderId: '' })
+  const [filters, setFilters] = useState({ name: '', setCode: '', type: '', archetype: '', folderId: '' })
   const { folders } = usePublicFolders(slug)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const items = useCartStore(state => state.items)
@@ -33,14 +33,16 @@ export default function PortfolioPage() {
   const handleTabChange = (tab) => {
     setSearchParams((prev) => { prev.set('tab', tab); return prev })
     // Limpiar filtros al cambiar de tab
-    setFilters({ name: '', type: '', archetype: '', folderId: '' })
+    setFilters({ name: '', setCode: '', type: '', archetype: '', folderId: '' })
   }
 
   const debouncedName      = useDebounce(filters.name, 400)
+  const debouncedSetCode   = useDebounce(filters.setCode, 400)
   const debouncedArchetype = useDebounce(filters.archetype, 400)
 
   const activeFilters = {
     name:      debouncedName,
+    setCode:   debouncedSetCode,
     type:      filters.type,
     archetype: debouncedArchetype,
     folderId:  filters.folderId,
@@ -261,6 +263,7 @@ export default function PortfolioPage() {
         onClose={() => setIsCartOpen(false)} 
         whatsappNumber={whatsapp}
         sellerName={displayName}
+        sellerSlug={slug}
       />
     </div>
   )

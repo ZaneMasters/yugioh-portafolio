@@ -16,25 +16,28 @@ import { queryKeys } from '../../lib/queryKeys'
 
 export default function InventoryPage() {
   const [currentTab, setCurrentTab] = useState('inventory') // 'inventory' | 'wishlist' | 'folders'
-  const [filters, setFilters] = useState({ name: '', type: '', archetype: '', folderId: '' })
+  const [filters, setFilters] = useState({ name: '', setCode: '', type: '', archetype: '', folderId: '' })
   const queryClient = useQueryClient()
 
   const debouncedNameRaw      = useDebounce(filters.name, 400)
   const debouncedArchetypeRaw = useDebounce(filters.archetype, 400)
+  const debouncedSetCodeRaw   = useDebounce(filters.setCode, 400)
 
   const debouncedName      = filters.name === '' ? '' : debouncedNameRaw
   const debouncedArchetype = filters.archetype === '' ? '' : debouncedArchetypeRaw
+  const debouncedSetCode   = filters.setCode === '' ? '' : debouncedSetCodeRaw
 
   const handleTabChange = (tab) => {
     if (tab !== currentTab) {
       setCurrentTab(tab)
-      setFilters({ name: '', type: '', archetype: '', folderId: '' })
+      setFilters({ name: '', setCode: '', type: '', archetype: '', folderId: '' })
     }
   }
 
   // Filtros debounced para pasar al hook
   const activeFilters = {
     name:      debouncedName,
+    setCode:   debouncedSetCode,
     type:      filters.type,
     archetype: debouncedArchetype,
     folderId:  filters.folderId,

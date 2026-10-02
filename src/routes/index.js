@@ -8,6 +8,7 @@ const externalRoutes = require('./externalRoutes');
 const folderRoutes = require('./folderRoutes');
 const ogRoutes = require('./ogRoutes');
 const userRoutes = require('./userRoutes');
+const orderRoutes = require('./orderRoutes');
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.use('/wishlist', wishlistRoutes);
 router.use('/external', externalRoutes);
 router.use('/og', ogRoutes);
 router.use('/users', userRoutes);
+router.use('/orders', orderRoutes);
 
 module.exports = router;
 
