@@ -1,13 +1,13 @@
-import api from './api'
+import publicApi from './publicApi'
 
-/** Buscar cartas en YGOProdeck por nombre o arquetipo */
+/** Buscar cartas en catálogo externo por nombre, código de set o arquetipo */
 export const searchExternalCards = (name, type = 'name', lang = 'en', signal = undefined) =>
-  api.get('/external/cards', { params: { name, type, lang }, signal })
+  publicApi.get('/external/cards', { params: { name, type, lang }, signal })
 
-/** Obtener carta de YGOProdeck por ID numérico */
+/** Obtener carta de catálogo externo por ID numérico */
 export const getExternalCardById = (id, lang = 'en') => 
-  api.get(`/external/cards/${id}`, { params: { lang } })
+  publicApi.get(`/external/cards/${id}`, { params: { lang } })
 
 /** Obtener el estado del catálogo en memoria */
 export const getCatalogStatus = () => 
-  api.get('/external/catalog-status')
+  publicApi.get('/external/catalog-status')

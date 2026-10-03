@@ -25,7 +25,12 @@ export function useSearchCards(query = '', type = 'name', lang = 'en') {
     enabled: normalized.length >= (type === 'set' ? 4 : 3),
     staleTime: 10 * 60 * 1000,  // 10 minutos
     gcTime:    30 * 60 * 1000,  // 30 minutos en memoria
-    retry: false,
+    retry: (failureCount, error) => {
+      // No reintentar en errores 400 (ej. parámetros inválidos) ni aborts
+      if (error?.status === 400 || error?.name === 'CanceledError' || error?.name === 'AbortError') return false
+      return failureCount < 2 // 1 reintento para absorber cold starts
+    },
+    retryDelay: 1000,
     throwOnError: false,
     meta: {
       onError: (err) => {
