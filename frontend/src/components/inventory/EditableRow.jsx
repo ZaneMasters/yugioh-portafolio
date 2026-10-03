@@ -99,7 +99,7 @@ export const EditableRow = memo(function EditableRow({
             <img
               src={card.image}
               alt={card.name}
-              className={`w-10 h-14 object-contain rounded bg-black/20 shrink-0 ${card.isHidden ? 'opacity-40 grayscale' : ''}`}
+              className={`w-10 h-14 object-contain rounded bg-black/20 shrink-0 outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10 ${card.isHidden ? 'opacity-40 grayscale' : ''}`}
             />
             <div className="min-w-0">
               <p className="text-sm font-medium text-white line-clamp-2">
@@ -290,7 +290,7 @@ export const EditableRow = memo(function EditableRow({
             <img
               src={card.image}
               alt={card.name}
-              className={`w-12 h-16 sm:w-14 sm:h-20 object-contain rounded bg-black/20 shrink-0 ${card.isHidden ? 'opacity-40 grayscale' : ''}`}
+              className={`w-12 h-16 sm:w-14 sm:h-20 object-contain rounded bg-black/20 shrink-0 outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10 ${card.isHidden ? 'opacity-40 grayscale' : ''}`}
             />
 
             {/* Contenido */}
@@ -307,16 +307,30 @@ export const EditableRow = memo(function EditableRow({
                 
                 {/* Botones de acción simplificados */}
                 {!editing && (
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     {mode === 'wishlist' && (
-                      <button onClick={handleToggleVisibility} disabled={toggling} className="p-1.5 text-slate-400 hover:text-amber-400 bg-white/5 hover:bg-white/10 rounded border border-white/5">
+                      <button
+                        onClick={handleToggleVisibility}
+                        disabled={toggling}
+                        className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-amber-400 bg-white/5 hover:bg-white/10 active:scale-[0.96] rounded-lg border border-white/5 transition-all duration-150 cursor-pointer"
+                        title={card.isHidden ? "Mostrar en wishlist pública" : "Ocultar de wishlist pública"}
+                      >
                         {toggling ? <span className="w-3.5 h-3.5 block border-2 border-current border-t-transparent rounded-full animate-spin" /> : card.isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                       </button>
                     )}
-                    <button onClick={() => setEditing(true)} className="p-1.5 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 rounded border border-white/5">
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 active:scale-[0.96] rounded-lg border border-white/5 transition-all duration-150 cursor-pointer"
+                      title="Editar carta"
+                    >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => setShowConfirm(true)} disabled={deleting} className="p-1.5 text-slate-400 hover:text-red-400 bg-white/5 hover:bg-white/10 rounded border border-white/5">
+                    <button
+                      onClick={() => setShowConfirm(true)}
+                      disabled={deleting}
+                      className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-red-400 bg-white/5 hover:bg-white/10 active:scale-[0.96] rounded-lg border border-white/5 transition-all duration-150 cursor-pointer"
+                      title="Eliminar carta"
+                    >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -343,7 +357,7 @@ export const EditableRow = memo(function EditableRow({
                                 e.stopPropagation()
                                 onSyncPrice(card.id)
                               }}
-                              className="text-slate-400 hover:text-emerald-400 disabled:opacity-40"
+                              className="text-slate-400 hover:text-emerald-400 active:scale-[0.96] transition-transform p-0.5 disabled:opacity-40 cursor-pointer"
                               title="Actualizar precio con TCGPlayer"
                             >
                               <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? 'animate-spin text-emerald-400' : ''}`} />
@@ -358,7 +372,7 @@ export const EditableRow = memo(function EditableRow({
                             e.stopPropagation()
                             onSyncPrice(card.id)
                           }}
-                          className="text-[9px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 inline-flex items-center gap-1 disabled:opacity-40"
+                          className="text-[9px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 inline-flex items-center gap-1 active:scale-[0.96] transition-transform disabled:opacity-40 cursor-pointer"
                           title="Consultar precio en TCGPlayer"
                         >
                           <RefreshCw className={`w-2 h-2 ${isSyncing ? 'animate-spin' : ''}`} />

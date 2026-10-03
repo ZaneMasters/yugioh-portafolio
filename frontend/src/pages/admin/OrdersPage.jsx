@@ -14,7 +14,8 @@ import {
   Check, 
   ExternalLink,
   User,
-  ShoppingBag
+  ShoppingBag,
+  Folder
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getOrders, updateOrderStatus } from '../../services/orderService'
@@ -146,7 +147,7 @@ export default function OrdersPage() {
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold border border-white/10 transition-colors self-start sm:self-auto"
+          className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 active:scale-[0.96] text-slate-300 text-xs font-semibold border border-white/10 transition-all duration-150 self-start sm:self-auto cursor-pointer"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
           <span>Actualizar</span>
@@ -199,16 +200,16 @@ export default function OrdersPage() {
       </div>
 
       {/* TABS DE FILTRADO */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-1">
+      <div className="flex items-center gap-2 border-b border-white/10 pb-1 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab('pending')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer active:scale-[0.96] transition-all duration-150 ${
             activeTab === 'pending'
               ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-sm'
               : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
           }`}
         >
-          <Clock className="w-4 h-4" />
+          <Clock className="w-4 h-4 shrink-0" />
           <span>Pendientes / Apartadas</span>
           {metrics.pendingCount > 0 && (
             <span className="bg-amber-500 text-black text-[10px] font-black px-1.5 py-0.2 rounded-full">
@@ -219,13 +220,13 @@ export default function OrdersPage() {
 
         <button
           onClick={() => setActiveTab('completed')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer active:scale-[0.96] transition-all duration-150 ${
             activeTab === 'completed'
               ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm'
               : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
           }`}
         >
-          <CheckCircle2 className="w-4 h-4" />
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>Historial de Ventas</span>
           {metrics.completedCount > 0 && (
             <span className="bg-emerald-500/30 text-emerald-300 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
@@ -236,13 +237,13 @@ export default function OrdersPage() {
 
         <button
           onClick={() => setActiveTab('cancelled')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer active:scale-[0.96] transition-all duration-150 ${
             activeTab === 'cancelled'
               ? 'bg-red-500/20 text-red-400 border border-red-500/30 shadow-sm'
               : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
           }`}
         >
-          <XCircle className="w-4 h-4" />
+          <XCircle className="w-4 h-4 shrink-0" />
           <span>Cancelados / Expirados</span>
         </button>
       </div>
@@ -285,7 +286,7 @@ export default function OrdersPage() {
                   layout
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
+                  exit={{ opacity: 0, scale: 0.96, y: 6, transition: { duration: 0.15, ease: 'easeOut' } }}
                   className="glass rounded-2xl border border-white/5 p-5 md:p-6 space-y-4 shadow-xl shadow-black/20"
                 >
                   {/* Fila Cabecera del Pedido */}
@@ -345,12 +346,12 @@ export default function OrdersPage() {
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="w-10 h-14 object-contain rounded shrink-0 bg-black/40"
+                            className="w-10 h-14 object-contain rounded shrink-0 bg-black/40 outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
                             onError={(e) => { e.target.onerror = null; e.target.src = '/card-placeholder.png'; }}
                           />
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-white truncate">{item.name}</p>
-                            <div className="flex flex-wrap gap-1.5 items-center mt-0.5 text-[11px] text-slate-400">
+                            <div className="flex flex-wrap gap-1.5 items-center mt-1 text-[11px] text-slate-400">
                               {item.setCode && (
                                 <span className="font-mono text-amber-400 bg-amber-500/10 px-1 py-0.2 rounded border border-amber-500/20">
                                   {item.setCode}
@@ -358,6 +359,28 @@ export default function OrdersPage() {
                               )}
                               {item.rarity && <span>{item.rarity}</span>}
                               {item.edition && <span>• {item.edition}</span>}
+
+                              {/* Colección / Carpetas donde está guardada la carta */}
+                              {item.folderNames && item.folderNames.length > 0 ? (
+                                item.folderNames.map((fName, fIdx) => (
+                                  <span
+                                    key={fIdx}
+                                    className="inline-flex items-center gap-1 font-semibold text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded text-[10px]"
+                                    title={`Ubicación en inventario: Colección "${fName}"`}
+                                  >
+                                    <Folder className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+                                    {fName}
+                                  </span>
+                                ))
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1 text-slate-500 bg-white/5 border border-white/5 px-1.5 py-0.5 rounded text-[10px]"
+                                  title="Esta carta no está asignada a ninguna carpeta específica"
+                                >
+                                  <Folder className="w-2.5 h-2.5 opacity-50 shrink-0" />
+                                  General
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -389,18 +412,18 @@ export default function OrdersPage() {
                         <button
                           onClick={() => handleOpenCancelModal(order)}
                           disabled={actionLoadingId === order.id}
-                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-all disabled:opacity-50"
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 active:scale-[0.96] border border-red-500/20 transition-all duration-150 cursor-pointer disabled:opacity-50"
                         >
-                          <XCircle className="w-4 h-4" />
+                          <XCircle className="w-4 h-4 shrink-0" />
                           <span>Cancelar y Liberar</span>
                         </button>
 
                         <button
                           onClick={() => handleOpenCompleteModal(order)}
                           disabled={actionLoadingId === order.id}
-                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold text-black bg-emerald-400 hover:bg-emerald-300 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold text-black bg-emerald-400 hover:bg-emerald-300 active:scale-[0.96] transition-all duration-150 shadow-lg shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
                         >
-                          <Check className="w-4 h-4" />
+                          <Check className="w-4 h-4 shrink-0" />
                           <span>Confirmar Venta</span>
                         </button>
                       </div>

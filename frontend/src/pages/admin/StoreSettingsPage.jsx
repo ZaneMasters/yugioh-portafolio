@@ -121,7 +121,7 @@ export default function StoreSettingsPage() {
                 key={hours}
                 type="button"
                 onClick={() => setReservationHours(hours)}
-                className={`py-3 px-4 rounded-xl border text-center transition-all ${
+                className={`py-3 px-4 rounded-xl border text-center transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.96] ${
                   reservationHours === hours
                     ? 'bg-amber-500/20 border-amber-500/60 text-amber-300 font-bold shadow-lg shadow-amber-500/10'
                     : 'bg-[#111827] border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'
@@ -156,8 +156,9 @@ export default function StoreSettingsPage() {
               (whatsapp.trim() !== '' && !/^\+?[0-9]{10,15}$/.test(whatsapp.trim()))
             }
             className="
-              flex items-center gap-2 px-8 py-3.5 rounded-xl font-bold text-sm transition-all duration-150
-              bg-emerald-500 hover:bg-emerald-400 text-black active:scale-[0.98]
+              flex items-center gap-2 ps-7 pe-8 py-3.5 rounded-xl font-bold text-sm
+              transition-[background-color,box-shadow,transform] duration-150 ease-out
+              bg-emerald-500 hover:bg-emerald-400 text-black active:scale-[0.96]
               disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-emerald-500/20
             "
           >

@@ -213,4 +213,46 @@
     animation: foil-shine 6s linear infinite;
     mix-blend-mode: color-dodge;
   }
+
+  /* Rare: Reflejo plateado muy suave y tenue ("muy poco") */
+  .foil-rare::after {
+    background-image: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.08) 48%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0.08) 52%, transparent 60%);
+    animation: foil-shine 7s linear infinite;
+    mix-blend-mode: screen;
+    opacity: 0.25; /* Muy tenue en reposo */
+  }
+
+  .group:hover .foil-rare::after,
+  .foil-rare:hover::after {
+    opacity: 0.45; /* Aumenta levemente en hover sin saturar */
+  }
+
+  /* Starlight Rare: Reflejo estelar prismático multicolor con destellos cruzados */
+  .foil-starlight::after {
+    background-image: 
+      radial-gradient(ellipse at 35% 35%, rgba(255, 255, 255, 0.4) 0%, transparent 45%),
+      repeating-linear-gradient(125deg, 
+        transparent 0%, 
+        rgba(255, 105, 180, 0.45) 8%, 
+        rgba(0, 255, 255, 0.45) 16%, 
+        rgba(255, 215, 0, 0.45) 24%, 
+        transparent 32%),
+      repeating-linear-gradient(55deg, 
+        transparent 0%, 
+        rgba(255, 255, 255, 0.18) 6%, 
+        transparent 12%);
+    background-size: 100% 100%, 250% auto, 120px 120px;
+    animation: foil-shine 4s linear infinite;
+    mix-blend-mode: color-dodge;
+  }
+
+  /* Utilidad para ocultar barras de scroll sin perder funcionalidad de desplazamiento */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
+

@@ -47,7 +47,7 @@ export function InventoryTable({
               </td>
             </tr>
           ) : (
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
               {cards.map((card) => (
                 <EditableRow
                   key={card.id}

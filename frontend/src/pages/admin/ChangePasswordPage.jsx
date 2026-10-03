@@ -65,7 +65,7 @@ export default function ChangePasswordPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-300 ml-1">Nueva Contraseña</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
               <input
                 type={showPwd ? 'text' : 'password'}
                 placeholder="Ingresa tu nueva contraseña"
@@ -74,15 +74,15 @@ export default function ChangePasswordPage() {
                 required
                 className="
                   w-full bg-[#111827] border border-[#374151] rounded-lg text-slate-100 text-sm
-                  placeholder:text-slate-600 outline-none transition-all
+                  placeholder:text-slate-600 outline-none transition-[border-color,box-shadow] duration-150 ease-out
                   focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/10
-                  pl-9 pr-10 py-3
+                  pl-9 pr-11 py-3
                 "
               />
               <button
                 type="button"
                 onClick={() => setShowPwd(!showPwd)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
               >
                 {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -92,7 +92,7 @@ export default function ChangePasswordPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-300 ml-1">Confirmar Contraseña</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
               <input
                 type={showConfirmPwd ? 'text' : 'password'}
                 placeholder="Repite tu nueva contraseña"
@@ -101,15 +101,15 @@ export default function ChangePasswordPage() {
                 required
                 className="
                   w-full bg-[#111827] border border-[#374151] rounded-lg text-slate-100 text-sm
-                  placeholder:text-slate-600 outline-none transition-all
+                  placeholder:text-slate-600 outline-none transition-[border-color,box-shadow] duration-150 ease-out
                   focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/10
-                  pl-9 pr-10 py-3
+                  pl-9 pr-11 py-3
                 "
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPwd(!showConfirmPwd)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
               >
                 {showConfirmPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -122,12 +122,12 @@ export default function ChangePasswordPage() {
               disabled={loading || !newPassword || !confirmPassword}
               className="
                 flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-150
-                bg-amber-500 hover:bg-amber-400 text-black active:scale-[0.98]
-                disabled:opacity-50 disabled:cursor-not-allowed
+                bg-amber-500 hover:bg-amber-400 text-black active:scale-[0.96] cursor-pointer
+                disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center
                 shadow-lg shadow-amber-500/20
               "
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-4 h-4 shrink-0" />
               {loading ? 'Guardando...' : 'Actualizar Contraseña'}
             </button>
           </div>

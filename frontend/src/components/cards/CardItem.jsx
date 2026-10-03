@@ -49,10 +49,12 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
   const getFoilClass = (rarity) => {
     if (!rarity) return ''
     const r = rarity.toLowerCase()
+    if (r.includes('starlight')) return 'foil-starlight'
     if (r.includes('secret') || r.includes('prismatic')) return 'foil-secret'
     if (r.includes('ultimate')) return 'foil-ultimate'
     if (r.includes('ultra')) return 'foil-ultra'
     if (r.includes('super')) return 'foil-super'
+    if (r.includes('rare') && !r.includes('common')) return 'foil-rare'
     return ''
   }
 
@@ -145,7 +147,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
             alt={card.name}
             loading="lazy"
             onLoad={() => setImgLoaded(true)}
-            className={`w-full h-full object-contain transition-all duration-500 group-hover:scale-105 relative z-0 ${
+            className={`w-full h-full object-contain outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10 transition-[transform,opacity,filter] duration-300 ease-out group-hover:scale-105 relative z-0 ${
               imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'
             }`}
             onError={(e) => { e.target.onerror = null; e.target.src = '/card-placeholder.png'; setImgLoaded(true); }}
@@ -160,7 +162,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
 
           {/* Overlay interactivo */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex flex-col items-center justify-center gap-2 z-20 pointer-events-none group-hover:pointer-events-auto">
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-medium border border-white/20">
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 ps-3 pe-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-medium border border-white/20">
               <Eye className="w-3.5 h-3.5" /> Ver detalles
             </span>
             {isPublic && (
@@ -171,7 +173,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
               ) : (
                 <button 
                   onClick={handleAddToCart}
-                  className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-sm text-xs font-bold border ${
+                  className={`opacity-0 group-hover:opacity-100 transition-[opacity,background-color,border-color,color,transform] duration-150 active:scale-[0.96] flex items-center gap-1.5 ps-3 pe-3.5 py-1.5 rounded-full backdrop-blur-sm text-xs font-bold border ${
                     isMaxInCart 
                       ? 'bg-green-500/20 hover:bg-green-500/40 text-green-400 border-green-500/30' 
                       : isWishlist 
@@ -291,7 +293,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
             ) : (
               <button
                 onClick={handleAddToCart}
-                className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md sm:hidden border shrink-0 transition-all active:scale-90 ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md sm:hidden border shrink-0 transition-[background-color,border-color,color,transform] duration-150 ease-out active:scale-[0.96] ${
                   isMaxInCart 
                     ? 'bg-green-500/20 text-green-400 border-green-500/40' 
                     : isWishlist 

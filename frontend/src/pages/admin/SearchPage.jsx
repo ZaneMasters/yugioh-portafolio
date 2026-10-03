@@ -137,7 +137,7 @@ export default function SearchPage() {
   const pageResults  = results.slice(pageStart, pageStart + PAGE_SIZE)
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       {/* Header */}
       <div className="mb-4 md:mb-8 flex items-center justify-between gap-4">
         <div>
@@ -166,7 +166,7 @@ export default function SearchPage() {
 
         <Link
           to="/admin/inventory"
-          className="flex items-center gap-1.5 text-xs font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-2 rounded-xl border border-amber-500/20 transition-all shrink-0 shadow-sm"
+          className="flex items-center gap-1.5 text-xs font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 active:scale-[0.96] px-3 py-2 rounded-xl border border-amber-500/20 transition-colors shrink-0 shadow-sm"
         >
           <Package className="w-4 h-4" />
           <span>Ver Inventario</span>
@@ -174,66 +174,62 @@ export default function SearchPage() {
       </div>
 
       {/* Caja Principal Unificada */}
-      <div className="glass rounded-2xl p-5 mb-8 flex flex-col gap-5 shadow-xl shadow-black/20">
+      <div className="glass rounded-2xl p-4 sm:p-5 mb-8 flex flex-col gap-4 sm:gap-5 shadow-xl shadow-black/20">
         
         {/* Fila Superior: Modos y Destino */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3.5">
           
-          {/* Tabs Minimalistas (Set vs Nombre vs Arquetipo) */}
-          <div className="flex items-center gap-6 border-b border-white/5 px-2">
+          {/* Selector de Modo de Búsqueda (Pills Segmentados, sin scrollbars, 100% responsivo) */}
+          <div className="grid grid-cols-3 sm:flex items-center bg-black/40 rounded-xl p-1 border border-white/5 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => { setSearchType('set'); setQueryInput(''); setActiveQuery(''); setFilterType('all'); }}
-              className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg active:scale-[0.96] transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer ${
                 searchType === 'set' 
-                  ? 'border-amber-500 text-amber-400' 
-                  : 'border-transparent text-slate-500 hover:text-slate-300'
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
               }`}
             >
-              <span>Por Set / Código</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
-                searchType === 'set'
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                  : 'bg-white/5 text-slate-500 border-white/10'
-              }`}>
-                ID / Set
-              </span>
+              <Tag className="w-3.5 h-3.5 shrink-0" />
+              <span>Set / Código</span>
             </button>
             <button
               type="button"
               onClick={() => { setSearchType('name'); setQueryInput(''); setActiveQuery(''); setFilterType('all'); }}
-              className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg active:scale-[0.96] transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer ${
                 searchType === 'name' 
-                  ? 'border-amber-500 text-amber-400' 
-                  : 'border-transparent text-slate-500 hover:text-slate-300'
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
               }`}
             >
-              Por Nombre
+              <Search className="w-3.5 h-3.5 shrink-0" />
+              <span>Por Nombre</span>
             </button>
             <button
               type="button"
               onClick={() => { setSearchType('archetype'); setQueryInput(''); setActiveQuery(''); }}
-              className={`pb-2 text-sm font-medium transition-colors border-b-2 -mb-[1px] ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg active:scale-[0.96] transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer ${
                 searchType === 'archetype' 
-                  ? 'border-amber-500 text-amber-400' 
-                  : 'border-transparent text-slate-500 hover:text-slate-300'
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
               }`}
             >
-              Por Arquetipo
+              <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
+              <span>Arquetipo</span>
             </button>
           </div>
 
           {/* Toggle Inventario / Wishlist */}
-          <div className="flex items-center gap-2.5">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Añadir a:</span>
-            <div className="flex bg-black/40 rounded-lg p-1 border border-white/5">
+          <div className="flex items-center justify-between sm:justify-start gap-2.5 w-full sm:w-auto">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Añadir a:</span>
+            <div className="flex flex-1 sm:flex-initial bg-black/40 rounded-xl p-1 border border-white/5">
               <button
                 type="button"
                 onClick={() => setDestination('inventory')}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-semibold rounded-lg active:scale-[0.96] transition-all duration-150 cursor-pointer ${
                   destination === 'inventory'
-                    ? 'bg-amber-500/20 text-amber-400 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
                 }`}
               >
                 + Mi Inventario
@@ -241,10 +237,10 @@ export default function SearchPage() {
               <button
                 type="button"
                 onClick={() => setDestination('wishlist')}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-semibold rounded-lg active:scale-[0.96] transition-all duration-150 cursor-pointer ${
                   destination === 'wishlist'
-                    ? 'bg-amber-500/20 text-amber-400 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
                 }`}
               >
                 + Mi Wishlist
