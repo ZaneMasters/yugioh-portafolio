@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Por seguridad, todas las lecturas y escrituras directas desde el SDK de cliente
+    // quedan bloqueadas. Todo el acceso a la base de datos se realiza a través de la API
+    // de backend en Node.js mediante Firebase Admin SDK con credenciales de servicio.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

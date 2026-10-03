@@ -49,11 +49,25 @@ class OrderService {
     if (!Array.isArray(items) || items.length === 0) {
       throw new AppError('El pedido debe incluir al menos una carta.', 400);
     }
+    if (items.length > 25) {
+      throw new AppError('Un pedido no puede contener más de 25 cartas distintas simultáneamente.', 400);
+    }
 
     const sellerId = await slugToUid(sellerSlug);
     if (!sellerId) {
       throw new AppError(`Vendedor "${sellerSlug}" no encontrado.`, 404);
     }
+
+    // Consolidar cantidades en caso de que el cliente envíe IDs repetidos
+    const consolidatedMap = new Map();
+    for (const it of items) {
+      if (!it.cardId || typeof it.cardId !== 'string') {
+        throw new AppError('ID de carta inválido en el pedido.', 400);
+      }
+      const qty = Math.max(1, Math.min(100, Number(it.quantity) || 1));
+      consolidatedMap.set(it.cardId, (consolidatedMap.get(it.cardId) || 0) + qty);
+    }
+    const sanitizedItems = Array.from(consolidatedMap.entries()).map(([cardId, quantity]) => ({ cardId, quantity }));
 
     // Obtener horas de expiración configuradas en el perfil del vendedor (por defecto 48)
     const profile = await userRepository.getProfile(sellerId);
@@ -62,78 +76,95 @@ class OrderService {
     // Verificar pedidos expirados del vendedor antes de procesar para liberar stock antiguo
     await this.expireOutdatedOrders(sellerId);
 
-    // Validar disponibilidad de cada carta solicitada
-    const orderItems = [];
-    let totalAmount = 0;
-
-    for (const reqItem of items) {
-      const requestedQty = Math.max(1, Number(reqItem.quantity) || 1);
-      const card = await cardRepository.findById(reqItem.cardId);
-
-      if (!card || card.userId !== sellerId) {
-        throw new AppError(`La carta solicitada no pertenece al catálogo del vendedor o no existe.`, 404);
-      }
-
-      const totalQty = Number(card.quantity) || 1;
-      const reservedQty = Number(card.reservedQuantity) || 0;
-      const availableQty = Math.max(0, totalQty - reservedQty);
-
-      if (availableQty < requestedQty) {
-        throw new AppError(
-          `No hay suficiente stock disponible de "${card.name}". Quedan ${availableQty} disponible(s) (tenías ${requestedQty} en tu pedido).`,
-          400
-        );
-      }
-
-      // Obtener precio unitario de la carta
-      const priceVal = card.tcgMarketPrice ?? (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0' ? card.tcgPrice : 0);
-      const unitPrice = Number(priceVal) || 0;
-      const subtotal = unitPrice * requestedQty;
-      totalAmount += subtotal;
-
-      orderItems.push({
-        cardId: card.id,
-        name: card.name,
-        setCode: card.setCode || null,
-        setName: card.setName || null,
-        rarity: card.rarity || null,
-        edition: card.edition || null,
-        image: card.imageSmall || card.image,
-        unitPrice,
-        quantity: requestedQty,
-        subtotal: Number(subtotal.toFixed(2)),
-      });
-    }
-
-    // Apartar el stock incrementando reservedQuantity
-    for (const item of orderItems) {
-      const currentCard = await cardRepository.findById(item.cardId);
-      const currentReserved = Number(currentCard.reservedQuantity) || 0;
-      await cardRepository.update(item.cardId, {
-        reservedQuantity: currentReserved + item.quantity,
-      }, sellerId);
-    }
-
+    const { getFirestore } = require('../config/firebase');
+    const db = getFirestore();
     const orderNumber = await generateOrderNumber();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + reservationHours * 3600 * 1000).toISOString();
 
-    const orderPayload = {
-      orderNumber,
-      sellerId,
-      buyerName: buyerName ? buyerName.trim() : null,
-      items: orderItems,
-      totalAmount: Number(totalAmount.toFixed(2)),
-      status: 'pending',
-      createdAt: now.toISOString(),
-      expiresAt,
-      completedAt: null,
-      cancelledAt: null,
-    };
+    // ── Transacción atómica en Firestore: lectura y bloqueo de stock seguro ──
+    const newOrder = await db.runTransaction(async (transaction) => {
+      const cardRefs = sanitizedItems.map(item => db.collection('cards').doc(item.cardId));
+      const cardSnapshots = await Promise.all(cardRefs.map(ref => transaction.get(ref)));
 
-    const newOrder = await orderRepository.create(orderPayload);
+      const orderItems = [];
+      let totalAmount = 0;
+
+      // 1. Fase de Validación de Lectura dentro de la transacción
+      for (let i = 0; i < sanitizedItems.length; i++) {
+        const doc = cardSnapshots[i];
+        const reqItem = sanitizedItems[i];
+
+        if (!doc.exists) {
+          throw new AppError(`Una de las cartas seleccionadas ya no existe en el catálogo.`, 404);
+        }
+
+        const card = doc.data();
+        if (card.userId !== sellerId) {
+          throw new AppError(`La carta "${card.name}" no pertenece a este vendedor.`, 403);
+        }
+
+        const totalQty = Number(card.quantity) || 1;
+        const reservedQty = Number(card.reservedQuantity) || 0;
+        const availableQty = Math.max(0, totalQty - reservedQty);
+
+        if (availableQty < reqItem.quantity) {
+          throw new AppError(
+            `Stock insuficiente para "${card.name}". Solo quedan ${availableQty} disponible(s) (solicitadas: ${reqItem.quantity}).`,
+            400
+          );
+        }
+
+        const priceVal = card.tcgMarketPrice ?? (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0' ? card.tcgPrice : 0);
+        const unitPrice = Number(priceVal) || 0;
+        const subtotal = unitPrice * reqItem.quantity;
+        totalAmount += subtotal;
+
+        orderItems.push({
+          cardId: doc.id,
+          name: card.name,
+          setCode: card.setCode || null,
+          setName: card.setName || null,
+          rarity: card.rarity || null,
+          edition: card.edition || null,
+          image: card.imageSmall || card.image,
+          unitPrice,
+          quantity: reqItem.quantity,
+          subtotal: Number(subtotal.toFixed(2)),
+          currentReserved: reservedQty,
+        });
+      }
+
+      // 2. Fase de Escritura atómica (apartar stock e insertar orden)
+      for (let i = 0; i < orderItems.length; i++) {
+        const item = orderItems[i];
+        transaction.update(cardRefs[i], {
+          reservedQuantity: item.currentReserved + item.quantity,
+          updatedAt: now.toISOString(),
+        });
+        delete item.currentReserved;
+      }
+
+      const orderRef = db.collection('orders').doc();
+      const orderPayload = {
+        orderNumber,
+        sellerId,
+        buyerName: buyerName ? buyerName.trim() : null,
+        items: orderItems,
+        totalAmount: Number(totalAmount.toFixed(2)),
+        status: 'pending',
+        createdAt: now.toISOString(),
+        expiresAt,
+        completedAt: null,
+        cancelledAt: null,
+      };
+
+      transaction.set(orderRef, orderPayload);
+
+      return { id: orderRef.id, ...orderPayload };
+    });
+
     invalidateSellerCache(sellerId);
-
     logger.info(`✅ Pedido ${orderNumber} registrado exitosamente para vendedor ${sellerId} con reserva por ${reservationHours}h`);
     return newOrder;
   }

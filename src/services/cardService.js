@@ -104,9 +104,14 @@ async function registerCard(dto, userId) {
     }
   }
 
-  const tcgMarketPrice    = livePrice.marketPrice ?? null;
-  const tcgLowPrice       = livePrice.lowPrice ?? null;
-  const tcgPriceUpdatedAt = livePrice.marketPrice !== null ? new Date().toISOString() : null;
+  const matchedSet = externalCard.cardSets?.find(s => s.setCode === dto.setCode);
+  const fallbackPrice = (matchedSet?.setPrice && matchedSet.setPrice > 0)
+    ? matchedSet.setPrice
+    : (externalCard.tcgPrice && externalCard.tcgPrice > 0 ? externalCard.tcgPrice : null);
+
+  const tcgMarketPrice    = livePrice.marketPrice ?? fallbackPrice;
+  const tcgLowPrice       = livePrice.lowPrice ?? fallbackPrice;
+  const tcgPriceUpdatedAt = (livePrice.marketPrice !== null || fallbackPrice !== null) ? new Date().toISOString() : null;
 
   // Guardar la carta inmediatamente con la URL de YGOProdeck (respuesta rápida al usuario)
   const newCard = await cardRepository.create({
@@ -446,19 +451,16 @@ async function searchBySetCode(setCode) {
   // 1. Buscar en catálogo general en memoria por set
   const catalogCards = await ygoService.searchCards(query, 'set');
 
-  // 2. Buscar en Firestore si algún usuario de la comunidad tiene copias registradas
-  // Optimización: Consulta indexada por prefijo para evitar escanear toda la colección
-  const { getFirestore } = require('../config/firebase');
-  const db = getFirestore();
-
+  // 2. Buscar en Firestore si algún usuario de la comunidad tiene copias registradas (no bloqueante)
+  let ownersByCardId = {};
   try {
+    const { getFirestore } = require('../config/firebase');
+    const db = getFirestore();
     const cleanUpper = query.toUpperCase();
     const cardsSnap = await db.collection('cards')
       .where('setCode', '>=', cleanUpper)
       .where('setCode', '<=', cleanUpper + '\uf8ff')
       .get();
-
-    const ownersByCardId = {};
 
     if (!cardsSnap.empty) {
       // Obtener perfiles únicamente para los dueños que coinciden
@@ -502,8 +504,13 @@ async function searchBySetCode(setCode) {
         }
       });
     }
+  } catch (err) {
+    logger.warn(`⚠️ Error consultando disponibilidad en comunidad para set "${setCode}": ${err.message}`);
+    ownersByCardId = {};
+  }
 
-    // 3. Enriquecer los resultados del catálogo con precios en vivo y disponibilidad en comunidad
+  // 3. Enriquecer los resultados del catálogo con precios en vivo y fallbacks garantizados
+  try {
     const enrichedCards = await Promise.all(
       catalogCards.map(async (c) => {
         const matchingSet = c.cardSets?.find((s) => {
@@ -528,6 +535,14 @@ async function searchBySetCode(setCode) {
           }
         }
 
+        // Fallback confiable de precio si TCGPlayer en vivo no responde (ej. rate limit o bloqueo de IP de Cloud Functions)
+        const fallbackPrice = (matchingSet?.setPrice && matchingSet.setPrice > 0)
+          ? matchingSet.setPrice
+          : (c.tcgPrice && c.tcgPrice > 0 ? c.tcgPrice : null);
+
+        const marketPrice = tcgPrices.marketPrice ?? fallbackPrice;
+        const lowPrice = tcgPrices.lowPrice ?? fallbackPrice;
+
         // Si hay dueños de la comunidad con precio, calcular el precio más bajo en comunidad
         const communityPrices = owners
           .map((o) => (typeof o.price === 'number' ? o.price : parseFloat(o.price)))
@@ -536,13 +551,13 @@ async function searchBySetCode(setCode) {
 
         return {
           ...c,
-          marketPrice: tcgPrices.marketPrice,
-          lowPrice: tcgPrices.lowPrice,
+          marketPrice,
+          lowPrice,
           minCommunityPrice,
           matchedSet: {
             ...matchingSet,
-            marketPrice: tcgPrices.marketPrice,
-            lowPrice: tcgPrices.lowPrice,
+            marketPrice,
+            lowPrice,
           },
           communityOwners: owners,
           availableInCommunity: owners.length > 0,
@@ -555,20 +570,31 @@ async function searchBySetCode(setCode) {
 
     return enrichedCards;
   } catch (err) {
-    logger.warn(`Error cruzando disponibilidad en comunidad para set "${setCode}": ${err.message}`);
-    return catalogCards.map((c) => ({
-      ...c,
-      marketPrice: null,
-      lowPrice: null,
-      minCommunityPrice: null,
-      matchedSet:
-        c.cardSets?.find((s) => {
-          const sCode = (s.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          return sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode);
-        }) || c.cardSets?.[0] || null,
-      communityOwners: [],
-      availableInCommunity: false,
-    }));
+    logger.warn(`Error enriqueciendo precios para set "${setCode}": ${err.message}`);
+    return catalogCards.map((c) => {
+      const matchingSet = c.cardSets?.find((s) => {
+        const sCode = (s.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode);
+      }) || c.cardSets?.[0] || null;
+
+      const fallbackPrice = (matchingSet?.setPrice && matchingSet.setPrice > 0)
+        ? matchingSet.setPrice
+        : (c.tcgPrice && c.tcgPrice > 0 ? c.tcgPrice : null);
+
+      return {
+        ...c,
+        marketPrice: fallbackPrice,
+        lowPrice: fallbackPrice,
+        minCommunityPrice: null,
+        matchedSet: {
+          ...matchingSet,
+          marketPrice: fallbackPrice,
+          lowPrice: fallbackPrice,
+        },
+        communityOwners: [],
+        availableInCommunity: false,
+      };
+    });
   }
 }
 

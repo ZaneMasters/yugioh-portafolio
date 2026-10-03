@@ -91,12 +91,15 @@ const recoverPassword = async (req, res, next) => {
       }
     } else {
       const link = await admin.auth().generatePasswordResetLink(email);
-      logger.info(`Enlace de recuperacion generado para: ${email} (No se envio correo automatico)`);
+      if (process.env.NODE_ENV === 'development') {
+        logger.info(`[DEV ONLY] Enlace de recuperacion generado para: ${email} -> ${link}`);
+      } else {
+        logger.warn(`⚠️ GCP_API_KEY no configurado en produccion. No se puede enviar correo automatico a ${email}`);
+      }
 
       return res.status(200).json({
         success: true,
-        message: 'No se ha configurado el envío de correo automático. Se ha generado el enlace de recuperación exitosamente.',
-        data: { resetLink: link },
+        message: 'Si el correo está registrado, se enviarán las instrucciones para recuperar la contraseña.',
       });
     }
   } catch (error) {

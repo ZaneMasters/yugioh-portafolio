@@ -1,0 +1,15 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Permitir lectura pública de las imágenes de cartas WebP optimizadas
+    match /cards/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Denegar cualquier otra lectura o escritura directa desde clientes frontend
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
