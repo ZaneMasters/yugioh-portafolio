@@ -19,8 +19,17 @@ const tcgAxios = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'application/json',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Origin': 'https://www.tcgplayer.com',
+    'Referer': 'https://www.tcgplayer.com/',
+    'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-site',
   },
 });
 
@@ -144,8 +153,24 @@ async function getPriceForCard(cardName, setCode = null, rarity = null, setName 
   const cleanCode = setCode.trim().toUpperCase();
   const targetRarityNorm = normalize(rarity);
 
-  const directItems = await searchBySetCode(cleanCode);
-  if (!directItems || directItems.length === 0) {
+  let items = await searchBySetCode(cleanCode);
+
+  // Si no se encontró por código exacto, intentar búsqueda por nombre y filtrar por código/rareza
+  if (!items || items.length === 0) {
+    if (cardName) {
+      const nameItems = await searchTCGPlayer(cardName);
+      if (nameItems && nameItems.length > 0) {
+        const matchingCode = nameItems.filter(i => {
+          const num = normalize(i.customAttributes?.number || i.setCode);
+          const cleanNorm = normalize(cleanCode);
+          return num && (num.includes(cleanNorm) || cleanNorm.includes(num));
+        });
+        items = matchingCode.length > 0 ? matchingCode : nameItems;
+      }
+    }
+  }
+
+  if (!items || items.length === 0) {
     return { marketPrice: null, lowPrice: null, matchedNumber: null };
   }
 
@@ -153,7 +178,7 @@ async function getPriceForCard(cardName, setCode = null, rarity = null, setName 
 
   // Si hay más de una variante con el mismo código (ej: Rarity Collection), emparejar por rareza
   if (targetRarityNorm) {
-    match = directItems.find(i => {
+    match = items.find(i => {
       const rNorm = normalize(i.rarityName);
       const pNorm = normalize(i.productName);
       return rNorm === targetRarityNorm || rNorm.includes(targetRarityNorm) || pNorm.includes(targetRarityNorm);
@@ -161,7 +186,7 @@ async function getPriceForCard(cardName, setCode = null, rarity = null, setName 
   }
 
   if (!match) {
-    match = directItems.find(i => typeof i.marketPrice === 'number') || directItems[0];
+    match = items.find(i => typeof i.marketPrice === 'number') || items[0];
   }
 
   if (!match) {

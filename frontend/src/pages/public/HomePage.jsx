@@ -403,8 +403,8 @@ export default function HomePage() {
                   <div className="space-y-3.5 sm:space-y-4">
                     {searchResults.map((card) => {
                       const matched = card.matchedSet
-                      const tcgPrice = card.marketPrice || matched?.marketPrice
-                      const lowPrice = card.lowPrice || matched?.lowPrice
+                      const tcgPrice = card.marketPrice ?? matched?.marketPrice ?? card.tcgMarketPrice ?? (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0' ? card.tcgPrice : null)
+                      const lowPrice = card.lowPrice ?? matched?.lowPrice ?? card.tcgLowPrice ?? null
                       const commPrice = card.minCommunityPrice
 
                       return (
