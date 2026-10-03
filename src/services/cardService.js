@@ -432,6 +432,99 @@ async function syncSingleCardPrice(id, userId) {
 }
 
 /**
+ * Consulta y actualiza en segundo plano el precio de TCGPlayer de una carta (público / carrito).
+ * Solo actualiza si tiene más de 24 horas sin refrescar o no tiene precio.
+ *
+ * @param {string} id - ID de la carta en Firestore
+ * @returns {Promise<{ updated: boolean, card: Object }>}
+ */
+async function refreshCardPricePublic(id) {
+  if (!id) throw new AppError('ID de carta requerido.', 400);
+
+  const card = await cardRepository.findById(id);
+  if (!card) throw new AppError('Carta no encontrada.', 404);
+
+  // Si no tiene setCode, no se puede consultar precio en TCGPlayer
+  if (!card.setCode) {
+    return {
+      updated: false,
+      card: {
+        id: card.id,
+        tcgMarketPrice: card.tcgMarketPrice ?? null,
+        tcgLowPrice: card.tcgLowPrice ?? null,
+        tcgPrice: card.tcgPrice ?? null,
+        tcgPriceUpdatedAt: card.tcgPriceUpdatedAt ?? null,
+      },
+    };
+  }
+
+  const DAY_IN_MS = 24 * 60 * 60 * 1000;
+  const isOutdated = tcgPlayerService.isPriceOutdated(card.tcgPriceUpdatedAt, DAY_IN_MS) || !card.tcgMarketPrice;
+
+  if (!isOutdated) {
+    return {
+      updated: false,
+      card: {
+        id: card.id,
+        tcgMarketPrice: card.tcgMarketPrice,
+        tcgLowPrice: card.tcgLowPrice ?? null,
+        tcgPrice: card.tcgPrice ?? String(card.tcgMarketPrice),
+        tcgPriceUpdatedAt: card.tcgPriceUpdatedAt,
+      },
+    };
+  }
+
+  // Consultar TCGPlayer
+  let priceInfo = { marketPrice: null, lowPrice: null };
+  try {
+    priceInfo = await tcgPlayerService.getPriceForCard(
+      card.name,
+      card.setCode,
+      card.rarity,
+      card.setName
+    );
+  } catch (err) {
+    logger.debug(`Error al consultar TCGPlayer en refreshCardPricePublic para "${card.name}": ${err.message}`);
+  }
+
+  if (priceInfo.marketPrice === null && priceInfo.lowPrice === null) {
+    return {
+      updated: false,
+      card: {
+        id: card.id,
+        tcgMarketPrice: card.tcgMarketPrice ?? null,
+        tcgLowPrice: card.tcgLowPrice ?? null,
+        tcgPrice: card.tcgPrice ?? null,
+        tcgPriceUpdatedAt: card.tcgPriceUpdatedAt ?? null,
+      },
+    };
+  }
+
+  const chosenPrice = priceInfo.marketPrice ?? priceInfo.lowPrice;
+  const updates = {
+    tcgMarketPrice: chosenPrice,
+    tcgLowPrice: priceInfo.lowPrice ?? null,
+    tcgPrice: String(chosenPrice),
+    tcgPriceUpdatedAt: new Date().toISOString(),
+  };
+
+  await cardRepository.update(card.id, updates, card.userId);
+  invalidateInventoryCache(card.userId);
+  logger.info(`💲 [Cart Refresh] Precio TCGPlayer actualizado para "${card.name}" (${card.setCode}): $${chosenPrice} USD`);
+
+  return {
+    updated: true,
+    card: {
+      id: card.id,
+      tcgMarketPrice: chosenPrice,
+      tcgLowPrice: priceInfo.lowPrice ?? null,
+      tcgPrice: String(chosenPrice),
+      tcgPriceUpdatedAt: updates.tcgPriceUpdatedAt,
+    },
+  };
+}
+
+/**
  * Busca cartas exclusivamente por código de set / expansión.
  * Consulta el catálogo general y cruza con las cartas de la comunidad
  * para mostrar qué coleccionistas la tienen disponible.
@@ -606,6 +699,7 @@ module.exports = {
   deleteCard,
   syncUserCardPrices,
   syncSingleCardPrice,
+  refreshCardPricePublic,
   invalidateInventoryCache,
   searchBySetCode,
 };

@@ -203,16 +203,19 @@ async function getPriceForCard(cardName, setCode = null, rarity = null, setName 
   };
 }
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000; // 24 horas
+
 /**
- * Determina si el precio de una carta requiere actualización (más de 7 días o nunca actualizada).
+ * Determina si el precio de una carta requiere actualización (por defecto más de 7 días o nunca actualizada).
  * @param {string|null} tcgPriceUpdatedAt
+ * @param {number} [maxAgeMs=WEEK_IN_MS]
  * @returns {boolean}
  */
-function isPriceOutdated(tcgPriceUpdatedAt) {
+function isPriceOutdated(tcgPriceUpdatedAt, maxAgeMs = WEEK_IN_MS) {
   if (!tcgPriceUpdatedAt) return true;
   const updatedTime = new Date(tcgPriceUpdatedAt).getTime();
   if (Number.isNaN(updatedTime)) return true;
-  return (Date.now() - updatedTime) >= WEEK_IN_MS;
+  return (Date.now() - updatedTime) >= maxAgeMs;
 }
 
 /**
