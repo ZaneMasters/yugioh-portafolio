@@ -101,7 +101,7 @@ export default function LoginPage() {
 
             {/* Contraseña */}
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
               <input
                 type={showPwd ? 'text' : 'password'}
                 placeholder="Contraseña"
@@ -110,15 +110,15 @@ export default function LoginPage() {
                 required
                 className="
                   w-full bg-[#111827]/80 border border-white/10 rounded-xl text-slate-100 text-sm
-                  placeholder:text-slate-600 outline-none transition-all backdrop-blur-md
+                  placeholder:text-slate-600 outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out backdrop-blur-md
                   focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/10 focus:bg-[#1f2937]/90
-                  pl-10 pr-10 py-3
+                  pl-10 pr-11 py-3
                 "
               />
               <button
                 type="button"
                 onClick={() => setShowPwd(!showPwd)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
               >
                 {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -138,9 +138,9 @@ export default function LoginPage() {
               type="submit"
               disabled={loading || !password || !email}
               className="
-                w-full py-3 rounded-xl font-bold text-sm transition-all duration-300
+                w-full py-3 rounded-xl font-bold text-sm transition-all duration-150 cursor-pointer
                 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400
-                text-black active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed
+                text-black active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed
                 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_25px_rgba(245,158,11,0.3)]
               "
             >

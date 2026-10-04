@@ -2,6 +2,7 @@
 
 const orderRepository   = require('../repositories/orderRepository');
 const cardRepository    = require('../repositories/cardRepository');
+const folderRepository  = require('../repositories/folderRepository');
 const userRepository    = require('../repositories/userRepository');
 const { slugToUid }     = require('../utils/slugToUid');
 const AppError          = require('../utils/AppError');
@@ -120,6 +121,8 @@ class OrderService {
         const subtotal = unitPrice * reqItem.quantity;
         totalAmount += subtotal;
 
+        const folderIds = Array.isArray(card.folderIds) ? card.folderIds : [];
+
         orderItems.push({
           cardId: doc.id,
           name: card.name,
@@ -132,6 +135,7 @@ class OrderService {
           quantity: reqItem.quantity,
           subtotal: Number(subtotal.toFixed(2)),
           currentReserved: reservedQty,
+          folderIds,
         });
       }
 
@@ -220,6 +224,53 @@ class OrderService {
 
     // 2. Obtener pedidos
     const orders = await orderRepository.findAllBySeller(sellerId, status);
+
+    // 2.1 Enriquecer items de pedidos con los nombres de las carpetas / colecciones
+    try {
+      const userFolders = await folderRepository.findAll(sellerId);
+      const folderMap = new Map(userFolders.map(f => [f.id, f.name]));
+
+      // Si hay órdenes antiguas sin folderIds en el snapshot, buscar en la colección cards
+      const missingCardIds = [];
+      for (const order of orders) {
+        for (const item of (order.items || [])) {
+          if (!item.folderIds && item.cardId) {
+            missingCardIds.push(item.cardId);
+          }
+        }
+      }
+
+      const cardFolderMap = new Map();
+      if (missingCardIds.length > 0) {
+        const uniqueIds = [...new Set(missingCardIds)];
+        const { getFirestore } = require('../config/firebase');
+        const db = getFirestore();
+        for (let i = 0; i < uniqueIds.length; i += 30) {
+          const chunk = uniqueIds.slice(i, i + 30);
+          const refs = chunk.map(id => db.collection('cards').doc(id));
+          const snaps = await db.getAll(...refs);
+          snaps.forEach(snap => {
+            if (snap.exists) {
+              const data = snap.data();
+              if (Array.isArray(data.folderIds)) {
+                cardFolderMap.set(snap.id, data.folderIds);
+              }
+            }
+          });
+        }
+      }
+
+      for (const order of orders) {
+        for (const item of (order.items || [])) {
+          const itemFolderIds = item.folderIds || cardFolderMap.get(item.cardId) || [];
+          item.folderNames = itemFolderIds
+            .map(fId => folderMap.get(fId))
+            .filter(Boolean);
+        }
+      }
+    } catch (err) {
+      logger.warn(`Error al resolver carpetas para pedidos: ${err.message}`);
+    }
 
     // 3. Calcular métricas para el admin
     const allOrders = status && status !== 'all'

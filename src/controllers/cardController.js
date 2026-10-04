@@ -247,6 +247,20 @@ const searchCardsBySet = async (req, res, next) => {
   }
 };
 
+// ── POST /cards/public/refresh-price/:id ──────────────────────────────────────
+const refreshCardPricePublic = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await cardService.refreshCardPricePublic(id);
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createCard,
   getAllCards,
@@ -257,6 +271,7 @@ module.exports = {
   syncPrices,
   syncSingleCardPrice,
   searchCardsBySet,
+  refreshCardPricePublic,
 };
 
 

@@ -45,7 +45,7 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
             onChange={(e) => onChange({ ...filters, name: e.target.value })}
             className="
               w-full bg-black/30 border border-white/8 rounded-xl text-slate-100 text-sm
-              pl-10 pr-4 py-2.5 outline-none transition-all
+              pl-10 pr-4 py-2.5 outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out
               placeholder:text-slate-600
               focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 focus:bg-black/50
             "
@@ -72,7 +72,7 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
             onChange={(e) => onChange({ ...filters, setCode: e.target.value })}
             className="
               w-full bg-black/30 border border-white/8 rounded-xl text-slate-100 text-sm
-              pl-9 pr-4 py-2.5 outline-none transition-all font-mono text-xs
+              pl-9 pr-4 py-2.5 outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out font-mono text-xs
               placeholder:text-slate-600 placeholder:font-sans
               focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 focus:bg-black/50
             "
@@ -110,7 +110,7 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
             onChange={(e) => onChange({ ...filters, archetype: e.target.value })}
             className="
               w-36 bg-black/30 border border-white/8 rounded-xl text-slate-100 text-sm
-              px-4 py-2.5 outline-none transition-all
+              px-4 py-2.5 outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out
               placeholder:text-slate-600
               focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/10 focus:bg-black/50
             "
@@ -128,7 +128,7 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
         {/* Botón de filtros avanzados — mobile y desktop */}
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`p-2.5 rounded-xl border transition-all flex items-center justify-center relative ${
+          className={`p-2.5 rounded-xl border transition-[background-color,border-color,color,transform] duration-150 ease-out active:scale-[0.96] flex items-center justify-center relative ${
             showAdvanced || hasAdvancedFilters
               ? 'bg-amber-500/20 border-amber-500/30 text-amber-400'
               : 'bg-black/20 text-slate-400 border-white/5 hover:bg-white/5'
@@ -148,7 +148,7 @@ export function FiltersPanel({ filters, onChange, folders = [] }) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             onClick={clearAll}
-            className="p-2.5 rounded-xl border border-white/5 bg-black/20 text-slate-500 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all"
+            className="p-2.5 rounded-xl border border-white/5 bg-black/20 text-slate-500 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-[background-color,border-color,color,transform] duration-150 ease-out active:scale-[0.96]"
             title="Limpiar filtros"
           >
             <X size={18} />

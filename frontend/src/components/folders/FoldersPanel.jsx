@@ -60,7 +60,7 @@ export function FoldersPanel({ folders = [], loading, actionLoading, createFolde
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            exit={{ opacity: 0, height: 0, transition: { duration: 0.15, ease: 'easeOut' } }}
             className="p-4 rounded-xl glass border border-amber-500/30 overflow-hidden"
           >
             <div className="flex flex-col sm:flex-row gap-3">
@@ -74,7 +74,7 @@ export function FoldersPanel({ folders = [], loading, actionLoading, createFolde
               />
               <motion.button
                 whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.96 }}
                 onClick={() => setAddPublic(!addPublic)}
                 className={`px-3 py-2 rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   addPublic ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
@@ -122,7 +122,7 @@ export function FoldersPanel({ folders = [], loading, actionLoading, createFolde
                   <div className="flex items-center justify-between mt-2">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileTap={{ scale: 0.96 }}
                       onClick={() => setEditPublic(!editPublic)}
                       className={`px-2 py-1 rounded text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                         editPublic ? 'text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20' : 'text-slate-400 bg-slate-800 hover:bg-slate-700'

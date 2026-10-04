@@ -24,20 +24,32 @@ export function Button({
   className = '',
   ...props
 }) {
+  const hasIcon = Boolean(Icon || loading)
+  // Optical alignment: slightly less padding on the icon side
+  const opticalPadding = hasIcon && children
+    ? {
+        xs: 'ps-2 pe-2.5',
+        sm: 'ps-2.5 pe-3',
+        md: 'ps-3 pe-4',
+        lg: 'ps-4 pe-5',
+      }[size] || ''
+    : ''
+
   return (
     <button
       className={`
-        inline-flex items-center justify-center gap-2 transition-all duration-150
-        disabled:opacity-50 disabled:cursor-not-allowed active:scale-95
-        ${variants[variant]} ${sizes[size]} ${className}
+        inline-flex items-center justify-center gap-2
+        transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out
+        disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.96]
+        ${variants[variant]} ${opticalPadding || sizes[size]} ${className}
       `}
       disabled={loading || props.disabled}
       {...props}
     >
       {loading ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <Loader2 className="w-4 h-4 animate-spin shrink-0" strokeWidth={2} />
       ) : Icon ? (
-        <Icon className="w-4 h-4" />
+        <Icon className="w-4 h-4 shrink-0" strokeWidth={2} />
       ) : null}
       {children}
     </button>

@@ -7,6 +7,8 @@ const authMiddleware = require('../middlewares/authMiddleware');
 const { createCardSchema } = require('../dtos/createCardDto');
 const { updateCardSchema, idParamSchema } = require('../dtos/updateCardDto');
 
+const rateLimit = require('express-rate-limit');
+
 const router = Router();
 
 /**
@@ -37,6 +39,24 @@ router.get('/', authMiddleware, cardController.getAllCards);
  * @access  Public
  */
 router.get('/portfolio/:slug/cards', cardController.getPortfolioBySlug);
+
+const refreshPriceLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutos
+  max: 60, // hasta 60 consultas cada 5 minutos por IP
+  message: { success: false, message: 'Demasiadas solicitudes de actualización de precio. Intenta más tarde.' },
+});
+
+/**
+ * @route   POST /api/v1/cards/public/refresh-price/:id
+ * @desc    Actualizar en segundo plano el precio TCGPlayer de una carta (público / carrito)
+ * @access  Public (protegido por rate-limiter)
+ */
+router.post(
+  '/public/refresh-price/:id',
+  refreshPriceLimiter,
+  validate({ params: idParamSchema }),
+  cardController.refreshCardPricePublic,
+);
 
 /**
  * @route   GET /api/v1/cards/search-by-set

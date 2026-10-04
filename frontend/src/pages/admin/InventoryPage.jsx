@@ -109,7 +109,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
         <div>
@@ -146,7 +146,7 @@ export default function InventoryPage() {
                 href={`/portfolio/${userSlug}${currentTab === 'wishlist' ? '?tab=wishlist' : ''}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-white/10 text-slate-300 hover:text-white hover:bg-white/5 transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-white/10 text-slate-300 hover:text-white hover:bg-white/5 active:scale-[0.96] transition-all duration-150"
                 title="Abrir tu portafolio público en una pestaña nueva"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -167,14 +167,14 @@ export default function InventoryPage() {
       </div>
 
       {/* Pestañas (Tabs) */}
-      <div className="flex border-b border-white/10 mb-6">
+      <div className="flex border-b border-white/10 mb-6 overflow-x-auto no-scrollbar">
         {['inventory', 'wishlist', 'folders'].map((tab) => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
-            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+            className={`px-4 py-3 text-sm font-medium border-b-2 shrink-0 cursor-pointer active:scale-[0.96] transition-all duration-150 ${
               currentTab === tab
-                ? 'border-amber-400 text-amber-400'
+                ? 'border-amber-400 text-amber-400 font-semibold'
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-white/20'
             }`}
           >

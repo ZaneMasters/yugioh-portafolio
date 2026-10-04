@@ -152,7 +152,7 @@ export default function HomePage() {
               {user ? (
                 <Link
                   to="/admin/search"
-                  className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-all shadow-[0_0_15px_rgba(245,158,11,0.08)] hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] active:scale-95"
+                  className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-all shadow-[0_0_15px_rgba(245,158,11,0.08)] hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] active:scale-[0.96]"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                   <span>Panel Admin</span>
@@ -160,7 +160,7 @@ export default function HomePage() {
               ) : (
                 <Link
                   to="/login"
-                  className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all active:scale-95"
+                  className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all active:scale-[0.96]"
                 >
                   <Lock className="w-3.5 h-3.5 text-amber-400" />
                   <span>Acceder</span>
@@ -290,7 +290,7 @@ export default function HomePage() {
                   {/* Botón de búsqueda */}
                   <button
                     type="submit"
-                    className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 active:scale-95 text-black text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                    className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 active:scale-[0.96] text-black text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                   >
                     <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span>Buscar</span>
@@ -312,7 +312,7 @@ export default function HomePage() {
                     key={code}
                     type="button"
                     onClick={() => handleSelectExample(code)}
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[11px] transition-all cursor-pointer ${
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full font-mono text-[11px] active:scale-[0.96] transition-all duration-150 cursor-pointer ${
                       activeSetQuery.toUpperCase() === code.toUpperCase()
                         ? 'bg-amber-500 text-black font-bold shadow-[0_0_10px_rgba(245,158,11,0.5)]'
                         : 'bg-white/[0.04] hover:bg-amber-500/15 border border-white/10 hover:border-amber-500/40 text-slate-300 hover:text-amber-300'
@@ -423,7 +423,7 @@ export default function HomePage() {
                               <img
                                 src={card.imageSmall || card.image}
                                 alt={card.name}
-                                className="w-full h-auto rounded-lg shadow-lg group-hover:scale-105 transition-transform duration-200"
+                                className="w-full h-auto rounded-lg shadow-lg group-hover:scale-105 transition-transform duration-200 outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
                                 onError={(e) => {
                                   e.target.onerror = null
                                   e.target.src = '/card-placeholder.png'
@@ -518,7 +518,7 @@ export default function HomePage() {
                                         key={owner.id || owner.slug}
                                         type="button"
                                         onClick={() => navigate(`/portfolio/${owner.slug}`)}
-                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] sm:text-xs font-medium transition-all cursor-pointer ${
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] sm:text-xs font-medium active:scale-[0.96] transition-all duration-150 cursor-pointer ${
                                           isMe
                                             ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/40 text-amber-300 font-bold shadow-sm'
                                             : 'bg-emerald-500/10 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-300'
@@ -543,7 +543,7 @@ export default function HomePage() {
                             <button
                               type="button"
                               onClick={() => setDetailCard(card)}
-                              className="self-end sm:self-auto inline-flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer shrink-0"
+                              className="self-end sm:self-auto inline-flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 active:scale-[0.96] transition-all duration-150 cursor-pointer shrink-0"
                             >
                               Ver detalle completo
                               <ChevronRight className="w-3.5 h-3.5" />
@@ -719,7 +719,7 @@ export default function HomePage() {
               </p>
               <a
                 href="/login"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black text-sm font-bold shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all transform active:scale-95"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black text-sm font-bold shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all duration-150 transform active:scale-[0.96]"
               >
                 <Lock className="w-4 h-4" />
                 <span>Acceder al Panel de Coleccionista</span>

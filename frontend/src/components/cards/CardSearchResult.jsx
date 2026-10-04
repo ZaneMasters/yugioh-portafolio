@@ -309,21 +309,21 @@ export const CardSearchResult = memo(function CardSearchResult({
           {/* Fila inferior en mobile: Cantidad + Opciones + Agregar */}
           <div className="flex items-center gap-1.5 shrink-0">
             {/* Cantidad */}
-            <div className="flex items-center gap-0.5 bg-black/30 rounded border border-white/10 p-0.5 h-6 sm:h-7">
+            <div className="flex items-center gap-0.5 bg-black/30 rounded-lg border border-white/10 p-0.5 h-8 sm:h-7">
               <button
                 type="button"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
-                className="w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-slate-400 hover:text-white transition-colors rounded"
+                className="w-7 h-7 sm:w-5 sm:h-5 flex items-center justify-center text-slate-400 hover:text-white active:scale-[0.96] transition-colors rounded"
               >
-                <Minus className="w-2.5 h-2.5" />
+                <Minus className="w-3.5 h-3.5 sm:w-2.5 sm:h-2.5" />
               </button>
-              <span className="w-4 sm:w-5 text-center text-xs font-stat text-white select-none">{qty}</span>
+              <span className="w-5 sm:w-5 text-center text-xs font-stat text-white select-none">{qty}</span>
               <button
                 type="button"
                 onClick={() => setQty((q) => Math.min(99, q + 1))}
-                className="w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-slate-400 hover:text-white transition-colors rounded"
+                className="w-7 h-7 sm:w-5 sm:h-5 flex items-center justify-center text-slate-400 hover:text-white active:scale-[0.96] transition-colors rounded"
               >
-                <Plus className="w-2.5 h-2.5" />
+                <Plus className="w-3.5 h-3.5 sm:w-2.5 sm:h-2.5" />
               </button>
             </div>
 
@@ -331,12 +331,12 @@ export const CardSearchResult = memo(function CardSearchResult({
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              className={`sm:hidden w-6 h-6 flex items-center justify-center rounded border transition-all ${
+              className={`sm:hidden w-8 h-8 flex items-center justify-center rounded-lg border active:scale-[0.96] transition-colors ${
                 expanded ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-black/30 border-white/10 text-slate-400 hover:text-slate-300'
               }`}
               title="Opciones"
             >
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Botón agregar */}
@@ -345,10 +345,9 @@ export const CardSearchResult = memo(function CardSearchResult({
               size="sm"
               loading={adding}
               onClick={handleAdd}
-              className="shrink-0 w-6 h-6 !p-0 sm:!px-3 sm:w-auto sm:h-auto sm:text-sm flex items-center justify-center rounded"
+              className="shrink-0 w-8 h-8 !p-0 sm:!px-3 sm:!py-1.5 sm:w-auto sm:h-auto sm:text-sm flex items-center justify-center rounded-lg active:scale-[0.96]"
             >
-              <Plus className="w-5 h-5 shrink-0 sm:hidden" />
-              <Plus className="w-4 h-4 shrink-0 hidden sm:block" />
+              <Plus className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Agregar</span>
             </Button>
           </div>

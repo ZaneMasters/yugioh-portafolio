@@ -74,15 +74,15 @@ export function Navbar() {
             to={galleryLink}
             end
             className={({ isActive }) =>
-              `flex items-center gap-1.5 px-2.5 py-2 sm:px-3 rounded-lg text-sm transition-all ${
+              `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm min-h-[36px] min-w-[36px] justify-center active:scale-[0.96] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer ${
                 isActive && !location.search.includes('tab=wishlist')
-                  ? 'text-amber-400 bg-amber-500/10'
+                  ? 'text-amber-400 bg-amber-500/10 font-semibold'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               }`
             }
             title="Galería"
           >
-            <LayoutGrid className="w-4 h-4" />
+            <LayoutGrid className="w-4 h-4 shrink-0" />
             <span className="hidden sm:inline">Galería</span>
           </NavLink>
           {/* Admin / Login */}
@@ -90,30 +90,30 @@ export function Navbar() {
             <NavLink
               to="/admin/search"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 px-2.5 py-2 sm:px-3 rounded-lg text-sm transition-all ${
+                `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm min-h-[36px] min-w-[36px] justify-center active:scale-[0.96] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer ${
                   isActive || location.pathname.startsWith('/admin')
-                    ? 'text-purple-400 bg-purple-500/10'
+                    ? 'text-purple-400 bg-purple-500/10 font-semibold'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 }`
               }
               title="Admin"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Admin</span>
             </NavLink>
           ) : (
             <NavLink
               to="/login"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 px-2.5 py-2 sm:px-3 rounded-lg text-sm transition-all ${
+                `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm min-h-[36px] min-w-[36px] justify-center active:scale-[0.96] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer ${
                   isActive
-                    ? 'text-purple-400 bg-purple-500/10'
+                    ? 'text-purple-400 bg-purple-500/10 font-semibold'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 }`
               }
               title="Login Admin"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Login</span>
             </NavLink>
           )}

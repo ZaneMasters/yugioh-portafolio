@@ -86,10 +86,10 @@ export function CardGrid({
     <>
       {/* Mobile Layout Toggle */}
       <div className="flex justify-end mb-4 sm:hidden">
-        <div className="flex gap-1 bg-black/20 p-1 rounded-lg border border-white/5">
+        <div className="flex gap-1 bg-black/20 p-1 rounded-xl border border-white/5">
           <button
             onClick={() => setMobileCols('list')}
-            className={`p-1.5 rounded transition-colors ${
+            className={`w-9 h-9 flex items-center justify-center rounded-lg active:scale-[0.96] transition-colors ${
               mobileCols === 'list' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-slate-200'
             }`}
             title="Vista de lista"
@@ -98,7 +98,7 @@ export function CardGrid({
           </button>
           <button
             onClick={() => setMobileCols('1')}
-            className={`p-1.5 rounded transition-colors ${
+            className={`w-9 h-9 flex items-center justify-center rounded-lg active:scale-[0.96] transition-colors ${
               mobileCols === '1' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-slate-200'
             }`}
             title="Vista de 1 columna"
@@ -107,7 +107,7 @@ export function CardGrid({
           </button>
           <button
             onClick={() => setMobileCols('2')}
-            className={`p-1.5 rounded transition-colors ${
+            className={`w-9 h-9 flex items-center justify-center rounded-lg active:scale-[0.96] transition-colors ${
               mobileCols === '2' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-slate-200'
             }`}
             title="Vista de 2 columnas"

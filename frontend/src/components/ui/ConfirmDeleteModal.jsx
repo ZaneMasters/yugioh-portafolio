@@ -91,9 +91,9 @@ export function ConfirmDeleteModal({
           {/* Panel */}
           <motion.div
             key="modal"
-            initial={{ opacity: 0, scale: 0.92, y: 16 }}
+            initial={{ opacity: 0, scale: 0.94, y: 14 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 16 }}
+            exit={{ opacity: 0, scale: 0.96, y: 6, transition: { duration: 0.15, ease: 'easeOut' } }}
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none"
           >
@@ -127,7 +127,7 @@ export function ConfirmDeleteModal({
                         src={cardImage}
                         alt={cardName}
                         loading="lazy"
-                        className="w-12 h-[68px] object-contain rounded-lg bg-black/30 shrink-0"
+                        className="w-12 h-[68px] object-contain rounded-lg bg-black/30 shrink-0 outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
                         onError={(e) => { e.target.style.display = 'none' }}
                       />
                     )}

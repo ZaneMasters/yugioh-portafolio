@@ -45,6 +45,18 @@ const ATTR_COLORS = {
   DIVINE: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.4)', text: '#fbbf24' },
 }
 
+function getFoilClass(rarity) {
+  if (!rarity) return ''
+  const r = rarity.toLowerCase()
+  if (r.includes('starlight')) return 'foil-starlight'
+  if (r.includes('secret') || r.includes('prismatic')) return 'foil-secret'
+  if (r.includes('ultimate')) return 'foil-ultimate'
+  if (r.includes('ultra')) return 'foil-ultra'
+  if (r.includes('super')) return 'foil-super'
+  if (r.includes('rare') && !r.includes('common')) return 'foil-rare'
+  return ''
+}
+
 const rarityLabel    = (v) => RARITIES.find((r)  => r.value === v)?.label ?? v
 
 // ─── Colores de glow por frameType ───────────────────────────────────────────
@@ -109,6 +121,9 @@ const MODAL_STYLES = `
     width: 148px;
     height: auto;
     object-fit: contain;
+    outline: 1px solid oklch(1 0 0 / 0.1);
+    outline-offset: -1px;
+    border-radius: 8px;
   }
 
   .cdm-info-col {
@@ -215,6 +230,8 @@ const MODAL_STYLES = `
     .cdm-close-btn {
       top: 12px;
       right: 12px;
+      width: 36px;
+      height: 36px;
     }
 
     .cdm-inventory-row button {
@@ -297,6 +314,7 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
   const attrStyle  = card?.attribute ? (ATTR_COLORS[card.attribute.toUpperCase()] ?? null) : null
   const isMonster  = card && card.atk !== null && card.atk !== undefined
   const frameLabel = FRAME_LABEL[frameType] ?? frameType
+  const foilClass  = getFoilClass(card?.rarity)
 
   return createPortal(
     <AnimatePresence>
@@ -319,9 +337,9 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
           {/* ── Panel wrapper ──────────────────────────────────── */}
           <motion.div
             key="panel"
-            initial={{ opacity: 0, scale: 0.88, y: 32 }}
+            initial={{ opacity: 0, scale: 0.94, y: 16 }}
             animate={{ opacity: 1, scale: 1,    y: 0  }}
-            exit={{ opacity: 0, scale: 0.88, y: 32 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8, transition: { duration: 0.15, ease: 'easeOut' } }}
             transition={{ type: 'spring', stiffness: 360, damping: 30 }}
             style={{
               position: 'fixed', inset: 0, zIndex: 50,
@@ -353,7 +371,7 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                   style={{ borderRight: `1px solid ${glowColor}22` }}
                 >
                   <div
-                    className="cdm-img-wrap"
+                    className={`cdm-img-wrap foil-wrapper ${foilClass}`}
                     style={{
                       position: 'relative', borderRadius: '10px', overflow: 'hidden',
                       boxShadow: `0 0 32px ${glowColor}40, 0 8px 24px rgba(0,0,0,0.6)`,
@@ -483,7 +501,7 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                       ) : (
                         <button 
                           onClick={handleAddToCart}
-                          className={`ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-lg font-bold text-xs transition-colors border ${
+                          className={`ml-auto flex items-center gap-1.5 ps-3.5 pe-4 py-1.5 rounded-lg font-bold text-xs transition-[background-color,color,border-color,transform] duration-150 ease-out active:scale-[0.96] border ${
                             isMaxInCart 
                               ? 'bg-green-500/20 hover:bg-green-500/40 text-green-400 border-green-500/30 cursor-pointer' 
                               : isWishlist 

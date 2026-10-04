@@ -174,9 +174,9 @@ export default function PortfolioPage() {
             <button
               key={tab}
               onClick={() => handleTabChange(tab)}
-              className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+              className={`px-6 py-3 text-sm font-medium border-b-2 active:scale-[0.96] transition-all duration-150 cursor-pointer ${
                 currentTab === tab
-                  ? 'border-amber-400 text-amber-400'
+                  ? 'border-amber-400 text-amber-400 font-semibold'
                   : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-white/20'
               }`}
             >
@@ -236,9 +236,9 @@ export default function PortfolioPage() {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0, opacity: 0 }}
           whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.96 }}
           onClick={() => setIsCartOpen(true)}
-          className={`fixed bottom-6 right-6 z-40 bg-amber-500 text-black shadow-[0_8px_32px_rgba(245,158,11,0.45)] flex items-center justify-center hover:bg-amber-400 transition-all cursor-pointer ${
+          className={`fixed bottom-6 right-6 z-40 bg-amber-500 text-black shadow-[0_8px_32px_rgba(245,158,11,0.45)] flex items-center justify-center hover:bg-amber-400 transition-[background-color,box-shadow,transform] duration-150 ease-out cursor-pointer ${
             totalCartPrice > 0 ? 'px-4 py-3.5 rounded-full gap-2.5' : 'p-4 rounded-full'
           }`}
           title="Ver carrito"

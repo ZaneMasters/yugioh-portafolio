@@ -51,4 +51,7 @@ export const syncSingleCardPrice = (id) => api.post(`/cards/${id}/sync-price`)
 /** Buscar cartas exclusivamente por set code (público) */
 export const searchCardsBySet = (code) => publicApi.get('/cards/search-by-set', { params: { code } })
 
+/** Actualizar en segundo plano el precio TCGPlayer de una carta (público / carrito) */
+export const refreshCardPricePublic = (id) => publicApi.post(`/cards/public/refresh-price/${id}`)
+
 
