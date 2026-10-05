@@ -254,5 +254,26 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Animación de brillo de texto holográfico / foil (ShinyText) */
+  @keyframes text-shine {
+    0% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: -100% 50%;
+    }
+  }
+
+  .animate-text-shine {
+    animation: text-shine 4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-text-shine {
+      animation: none !important;
+    }
+  }
 }
+
 

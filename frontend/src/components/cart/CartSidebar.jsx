@@ -150,10 +150,10 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName, selle
               </div>
               <button 
                 onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-slate-400 hover:text-white active:scale-[0.96] transition-all duration-150 cursor-pointer"
+                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-slate-400 hover:text-white active:scale-[0.96] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer"
                 title="Cerrar carrito"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 stroke-2" />
               </button>
             </div>
 
@@ -177,7 +177,7 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName, selle
                     return (
                       <div 
                         key={`${card.id}-${item.isWishlist ? 'wishlist' : 'inventory'}`} 
-                        className="flex gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 group hover:border-white/10 transition-colors"
+                        className="flex gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 group hover:border-white/10 transition-colors duration-150 ease-out"
                       >
                         <div className="w-16 h-24 shrink-0 rounded-md overflow-hidden bg-black/40 border border-white/10 relative">
                           <img 
@@ -194,7 +194,7 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName, selle
                               <h3 className="text-sm font-bold text-white truncate" title={card.name}>{card.name}</h3>
                               <button 
                                 onClick={() => removeItem(card.id, item.isWishlist)}
-                                className="w-7 h-7 -mr-1 -mt-1 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 active:scale-[0.96] transition-all duration-150 shrink-0 cursor-pointer"
+                                className="w-7 h-7 -mr-1 -mt-1 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 active:scale-[0.96] transition-[background-color,color,transform] duration-150 ease-out shrink-0 cursor-pointer"
                                 title="Eliminar del carrito"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -220,17 +220,17 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName, selle
                                 <button 
                                   onClick={() => updateQuantity(card.id, Math.max(1, cartQuantity - 1), item.isWishlist)}
                                   disabled={cartQuantity <= 1}
-                                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 active:scale-[0.96] transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 active:scale-[0.96] transition-[background-color,color,transform] duration-150 ease-out disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
                                 >
                                   <Minus className="w-3.5 h-3.5" />
                                 </button>
-                                <span className="w-6 text-center text-xs font-bold text-white">
+                                <span className="w-6 text-center text-xs font-bold text-white tabular-nums">
                                   {cartQuantity}
                                 </span>
                                 <button 
                                   onClick={() => updateQuantity(card.id, item.isWishlist ? cartQuantity + 1 : Math.min(card.quantity, cartQuantity + 1), item.isWishlist)}
                                   disabled={!item.isWishlist && cartQuantity >= card.quantity}
-                                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 active:scale-[0.96] transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 active:scale-[0.96] transition-[background-color,color,transform] duration-150 ease-out disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
                                 >
                                   <Plus className="w-3.5 h-3.5" />
                                 </button>
@@ -378,7 +378,7 @@ export function CartSidebar({ isOpen, onClose, whatsappNumber, sellerName, selle
                 <div className="text-center mt-3">
                   <button 
                     onClick={clearCart}
-                    className="text-xs text-slate-500 hover:text-slate-300 active:scale-[0.96] transition-all duration-150 cursor-pointer"
+                    className="text-xs text-slate-500 hover:text-slate-300 active:scale-[0.96] transition-[color,transform] duration-150 ease-out cursor-pointer"
                   >
                     Vaciar carrito
                   </button>

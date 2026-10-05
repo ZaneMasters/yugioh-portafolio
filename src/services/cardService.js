@@ -525,6 +525,32 @@ async function refreshCardPricePublic(id) {
 }
 
 /**
+ * Compara dos rarezas de Yu-Gi-Oh! de forma exacta y segura contra falsos positivos.
+ * Evita que 'Rare' coincida por substring con 'Collector\'s Rare', 'Super Rare', etc.
+ */
+function isSameRarity(r1, r2) {
+  if (!r1 || !r2) return false;
+  const n1 = r1.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const n2 = r2.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (n1 === n2) return true;
+
+  // Casos comunes de alias reconocidos
+  if ((n1 === 'quartercentury' && n2 === 'quartercenturysecretrare') ||
+      (n2 === 'quartercentury' && n1 === 'quartercenturysecretrare')) {
+    return true;
+  }
+  if ((n1 === 'collector' && n2 === 'collectorsrare') ||
+      (n2 === 'collector' && n1 === 'collectorsrare')) {
+    return true;
+  }
+  if ((n1 === 'starlight' && n2 === 'starlightrare') ||
+      (n2 === 'starlight' && n1 === 'starlightrare')) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Busca cartas exclusivamente por código de set / expansión.
  * Consulta el catálogo general y cruza con las cartas de la comunidad
  * para mostrar qué coleccionistas la tienen disponible.
@@ -580,7 +606,7 @@ async function searchBySetCode(setCode) {
         if (cCode && (cCode.includes(normalizedQuery) || normalizedQuery.includes(cCode))) {
           const owner = userMap[cardData.userId];
           if (owner) {
-            const cId = cardData.cardId;
+            const cId = String(cardData.cardId);
             if (!ownersByCardId[cId]) ownersByCardId[cId] = [];
             ownersByCardId[cId].push({
               id: doc.id,
@@ -604,59 +630,110 @@ async function searchBySetCode(setCode) {
 
   // 3. Enriquecer los resultados del catálogo con precios en vivo y fallbacks garantizados
   try {
-    const enrichedCards = await Promise.all(
+    const enrichedCardsNested = await Promise.all(
       catalogCards.map(async (c) => {
-        const matchingSet = c.cardSets?.find((s) => {
+        // Encontrar todos los sets que coinciden con la búsqueda por setCode
+        let matchingSets = (c.cardSets || []).filter((s) => {
           const sCode = (s.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          return sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode);
-        }) || c.cardSets?.[0] || null;
+          return sCode && (sCode === normalizedQuery || sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode));
+        });
 
-        const owners = ownersByCardId[c.cardId] || [];
+        // Si no coincidió por setCode, intentar por nombre de set
+        if (matchingSets.length === 0) {
+          matchingSets = (c.cardSets || []).filter((s) => {
+            const sName = (s.setName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            return sName && (sName.includes(normalizedQuery) || normalizedQuery.includes(sName));
+          });
+        }
 
-        // Consultar precios oficiales TCGPlayer en vivo para este set code exacto
-        let tcgPrices = { marketPrice: null, lowPrice: null };
-        if (matchingSet?.setCode) {
-          try {
-            tcgPrices = await tcgPlayerService.getPriceForCard(
-              c.name,
-              matchingSet.setCode,
-              matchingSet.rarity,
-              matchingSet.setName
-            );
-          } catch (err) {
-            logger.debug(`No se pudo obtener precio TCGPlayer para "${c.name}" (${matchingSet.setCode}): ${err.message}`);
+        // Si aún así no hay match, tomar el primer set disponible
+        if (matchingSets.length === 0 && c.cardSets?.[0]) {
+          matchingSets = [c.cardSets[0]];
+        }
+
+        // Deduplicar sets por combinación de setCode + rareza exacta
+        const uniqueSets = [];
+        const seenSetRarity = new Set();
+        for (const s of matchingSets) {
+          const key = `${(s.setCode || '').trim().toUpperCase()}|${(s.rarity || '').trim().toLowerCase()}`;
+          if (!seenSetRarity.has(key)) {
+            seenSetRarity.add(key);
+            uniqueSets.push(s);
           }
         }
 
-        // Fallback confiable de precio si TCGPlayer en vivo no responde (ej. rate limit o bloqueo de IP de Cloud Functions)
-        const fallbackPrice = (matchingSet?.setPrice && matchingSet.setPrice > 0)
-          ? matchingSet.setPrice
-          : (c.tcgPrice && c.tcgPrice > 0 ? c.tcgPrice : null);
+        const owners = ownersByCardId[String(c.cardId)] || [];
 
-        const marketPrice = tcgPrices.marketPrice ?? fallbackPrice;
-        const lowPrice = tcgPrices.lowPrice ?? fallbackPrice;
+        // Para cada variante de set y rareza, consultar precios y filtrar dueños
+        return await Promise.all(
+          uniqueSets.map(async (mSet) => {
+            let tcgPrices = { marketPrice: null, lowPrice: null };
+            if (mSet?.setCode) {
+              try {
+                tcgPrices = await tcgPlayerService.getPriceForCard(
+                  c.name,
+                  mSet.setCode,
+                  mSet.rarity,
+                  mSet.setName
+                );
+              } catch (err) {
+                logger.debug(`No se pudo obtener precio TCGPlayer para "${c.name}" (${mSet.setCode} - ${mSet.rarity}): ${err.message}`);
+              }
+            }
 
-        // Si hay dueños de la comunidad con precio, calcular el precio más bajo en comunidad
-        const communityPrices = owners
-          .map((o) => (typeof o.price === 'number' ? o.price : parseFloat(o.price)))
-          .filter((p) => !isNaN(p) && p > 0);
-        const minCommunityPrice = communityPrices.length > 0 ? Math.min(...communityPrices) : null;
+            const fallbackPrice = (mSet?.setPrice && mSet.setPrice > 0)
+              ? mSet.setPrice
+              : (c.tcgPrice && c.tcgPrice > 0 ? c.tcgPrice : null);
 
-        return {
-          ...c,
-          marketPrice,
-          lowPrice,
-          minCommunityPrice,
-          matchedSet: {
-            ...matchingSet,
-            marketPrice,
-            lowPrice,
-          },
-          communityOwners: owners,
-          availableInCommunity: owners.length > 0,
-        };
+            const marketPrice = tcgPrices.marketPrice ?? fallbackPrice;
+            const lowPrice = tcgPrices.lowPrice ?? fallbackPrice;
+
+            // Filtrar los dueños de la comunidad que tengan EXACTAMENTE este set y esta rareza
+            const normSetCode = (mSet?.setCode || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            const matchingOwners = owners.filter((o) => {
+              const oSetCode = (o.setCode || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (oSetCode && normSetCode && oSetCode !== normSetCode) return false;
+
+              if (o.rarity && mSet?.rarity) {
+                return isSameRarity(o.rarity, mSet.rarity);
+              }
+              return uniqueSets.length === 1;
+            });
+
+            const communityPrices = matchingOwners
+              .map((o) => (typeof o.price === 'number' ? o.price : parseFloat(o.price)))
+              .filter((p) => !isNaN(p) && p > 0);
+            const minCommunityPrice = communityPrices.length > 0 ? Math.min(...communityPrices) : null;
+
+            const raritySlug = (mSet?.rarity || '').replace(/[^a-zA-Z0-9]/g, '_');
+            const uniqueId = `${c.cardId}_${mSet?.setCode || ''}_${raritySlug}`;
+
+            return {
+              ...c,
+              id: uniqueId,
+              setCode: mSet?.setCode || null,
+              setName: mSet?.setName || null,
+              rarity: mSet?.rarity || null,
+              tcgMarketPrice: marketPrice,
+              tcgLowPrice: lowPrice,
+              marketPrice,
+              lowPrice,
+              minCommunityPrice,
+              matchedSet: {
+                ...mSet,
+                marketPrice,
+                lowPrice,
+              },
+              communityOwners: matchingOwners,
+              availableInCommunity: matchingOwners.length > 0,
+            };
+          })
+        );
       })
     );
+
+    const enrichedCards = enrichedCardsNested.flat();
 
     // Guardar en caché en memoria por 2 minutos para evitar consultas masivas repetidas a Firestore
     memCache.set(cacheKey, enrichedCards, 120);
@@ -664,30 +741,64 @@ async function searchBySetCode(setCode) {
     return enrichedCards;
   } catch (err) {
     logger.warn(`Error enriqueciendo precios para set "${setCode}": ${err.message}`);
-    return catalogCards.map((c) => {
-      const matchingSet = c.cardSets?.find((s) => {
+    const fallbackCards = catalogCards.flatMap((c) => {
+      let matchingSets = (c.cardSets || []).filter((s) => {
         const sCode = (s.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        return sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode);
-      }) || c.cardSets?.[0] || null;
+        return sCode && (sCode === normalizedQuery || sCode.includes(normalizedQuery) || normalizedQuery.includes(sCode));
+      });
 
-      const fallbackPrice = (matchingSet?.setPrice && matchingSet.setPrice > 0)
-        ? matchingSet.setPrice
-        : (c.tcgPrice && c.tcgPrice > 0 ? c.tcgPrice : null);
+      if (matchingSets.length === 0) {
+        matchingSets = (c.cardSets || []).filter((s) => {
+          const sName = (s.setName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          return sName && (sName.includes(normalizedQuery) || normalizedQuery.includes(sName));
+        });
+      }
 
-      return {
-        ...c,
-        marketPrice: fallbackPrice,
-        lowPrice: fallbackPrice,
-        minCommunityPrice: null,
-        matchedSet: {
-          ...matchingSet,
+      if (matchingSets.length === 0 && c.cardSets?.[0]) {
+        matchingSets = [c.cardSets[0]];
+      }
+
+      const uniqueSets = [];
+      const seenSetRarity = new Set();
+      for (const s of matchingSets) {
+        const key = `${(s.setCode || '').trim().toUpperCase()}|${(s.rarity || '').trim().toLowerCase()}`;
+        if (!seenSetRarity.has(key)) {
+          seenSetRarity.add(key);
+          uniqueSets.push(s);
+        }
+      }
+
+      return uniqueSets.map((mSet) => {
+        const fallbackPrice = (mSet?.setPrice && mSet.setPrice > 0)
+          ? mSet.setPrice
+          : (c.tcgPrice && c.tcgPrice > 0 ? c.tcgPrice : null);
+
+        const raritySlug = (mSet?.rarity || '').replace(/[^a-zA-Z0-9]/g, '_');
+        const uniqueId = `${c.cardId}_${mSet?.setCode || ''}_${raritySlug}`;
+
+        return {
+          ...c,
+          id: uniqueId,
+          setCode: mSet?.setCode || null,
+          setName: mSet?.setName || null,
+          rarity: mSet?.rarity || null,
+          tcgMarketPrice: fallbackPrice,
+          tcgLowPrice: fallbackPrice,
           marketPrice: fallbackPrice,
           lowPrice: fallbackPrice,
-        },
-        communityOwners: [],
-        availableInCommunity: false,
-      };
+          minCommunityPrice: null,
+          matchedSet: {
+            ...mSet,
+            marketPrice: fallbackPrice,
+            lowPrice: fallbackPrice,
+          },
+          communityOwners: [],
+          availableInCommunity: false,
+        };
+      });
     });
+
+    return fallbackCards;
   }
 }
 

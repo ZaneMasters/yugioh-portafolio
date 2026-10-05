@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -18,13 +18,18 @@ import {
   MessageCircle,
   Database,
   ChevronRight,
-  Flame
+  Flame,
+  TrendingUp
 } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { usePublicUsers } from '../../hooks/usePublicUsers'
 import { useSearchBySet } from '../../hooks/useSearchBySet'
 import { useAuth } from '../../context/AuthContext'
 import { CardDetailModal } from '../../components/cards/CardDetailModal'
+import { Badge } from '../../components/ui/Badge'
+import { SpotlightCard } from '../../components/ui/SpotlightCard'
+import { ShinyText } from '../../components/ui/ShinyText'
+import { CountUp } from '../../components/ui/CountUp'
 import logo from '../../assets/logo.webp'
 
 const POPULAR_SET_CODES = [
@@ -41,7 +46,7 @@ const FEATURES = [
     icon: Layers,
     tag: 'Control Total',
     title: 'Inventario & Valuación',
-    desc: 'Registra cada carta con su condición (NM, LP, MP), rareza exacta y carpetas temáticas con valuación de mercado automática.',
+    desc: 'Registra cada carta con su Set Code, rareza exacta, edición, idioma y carpetas temáticas con valuación de mercado automática desde TCGPlayer.',
     color: '#fbbf24',
     borderGlow: 'rgba(251, 191, 36, 0.25)',
   },
@@ -68,11 +73,24 @@ export default function HomePage() {
   const [activeSetQuery, setActiveSetQuery] = useState('')
   const [error, setError] = useState('')
   const [detailCard, setDetailCard] = useState(null)
+  const resultsRef = useRef(null)
   const navigate = useNavigate()
 
   const { users, loading: loadingUsers } = usePublicUsers()
   const { cards: searchResults, loading: loadingSearch } = useSearchBySet(activeSetQuery)
   const { user, profile } = useAuth()
+
+  const scrollToResults = () => {
+    setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 120)
+  }
+
+  useEffect(() => {
+    if (activeSetQuery) {
+      scrollToResults()
+    }
+  }, [activeSetQuery])
 
   const handleSearch = (e) => {
     e?.preventDefault()
@@ -87,12 +105,14 @@ export default function HomePage() {
     }
     setError('')
     setActiveSetQuery(clean)
+    scrollToResults()
   }
 
   const handleSelectExample = (code) => {
     setSetCodeInput(code)
     setError('')
     setActiveSetQuery(code)
+    scrollToResults()
   }
 
   const handleClearSearch = () => {
@@ -114,7 +134,7 @@ export default function HomePage() {
       <div className="min-h-screen bg-[#080a11] text-slate-100 flex flex-col relative overflow-x-hidden">
 
         {/* ── Navbar ─────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#080a11]/85 border-b border-white/5 transition-all">
+        <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#080a11]/85 border-b border-white/5">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
             {/* Logo oficial */}
             <a href="/" className="flex items-center gap-3 group">
@@ -137,32 +157,32 @@ export default function HomePage() {
             <nav className="flex items-center gap-3 sm:gap-6">
               <a
                 href="#buscador"
-                className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors hidden md:inline-flex items-center gap-1"
+                className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors duration-150 hidden md:inline-flex items-center gap-1.5"
               >
-                <Search className="w-3.5 h-3.5" />
+                <Search className="w-3.5 h-3.5 stroke-[1.75]" />
                 Buscador Set Code
               </a>
               <a
                 href="#coleccionistas"
-                className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors hidden sm:inline-flex items-center gap-1"
+                className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors duration-150 hidden sm:inline-flex items-center gap-1.5"
               >
-                <Users className="w-3.5 h-3.5" />
+                <Users className="w-3.5 h-3.5 stroke-[1.75]" />
                 Coleccionistas
               </a>
               {user ? (
                 <Link
                   to="/admin/search"
-                  className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-all shadow-[0_0_15px_rgba(245,158,11,0.08)] hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] active:scale-[0.96]"
+                  className="flex items-center gap-1.5 text-xs font-bold ps-3 pe-3.5 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out shadow-[0_0_15px_rgba(245,158,11,0.08)] hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] active:scale-[0.96]"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400 stroke-2" />
                   <span>Panel Admin</span>
                 </Link>
               ) : (
                 <Link
                   to="/login"
-                  className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all active:scale-[0.96]"
+                  className="flex items-center gap-1.5 text-xs font-bold ps-3 pe-3.5 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-[background-color,border-color,color,transform] duration-150 ease-out active:scale-[0.96]"
                 >
-                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <Lock className="w-3.5 h-3.5 text-amber-400 stroke-2" />
                   <span>Acceder</span>
                 </Link>
               )}
@@ -204,15 +224,15 @@ export default function HomePage() {
 
           <div className="relative z-10 w-full max-w-4xl flex flex-col items-center text-center">
             
-            {/* Badge místico */}
+            {/* Badge místico con ShinyText */}
             <motion.div
               initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/60 border border-amber-500/40 text-amber-300 text-xs font-semibold mb-6 tracking-wider uppercase backdrop-blur-md shadow-[0_0_25px_rgba(245,158,11,0.2)]"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span>Plataforma Oficial de Coleccionistas & TCG</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
+              <ShinyText text="Plataforma Oficial de Coleccionistas & TCG" color="#fbbf24" shineColor="#fffbeb" speed={3.5} />
             </motion.div>
 
             {/* Título Principal */}
@@ -235,7 +255,8 @@ export default function HomePage() {
               transition={{ duration: 0.5, delay: 0.16 }}
               className="font-ui text-sm sm:text-lg md:text-xl text-slate-200 max-w-2xl leading-relaxed mb-6 sm:mb-8 font-medium drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] px-2"
             >
-              Gestiona tu inventario con precios en tiempo real, localiza cartas por su{' '}
+              Gestiona tu inventario con precios en tiempo real de{' '}
+              <span className="text-emerald-400 font-bold">TCGPlayer</span>, localiza cartas por su{' '}
               <span className="text-amber-400 font-semibold font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30 whitespace-nowrap">
                 Código de Set
               </span>{' '}
@@ -252,12 +273,12 @@ export default function HomePage() {
             >
               <form onSubmit={handleSearch} className="relative group">
                 {/* Borde con degradado iluminado */}
-                <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-amber-500/40 via-yellow-500/20 to-purple-500/40 opacity-70 blur-sm group-hover:opacity-100 transition duration-300" />
+                <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-amber-500/40 via-yellow-500/20 to-purple-500/40 opacity-70 blur-sm group-hover:opacity-100 transition-opacity duration-200 ease-out" />
                 
                 <div className="relative flex items-center bg-[#0c101a]/95 backdrop-blur-xl rounded-2xl border border-amber-500/30 p-1 sm:p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.8)]">
                   {/* Tag prefix */}
-                  <div className="shrink-0 px-2 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1 text-amber-400 text-[11px] sm:text-xs font-mono font-bold select-none border-r border-white/10">
-                    <Tag className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
+                  <div className="shrink-0 ps-2.5 pe-3 sm:ps-3.5 sm:pe-4 py-1.5 sm:py-2 flex items-center gap-1 text-amber-400 text-[11px] sm:text-xs font-mono font-bold select-none border-r border-white/10">
+                    <Tag className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 stroke-2" />
                     <span>SET:</span>
                   </div>
 
@@ -280,19 +301,19 @@ export default function HomePage() {
                     <button
                       type="button"
                       onClick={handleClearSearch}
-                      className="p-1 sm:p-2 text-slate-500 hover:text-white transition-colors cursor-pointer mr-0.5"
+                      className="p-1 sm:p-2 text-slate-500 hover:text-white transition-colors duration-150 cursor-pointer mr-0.5"
                       title="Limpiar"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-3.5 h-3.5 stroke-2" />
                     </button>
                   )}
 
-                  {/* Botón de búsqueda */}
+                  {/* Botón de búsqueda (optical alignment: icon-side padding = text-side - 2px) */}
                   <button
                     type="submit"
-                    className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 active:scale-[0.96] text-black text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                    className="shrink-0 flex items-center gap-1.5 ps-3 pe-3.5 sm:ps-4 sm:pe-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 active:scale-[0.96] text-black text-xs sm:text-sm font-bold transition-[background-image,box-shadow,transform] duration-150 ease-out cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                   >
-                    <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-2" />
                     <span>Buscar</span>
                   </button>
                 </div>
@@ -312,7 +333,7 @@ export default function HomePage() {
                     key={code}
                     type="button"
                     onClick={() => handleSelectExample(code)}
-                    className={`inline-flex items-center px-2.5 py-1 rounded-full font-mono text-[11px] active:scale-[0.96] transition-all duration-150 cursor-pointer ${
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full font-mono text-[11px] active:scale-[0.96] transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out cursor-pointer ${
                       activeSetQuery.toUpperCase() === code.toUpperCase()
                         ? 'bg-amber-500 text-black font-bold shadow-[0_0_10px_rgba(245,158,11,0.5)]'
                         : 'bg-white/[0.04] hover:bg-amber-500/15 border border-white/10 hover:border-amber-500/40 text-slate-300 hover:text-amber-300'
@@ -324,20 +345,30 @@ export default function HomePage() {
               </div>
             </motion.div>
 
-            {/* Métricas rápidas / Badges de plataforma */}
+            {/* Métricas rápidas / Badges de plataforma con CountUp */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="mt-10 flex items-center justify-center gap-4 sm:gap-8 flex-wrap text-xs text-slate-400"
+              className="mt-10 flex items-center justify-center gap-3 sm:gap-6 flex-wrap text-xs text-slate-400"
             >
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/5">
                 <Database className="w-3.5 h-3.5 text-amber-400" />
-                <span><strong className="text-white font-mono">+14,000</strong> Cartas TCG</span>
+                <span>
+                  <CountUp to={14000} prefix="+" className="text-white font-mono font-bold" /> Cartas TCG
+                </span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/20 text-emerald-300">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                <span>
+                  Precios en vivo <ShinyText text="TCGPlayer" color="#34d399" shineColor="#ffffff" speed={3} className="font-bold font-mono" />
+                </span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/5">
                 <Users className="w-3.5 h-3.5 text-purple-400" />
-                <span><strong className="text-white font-mono">{users.length}</strong> Coleccionistas</span>
+                <span>
+                  <CountUp to={users.length} className="text-white font-mono font-bold" /> Coleccionistas
+                </span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/5">
                 <Tag className="w-3.5 h-3.5 text-sky-400" />
@@ -349,9 +380,13 @@ export default function HomePage() {
         </section>
 
         {/* ── Sección de Resultados de Búsqueda ───────────────────────── */}
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {activeSetQuery && (
-            <section className="w-full max-w-4xl mx-auto px-3 sm:px-4 mb-12 sm:mb-16">
+            <section
+              ref={resultsRef}
+              id="resultados"
+              className="w-full max-w-4xl mx-auto px-3 sm:px-4 mb-12 sm:mb-16 scroll-mt-24"
+            >
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -408,12 +443,14 @@ export default function HomePage() {
                       const commPrice = card.minCommunityPrice
 
                       return (
-                        <div
-                          key={card.cardId || card.id}
-                          className="flex flex-col p-3.5 sm:p-5 rounded-xl bg-black/40 border border-white/10 hover:border-amber-500/30 transition-all duration-200 gap-3"
+                        <SpotlightCard
+                          key={card.id || `${card.cardId}_${matched?.setCode}_${matched?.rarity}`}
+                          className="rounded-xl border border-white/10 hover:border-amber-500/30 transition-[border-color] duration-200 bg-black/40"
+                          spotlightColor="rgba(245, 158, 11, 0.12)"
                         >
-                          {/* Fila superior: Imagen al lado de la información clave (mobile y desktop) */}
-                          <div className="flex gap-3 sm:gap-5 items-start">
+                          <div className="flex flex-col p-3.5 sm:p-5 gap-3">
+                            {/* Fila superior: Imagen al lado de la información clave (mobile y desktop) */}
+                            <div className="flex gap-3 sm:gap-5 items-start">
                             {/* Miniatura */}
                             <div
                               onClick={() => setDetailCard(card)}
@@ -460,9 +497,7 @@ export default function HomePage() {
                                     {matched.setCode}
                                   </span>
                                   {matched.rarity && (
-                                    <span className="px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-[10px] sm:text-xs text-purple-300 font-semibold truncate max-w-[150px] sm:max-w-none">
-                                      {matched.rarity}
-                                    </span>
+                                    <Badge rarity={matched.rarity} />
                                   )}
                                   {matched.setName && (
                                     <span className="text-[11px] sm:text-xs text-slate-400 font-medium truncate hidden md:inline max-w-xs">
@@ -477,7 +512,7 @@ export default function HomePage() {
                                 {tcgPrice ? (
                                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/35 text-amber-300 shadow-sm">
                                     <span className="text-[9px] sm:text-[10px] uppercase font-mono font-bold tracking-wider text-amber-400/90">
-                                      Precio TCG:
+                                      Precio TCGPlayer Market:
                                     </span>
                                     <span className="font-stat font-bold text-xs sm:text-sm text-amber-300">
                                       ${Number(tcgPrice).toFixed(2)} USD
@@ -490,7 +525,7 @@ export default function HomePage() {
                                   </div>
                                 ) : (
                                   <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400 text-[10px] font-mono">
-                                    <span>TCG: Sin precio en vivo</span>
+                                    <span>TCGPlayer: Sin precio en vivo</span>
                                   </div>
                                 )}
                               </div>
@@ -514,11 +549,11 @@ export default function HomePage() {
                                   {card.communityOwners.map((owner) => {
                                     const isMe = profile?.slug && owner.slug === profile.slug;
                                     return (
-                                      <button
+                                        <button
                                         key={owner.id || owner.slug}
                                         type="button"
                                         onClick={() => navigate(`/portfolio/${owner.slug}`)}
-                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] sm:text-xs font-medium active:scale-[0.96] transition-all duration-150 cursor-pointer ${
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] sm:text-xs font-medium active:scale-[0.96] transition-[background-color,border-color,transform] duration-150 ease-out cursor-pointer ${
                                           isMe
                                             ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/40 text-amber-300 font-bold shadow-sm'
                                             : 'bg-emerald-500/10 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-300'
@@ -543,14 +578,15 @@ export default function HomePage() {
                             <button
                               type="button"
                               onClick={() => setDetailCard(card)}
-                              className="self-end sm:self-auto inline-flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 active:scale-[0.96] transition-all duration-150 cursor-pointer shrink-0"
+                              className="self-end sm:self-auto inline-flex items-center gap-1.5 pe-0.5 text-xs font-bold text-amber-400 hover:text-amber-300 active:scale-[0.96] transition-[color,transform] duration-150 ease-out cursor-pointer shrink-0"
                             >
-                              Ver detalle completo
-                              <ChevronRight className="w-3.5 h-3.5" />
+                              <span>Ver detalle completo</span>
+                              <ChevronRight className="w-3.5 h-3.5 stroke-2" />
                             </button>
                           </div>
                         </div>
-                      )
+                      </SpotlightCard>
+                    )
                     })}
                   </div>
                 )}
@@ -596,53 +632,60 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.05 }}
-                  onClick={() => navigate(`/portfolio/${u.slug}`)}
-                  className="glass-textured group relative rounded-xl border border-white/10 bg-[#0f1420]/80 hover:bg-[#151c2c]/90 hover:border-amber-500/40 p-5 transition-all duration-200 cursor-pointer flex flex-col justify-between shadow-md hover:shadow-[0_8px_30px_rgba(245,158,11,0.1)]"
+                  className="h-full"
                 >
-                  <div>
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-heading font-bold text-white text-lg group-hover:text-amber-400 transition-colors truncate">
-                        {u.displayName}
-                      </h3>
-                      {u.hasWhatsapp && (
-                        <span
-                          title="Ventas y tratos activos por WhatsApp"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full"
-                        >
-                          <MessageCircle className="w-3 h-3 text-emerald-400" />
-                          <span>WhatsApp</span>
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 font-mono truncate mt-1">
-                      /portfolio/{u.slug}
-                    </p>
-                  </div>
+                  <SpotlightCard
+                    onClick={() => navigate(`/portfolio/${u.slug}`)}
+                    className="glass-textured group relative rounded-xl border border-white/10 bg-[#0f1420]/80 hover:bg-[#151c2c]/90 hover:border-amber-500/40 transition-[border-color,background-color,box-shadow] duration-200 cursor-pointer shadow-md hover:shadow-[0_8px_30px_rgba(245,158,11,0.1)] h-full"
+                    spotlightColor="rgba(245, 158, 11, 0.15)"
+                  >
+                    <div className="p-5 flex flex-col justify-between h-full">
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="font-heading font-bold text-white text-lg group-hover:text-amber-400 transition-colors truncate">
+                            {u.displayName}
+                          </h3>
+                          {u.hasWhatsapp && (
+                            <span
+                              title="Ventas y tratos activos por WhatsApp"
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full"
+                            >
+                              <MessageCircle className="w-3 h-3 text-emerald-400" />
+                              <span>WhatsApp</span>
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 font-mono truncate mt-1">
+                          /portfolio/{u.slug}
+                        </p>
+                      </div>
 
-                  {/* Footer con contadores de cartas y link */}
-                  <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1.5 font-medium text-amber-300 font-stat">
-                        <Layers className="w-3.5 h-3.5 text-amber-400" />
-                        <span>{u.inventoryCount}</span>
-                        <span className="text-slate-500 text-[11px] font-ui">cartas</span>
-                      </span>
-                      {u.wishlistCount > 0 && (
-                        <span
-                          className="flex items-center gap-1 font-medium text-rose-300 font-stat"
-                          title="Cartas en lista de deseos"
-                        >
-                          <Heart className="w-3.5 h-3.5 text-rose-400" />
-                          <span>{u.wishlistCount}</span>
-                        </span>
-                      )}
-                    </div>
+                      {/* Footer con contadores de cartas y link */}
+                      <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1.5 font-medium text-amber-300 font-stat">
+                            <Layers className="w-3.5 h-3.5 text-amber-400" />
+                            <CountUp to={u.inventoryCount} className="font-bold" />
+                            <span className="text-slate-500 text-[11px] font-ui">cartas</span>
+                          </span>
+                          {u.wishlistCount > 0 && (
+                            <span
+                              className="flex items-center gap-1 font-medium text-rose-300 font-stat"
+                              title="Cartas en lista de deseos"
+                            >
+                              <Heart className="w-3.5 h-3.5 text-rose-400" />
+                              <CountUp to={u.wishlistCount} className="font-bold" />
+                            </span>
+                          )}
+                        </div>
 
-                    <span className="text-xs font-bold text-slate-400 group-hover:text-amber-400 transition-colors flex items-center gap-1">
-                      Ver Portafolio
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  </div>
+                        <span className="text-xs font-bold text-slate-400 group-hover:text-amber-400 transition-colors flex items-center gap-1">
+                          Ver Portafolio
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                        </span>
+                      </div>
+                    </div>
+                  </SpotlightCard>
                 </motion.div>
               ))}
             </div>
@@ -668,27 +711,34 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + i * 0.08 }}
-                className="glass-textured relative rounded-2xl border border-white/10 bg-[#0d121c]/80 hover:bg-[#121824] p-6 transition-all duration-200 group"
+                className="h-full"
               >
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
-                  style={{
-                    background: `${f.color}15`,
-                    border: `1px solid ${f.borderGlow}`,
-                  }}
+                <SpotlightCard
+                  className="glass-textured relative rounded-2xl border border-white/10 bg-[#0d121c]/80 hover:bg-[#121824] transition-[border-color,background-color] duration-200 group h-full"
+                  spotlightColor={`${f.color}18`}
                 >
-                  <f.icon style={{ width: 20, height: 20, color: f.color }} />
-                </div>
-                <span
-                  className="text-[10px] font-mono uppercase tracking-widest font-bold block mb-1"
-                  style={{ color: f.color }}
-                >
-                  {f.tag}
-                </span>
-                <h3 className="font-heading text-lg font-bold text-white mb-2">{f.title}</h3>
-                <p className="font-ui text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
-                  {f.desc}
-                </p>
+                  <div className="p-6 flex flex-col h-full">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-105"
+                      style={{
+                        background: `${f.color}15`,
+                        border: `1px solid ${f.borderGlow}`,
+                      }}
+                    >
+                      <f.icon style={{ width: 20, height: 20, color: f.color }} />
+                    </div>
+                    <span
+                      className="text-[10px] font-mono uppercase tracking-widest font-bold block mb-1"
+                      style={{ color: f.color }}
+                    >
+                      {f.tag}
+                    </span>
+                    <h3 className="font-heading text-lg font-bold text-white mb-2">{f.title}</h3>
+                    <p className="font-ui text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
+                      {f.desc}
+                    </p>
+                  </div>
+                </SpotlightCard>
               </motion.div>
             ))}
           </div>
@@ -719,11 +769,11 @@ export default function HomePage() {
               </p>
               <a
                 href="/login"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black text-sm font-bold shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all duration-150 transform active:scale-[0.96]"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black text-sm font-bold shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-[background-image,box-shadow,transform] duration-150 ease-out active:scale-[0.96]"
               >
-                <Lock className="w-4 h-4" />
+                <Lock className="w-4 h-4 stroke-2" />
                 <span>Acceder al Panel de Coleccionista</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 stroke-2" />
               </a>
             </div>
           </div>
@@ -737,7 +787,16 @@ export default function HomePage() {
               <span>Yu-Gi-Oh! Inventory & Portfolio</span>
             </div>
             <p className="text-center sm:text-right">
-              Powered by{' '}
+              Precios de mercado sincronizados con{' '}
+              <a
+                href="https://www.tcgplayer.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-slate-400 hover:text-emerald-400 transition-colors font-medium"
+              >
+                TCGPlayer
+              </a>
+              {' '}• Base de datos por{' '}
               <a
                 href="https://db.ygoprodeck.com"
                 target="_blank"
@@ -756,7 +815,8 @@ export default function HomePage() {
           <CardDetailModal
             card={detailCard}
             onClose={() => setDetailCard(null)}
-            isPublic={true}
+            isPublic={false}
+            isCatalog={true}
           />
         )}
 

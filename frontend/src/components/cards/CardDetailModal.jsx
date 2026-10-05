@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  X, Sword, Shield, Star, Layers, Link2, Sparkles, Tag, DollarSign, Globe, BookOpen, ShoppingCart, Check, ArrowRightLeft, Clock
+  X, Sword, Shield, Star, Layers, Link2, Sparkles, Tag, DollarSign, Globe, BookOpen, ShoppingCart, Check, ArrowRightLeft, Clock, Users, ChevronRight, CheckCircle2
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { RARITIES, LANGUAGES } from '../../utils/constants'
@@ -257,7 +257,7 @@ function injectStyles() {
 /**
  * Modal de detalles de carta – diseño premium, totalmente responsivo
  */
-export function CardDetailModal({ card, onClose, isPublic, isWishlist = false }) {
+export function CardDetailModal({ card, onClose, isPublic, isWishlist = false, isCatalog = false }) {
   const open = !!card
 
   const { items, addItem, removeItem } = useCartStore()
@@ -308,13 +308,20 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
     return () => unlockScroll()
   }, [open])
 
+  // Resolver atributos (soporta cartas de inventario y de catálogo/búsqueda de set)
+  const setCode = card?.setCode || card?.matchedSet?.setCode || null
+  const rarity = card?.rarity || card?.matchedSet?.rarity || null
+  const setName = card?.setName || card?.matchedSet?.setName || null
+  const tcgMarketPrice = card?.tcgMarketPrice ?? card?.marketPrice ?? card?.matchedSet?.marketPrice ?? (card?.tcgPrice && card?.tcgPrice !== '0.00' && card?.tcgPrice !== '0' ? card?.tcgPrice : null)
+  const tcgLowPrice = card?.tcgLowPrice ?? card?.lowPrice ?? card?.matchedSet?.lowPrice ?? null
+
   const frameType  = card?.frameType ?? 'normal'
   const glowColor  = FRAME_GLOW[frameType] ?? '#64748b'
   const typeMeta   = card ? resolveTypeMeta(card.type) : {}
   const attrStyle  = card?.attribute ? (ATTR_COLORS[card.attribute.toUpperCase()] ?? null) : null
   const isMonster  = card && card.atk !== null && card.atk !== undefined
   const frameLabel = FRAME_LABEL[frameType] ?? frameType
-  const foilClass  = getFoilClass(card?.rarity)
+  const foilClass  = getFoilClass(rarity)
 
   return createPortal(
     <AnimatePresence>
@@ -479,21 +486,53 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
 
                   {/* Inventario y Carrito */}
                   <div className="cdm-inventory-row">
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '5px',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      borderRadius: '8px', padding: '5px 12px',
-                      fontSize: '13px', fontWeight: 700, color: '#e2e8f0',
-                    }}>
-                      <Layers style={{ width: 14, height: 14, color: '#94a3b8' }} />
-                      ×{card.quantity} en inventario
-                    </span>
-                    {card.rarity && (
-                      <Badge rarity={card.rarity} />
+                    {/* Solo mostrar inventario si NO es vista de catálogo y tiene cantidad válida */}
+                    {!isCatalog && card.quantity !== undefined && card.quantity !== null && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '8px', padding: '5px 12px',
+                        fontSize: '13px', fontWeight: 700, color: '#e2e8f0',
+                      }}>
+                        <Layers style={{ width: 14, height: 14, color: '#94a3b8' }} />
+                        ×{card.quantity} en inventario
+                      </span>
                     )}
 
-                    {isPublic && (
+                    {/* Badge de Rareza */}
+                    {rarity && (
+                      <Badge rarity={rarity} />
+                    )}
+
+                    {/* En vista de catálogo del home, mostrar badge informativo de disponibilidad */}
+                    {isCatalog && (
+                      card.communityOwners && card.communityOwners.length > 0 ? (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '5px',
+                          background: 'rgba(16, 185, 129, 0.1)',
+                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                          borderRadius: '8px', padding: '5px 10px',
+                          fontSize: '11px', fontWeight: 700, color: '#34d399',
+                        }}>
+                          <CheckCircle2 style={{ width: 13, height: 13 }} />
+                          {card.communityOwners.length} {card.communityOwners.length === 1 ? 'dueño en la comunidad' : 'dueños en la comunidad'}
+                        </span>
+                      ) : (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '5px',
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '8px', padding: '5px 10px',
+                          fontSize: '11px', fontWeight: 600, color: '#94a3b8',
+                        }}>
+                          Catálogo General TCG
+                        </span>
+                      )
+                    )}
+
+                    {/* Carrito solo en portfolios públicos de vendedores */}
+                    {!isCatalog && isPublic && (
                       isFullyReserved ? (
                         <span className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs bg-amber-500/15 text-amber-300 border border-amber-500/30 select-none">
                           <Clock style={{ width: 14, height: 14 }} /> Reservada
@@ -537,8 +576,8 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                 className="cdm-body"
                 style={{ borderTop: `1px solid ${glowColor}18` }}
               >
-                {/* Detalles de la versión física del inventario */}
-                {(card.setCode || card.setName || card.rarity || card.edition || card.language || card.tcgMarketPrice || card.tcgPrice) && (
+                {/* Detalles de la versión física del inventario o catálogo */}
+                {(setCode || setName || rarity || card.edition || card.language || tcgMarketPrice || tcgLowPrice) && (
                   <div style={{ marginTop: '20px' }}>
                     <SectionLabel
                       icon={<Tag style={{ width: 12, height: 12 }} />}
@@ -560,19 +599,19 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                         position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
                         background: `linear-gradient(90deg, ${glowColor}60, transparent)`,
                       }} />
-                      {card.setCode && (
+                      {setCode && (
                         <InfoChip
                           icon={<Tag style={{ width: 11, height: 11 }} />}
                           label="Set Code"
-                          value={card.setCode}
+                          value={setCode}
                           color="#fbbf24"
                         />
                       )}
-                      {card.rarity && (
+                      {rarity && (
                         <InfoChip
                           icon={<Sparkles style={{ width: 11, height: 11 }} />}
                           label="Rareza"
-                          value={card.rarity}
+                          value={rarity}
                           color="#c084fc"
                         />
                       )}
@@ -592,19 +631,19 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                           color="#38bdf8"
                         />
                       )}
-                      {(card.tcgMarketPrice != null || (card.tcgPrice && card.tcgPrice !== '0.00' && card.tcgPrice !== '0')) && (
+                      {tcgMarketPrice != null && (
                         <InfoChip
                           icon={<DollarSign style={{ width: 11, height: 11 }} />}
                           label="TCGPlayer Market"
-                          value={`$${Number(card.tcgMarketPrice || card.tcgPrice).toFixed(2)} USD`}
+                          value={`$${Number(tcgMarketPrice).toFixed(2)} USD`}
                           color="#34d399"
                         />
                       )}
-                      {card.tcgLowPrice != null && (
+                      {tcgLowPrice != null && (
                         <InfoChip
                           icon={<DollarSign style={{ width: 11, height: 11 }} />}
                           label="TCG Low"
-                          value={`$${Number(card.tcgLowPrice).toFixed(2)} USD`}
+                          value={`$${Number(tcgLowPrice).toFixed(2)} USD`}
                           color="#38bdf8"
                         />
                       )}
@@ -613,11 +652,55 @@ export function CardDetailModal({ card, onClose, isPublic, isWishlist = false })
                           Precios actualizados: {new Date(card.tcgPriceUpdatedAt).toLocaleDateString()}
                         </div>
                       )}
-                      {card.setName && (
+                      {setName && (
                         <div style={{ width: '100%', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                          {card.setName}
+                          {setName}
                         </div>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Disponibilidad con duelistas de la comunidad */}
+                {card.communityOwners && card.communityOwners.length > 0 && (
+                  <div style={{ marginTop: '20px' }}>
+                    <SectionLabel
+                      icon={<Users style={{ width: 12, height: 12 }} />}
+                      text="Disponible con Duelistas"
+                    />
+                    <div style={{
+                      marginTop: '10px',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                    }}>
+                      {card.communityOwners.map((owner) => (
+                        <a
+                          key={owner.id || owner.slug}
+                          href={`/portfolio/${owner.slug}`}
+                          onClick={onClose}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            borderRadius: '99px',
+                            background: 'rgba(16, 185, 129, 0.08)',
+                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                            color: '#6ee7b7',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <span>{owner.displayName}</span>
+                          <span style={{ fontSize: '11px', opacity: 0.85, fontFamily: 'monospace' }}>
+                            ({owner.quantity}x{owner.price ? ` • $${owner.price}` : ''})
+                          </span>
+                          <ChevronRight style={{ width: 12, height: 12, opacity: 0.7 }} />
+                        </a>
+                      ))}
                     </div>
                   </div>
                 )}
