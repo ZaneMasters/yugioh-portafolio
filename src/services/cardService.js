@@ -104,14 +104,9 @@ async function registerCard(dto, userId) {
     }
   }
 
-  const matchedSet = externalCard.cardSets?.find(s => s.setCode === dto.setCode);
-  const fallbackPrice = (matchedSet?.setPrice && matchedSet.setPrice > 0)
-    ? matchedSet.setPrice
-    : (externalCard.tcgPrice && externalCard.tcgPrice > 0 ? externalCard.tcgPrice : null);
-
-  const tcgMarketPrice    = livePrice.marketPrice ?? fallbackPrice;
-  const tcgLowPrice       = livePrice.lowPrice ?? fallbackPrice;
-  const tcgPriceUpdatedAt = (livePrice.marketPrice !== null || fallbackPrice !== null) ? new Date().toISOString() : null;
+  const tcgMarketPrice    = livePrice.marketPrice ?? null;
+  const tcgLowPrice       = livePrice.lowPrice ?? null;
+  const tcgPriceUpdatedAt = livePrice.marketPrice !== null ? new Date().toISOString() : null;
 
   // Guardar la carta inmediatamente con la URL de YGOProdeck (respuesta rápida al usuario)
   const newCard = await cardRepository.create({
@@ -413,11 +408,12 @@ async function syncSingleCardPrice(id, userId) {
     card.setName
   );
 
-  if (priceInfo.marketPrice === null && priceInfo.lowPrice === null) {
+  const chosenPrice = priceInfo.marketPrice ?? priceInfo.lowPrice;
+
+  if (chosenPrice === null) {
     throw new AppError(`No se encontró precio en TCGPlayer para "${card.name}" (${card.setCode}).`, 404);
   }
 
-  const chosenPrice = priceInfo.marketPrice ?? priceInfo.lowPrice;
   const updates = {
     tcgMarketPrice: chosenPrice,
     tcgLowPrice: priceInfo.lowPrice ?? null,
@@ -681,12 +677,8 @@ async function searchBySetCode(setCode) {
               }
             }
 
-            const fallbackPrice = (mSet?.setPrice && mSet.setPrice > 0)
-              ? mSet.setPrice
-              : (c.tcgPrice && c.tcgPrice > 0 ? c.tcgPrice : null);
-
-            const marketPrice = tcgPrices.marketPrice ?? fallbackPrice;
-            const lowPrice = tcgPrices.lowPrice ?? fallbackPrice;
+            const marketPrice = tcgPrices.marketPrice ?? null;
+            const lowPrice = tcgPrices.lowPrice ?? null;
 
             // Filtrar los dueños de la comunidad que tengan EXACTAMENTE este set y esta rareza
             const normSetCode = (mSet?.setCode || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -769,10 +761,6 @@ async function searchBySetCode(setCode) {
       }
 
       return uniqueSets.map((mSet) => {
-        const fallbackPrice = (mSet?.setPrice && mSet.setPrice > 0)
-          ? mSet.setPrice
-          : (c.tcgPrice && c.tcgPrice > 0 ? c.tcgPrice : null);
-
         const raritySlug = (mSet?.rarity || '').replace(/[^a-zA-Z0-9]/g, '_');
         const uniqueId = `${c.cardId}_${mSet?.setCode || ''}_${raritySlug}`;
 
@@ -782,15 +770,15 @@ async function searchBySetCode(setCode) {
           setCode: mSet?.setCode || null,
           setName: mSet?.setName || null,
           rarity: mSet?.rarity || null,
-          tcgMarketPrice: fallbackPrice,
-          tcgLowPrice: fallbackPrice,
-          marketPrice: fallbackPrice,
-          lowPrice: fallbackPrice,
+          tcgMarketPrice: null,
+          tcgLowPrice: null,
+          marketPrice: null,
+          lowPrice: null,
           minCommunityPrice: null,
           matchedSet: {
             ...mSet,
-            marketPrice: fallbackPrice,
-            lowPrice: fallbackPrice,
+            marketPrice: null,
+            lowPrice: null,
           },
           communityOwners: [],
           availableInCommunity: false,

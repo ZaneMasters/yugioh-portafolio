@@ -110,7 +110,7 @@ export function useCards(filters = {}) {
     addCard:             (payload)      => addMutation.mutateAsync(payload),
     editCard:            (id, payload)  => editMutation.mutateAsync({ id, payload }),
     removeCard:          (id)           => removeMutation.mutateAsync(id),
-    syncPrices:          (force = true) => syncPricesMutation.mutateAsync(force),
-    syncSingleCardPrice: (id)           => syncSingleCardMutation.mutateAsync(id),
+    syncPrices:          (force = true) => syncPricesMutation.mutate(force),
+    syncSingleCardPrice: (id)           => syncSingleCardMutation.mutate(id),
   }
 }
