@@ -178,11 +178,16 @@ async function getPriceForCard(cardName, setCode = null, rarity = null, setName 
 
   // Si hay más de una variante con el mismo código (ej: Rarity Collection), emparejar por rareza
   if (targetRarityNorm) {
-    match = items.find(i => {
-      const rNorm = normalize(i.rarityName);
-      const pNorm = normalize(i.productName);
-      return rNorm === targetRarityNorm || rNorm.includes(targetRarityNorm) || pNorm.includes(targetRarityNorm);
-    });
+    // 1. Coincidencia exacta de rareza normalizada
+    match = items.find(i => normalize(i.rarityName) === targetRarityNorm);
+
+    // 2. Si no hubo coincidencia exacta, verificar si el nombre del producto contiene la rareza exacta
+    if (!match) {
+      match = items.find(i => {
+        const pNorm = normalize(i.productName);
+        return pNorm.includes(targetRarityNorm);
+      });
+    }
   }
 
   if (!match) {

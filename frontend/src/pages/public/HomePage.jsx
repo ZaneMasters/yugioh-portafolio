@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -25,6 +25,7 @@ import { usePublicUsers } from '../../hooks/usePublicUsers'
 import { useSearchBySet } from '../../hooks/useSearchBySet'
 import { useAuth } from '../../context/AuthContext'
 import { CardDetailModal } from '../../components/cards/CardDetailModal'
+import { Badge } from '../../components/ui/Badge'
 import logo from '../../assets/logo.webp'
 
 const POPULAR_SET_CODES = [
@@ -68,11 +69,24 @@ export default function HomePage() {
   const [activeSetQuery, setActiveSetQuery] = useState('')
   const [error, setError] = useState('')
   const [detailCard, setDetailCard] = useState(null)
+  const resultsRef = useRef(null)
   const navigate = useNavigate()
 
   const { users, loading: loadingUsers } = usePublicUsers()
   const { cards: searchResults, loading: loadingSearch } = useSearchBySet(activeSetQuery)
   const { user, profile } = useAuth()
+
+  const scrollToResults = () => {
+    setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 120)
+  }
+
+  useEffect(() => {
+    if (activeSetQuery) {
+      scrollToResults()
+    }
+  }, [activeSetQuery])
 
   const handleSearch = (e) => {
     e?.preventDefault()
@@ -87,12 +101,14 @@ export default function HomePage() {
     }
     setError('')
     setActiveSetQuery(clean)
+    scrollToResults()
   }
 
   const handleSelectExample = (code) => {
     setSetCodeInput(code)
     setError('')
     setActiveSetQuery(code)
+    scrollToResults()
   }
 
   const handleClearSearch = () => {
@@ -351,7 +367,11 @@ export default function HomePage() {
         {/* ── Sección de Resultados de Búsqueda ───────────────────────── */}
         <AnimatePresence>
           {activeSetQuery && (
-            <section className="w-full max-w-4xl mx-auto px-3 sm:px-4 mb-12 sm:mb-16">
+            <section
+              ref={resultsRef}
+              id="resultados"
+              className="w-full max-w-4xl mx-auto px-3 sm:px-4 mb-12 sm:mb-16 scroll-mt-24"
+            >
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -409,7 +429,7 @@ export default function HomePage() {
 
                       return (
                         <div
-                          key={card.cardId || card.id}
+                          key={card.id || `${card.cardId}_${matched?.setCode}_${matched?.rarity}`}
                           className="flex flex-col p-3.5 sm:p-5 rounded-xl bg-black/40 border border-white/10 hover:border-amber-500/30 transition-all duration-200 gap-3"
                         >
                           {/* Fila superior: Imagen al lado de la información clave (mobile y desktop) */}
@@ -460,9 +480,7 @@ export default function HomePage() {
                                     {matched.setCode}
                                   </span>
                                   {matched.rarity && (
-                                    <span className="px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-[10px] sm:text-xs text-purple-300 font-semibold truncate max-w-[150px] sm:max-w-none">
-                                      {matched.rarity}
-                                    </span>
+                                    <Badge rarity={matched.rarity} />
                                   )}
                                   {matched.setName && (
                                     <span className="text-[11px] sm:text-xs text-slate-400 font-medium truncate hidden md:inline max-w-xs">
@@ -756,7 +774,8 @@ export default function HomePage() {
           <CardDetailModal
             card={detailCard}
             onClose={() => setDetailCard(null)}
-            isPublic={true}
+            isPublic={false}
+            isCatalog={true}
           />
         )}
 
