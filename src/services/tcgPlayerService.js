@@ -3,17 +3,67 @@
 const axios = require('axios');
 const logger = require('../utils/logger');
 
+const TCGCSV_BASE = 'https://tcgcsv.com/tcgplayer/2';
 const TCG_SEARCH_URL = 'https://mp-search-api.tcgplayer.com/v1/search/request';
-const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutos de caché en memoria para búsquedas
-const WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
 
-// Caché en memoria para evitar repetir búsquedas de la misma carta
+const GROUPS_TTL_MS = 24 * 60 * 60 * 1000;      // 24 horas para lista de grupos
+const GROUP_DATA_TTL_MS = 2 * 60 * 60 * 1000;   // 2 horas para productos y precios de un set
+const PRICE_CACHE_TTL_MS = 30 * 60 * 1000;      // 30 minutos para precio específico
+const SEARCH_CACHE_TTL_MS = 15 * 60 * 1000;     // 15 minutos para búsquedas directas
+const WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;     // 7 días
+
+// Cachés en memoria
+let groupsCache = null;
+const groupDataCache = new Map();
+const priceCache = new Map();
 const searchCache = new Map();
 
 /**
  * Normaliza cadenas para comparaciones flexibles (elimina espacios y caracteres no alfanuméricos)
  */
 const normalize = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// Equivalencias de rarezas oficiales de Yu-Gi-Oh en TCGPlayer
+const RARITY_ALIASES = [
+  ['pcr', 'prismaticcollector', 'prismaticcollectorsrare', 'collectorsrare', 'collectorrare'],
+  ['pur', 'prismaticultimate', 'prismaticultimaterare'],
+  ['ultimate', 'ultimaterare', 'utr'],
+  ['qcsr', 'quartercentury', 'quartercenturysecretrare', 'quartercenturysecret', '25thsecret'],
+  ['platinumsecret', 'platinumsecretrare', 'pser'],
+  ['secret', 'secretrare', 'scr'],
+  ['ultra', 'ultrarare', 'ur'],
+  ['super', 'superrare', 'sr'],
+  ['common', 'shortprint'],
+  ['starlight', 'starlightrare'],
+  ['ghost', 'ghostrare'],
+  ['rare', 'r'],
+];
+
+/**
+ * Compara dos cadenas de rareza considerando nombres completos, siglas y abreviaciones.
+ */
+function isSameRarity(r1, r2) {
+  if (!r1 || !r2) return false;
+  const n1 = normalize(r1);
+  const n2 = normalize(r2);
+  if (n1 === n2) return true;
+
+  // Evitar falsos positivos como 'pur' emparejando con 'ultra rare'
+  const isPurVsUltra = (n1.includes('pur') && n2.includes('ultra')) || (n2.includes('pur') && n1.includes('ultra'));
+  if (!isPurVsUltra && (n1.includes(n2) || n2.includes(n1))) {
+    return true;
+  }
+
+  return RARITY_ALIASES.some(group => group.includes(n1) && group.includes(n2));
+}
+
+const csvAxios = axios.create({
+  timeout: 10000,
+  headers: {
+    'Accept': 'application/json',
+    'User-Agent': 'YugiohPortfolio/1.0 (https://yugioh-8fc03.web.app)',
+  },
+});
 
 const tcgAxios = axios.create({
   timeout: 10000,
@@ -25,7 +75,167 @@ const tcgAxios = axios.create({
 });
 
 /**
- * Realiza una búsqueda de productos en TCGPlayer por nombre de carta.
+ * Obtiene la lista completa de grupos (sets) de Yu-Gi-Oh desde el mirror público de TCGPlayer.
+ */
+async function getTCGGroups() {
+  if (groupsCache && Date.now() < groupsCache.expiresAt) {
+    return groupsCache.groups;
+  }
+
+  try {
+    const res = await csvAxios.get(`${TCGCSV_BASE}/groups`);
+    const groups = res.data?.results || [];
+    groupsCache = {
+      groups,
+      expiresAt: Date.now() + GROUPS_TTL_MS,
+    };
+    return groups;
+  } catch (err) {
+    logger.warn(`⚠️ Error al obtener grupos de TCGPlayer (TCGCSV): ${err.message}`);
+    return groupsCache ? groupsCache.groups : [];
+  }
+}
+
+/**
+ * Obtiene los productos y precios de un grupo específico desde TCGCSV con caché en memoria.
+ */
+async function getGroupProductsAndPrices(groupId) {
+  const cached = groupDataCache.get(groupId);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached;
+  }
+
+  try {
+    const [prodRes, priceRes] = await Promise.all([
+      csvAxios.get(`${TCGCSV_BASE}/${groupId}/products`),
+      csvAxios.get(`${TCGCSV_BASE}/${groupId}/prices`),
+    ]);
+
+    const data = {
+      products: prodRes.data?.results || [],
+      prices: priceRes.data?.results || [],
+      expiresAt: Date.now() + GROUP_DATA_TTL_MS,
+    };
+
+    groupDataCache.set(groupId, data);
+
+    // Limpieza periódica de caché
+    if (groupDataCache.size > 200) {
+      const now = Date.now();
+      for (const [k, v] of groupDataCache.entries()) {
+        if (now > v.expiresAt) groupDataCache.delete(k);
+      }
+    }
+
+    return data;
+  } catch (err) {
+    logger.warn(`⚠️ Error al obtener catálogo de grupo ${groupId} (TCGCSV): ${err.message}`);
+    return { products: [], prices: [] };
+  }
+}
+
+/**
+ * Busca el precio de una carta en TCGCSV a partir de su setCode y rareza.
+ */
+async function getPriceFromTCGCSV(cardName, setCode, rarity = null, setName = null) {
+  if (!setCode || typeof setCode !== 'string') return null;
+
+  const cleanCode = setCode.trim().toUpperCase();
+  const prefix = cleanCode.split('-')[0].trim();
+
+  const groups = await getTCGGroups();
+  if (!groups || groups.length === 0) return null;
+
+  // 1. Encontrar el grupo por abreviatura exacta o prefijo
+  let group = groups.find(g => (g.abbreviation || '').toUpperCase() === prefix);
+
+  // 2. Si no coincide exacto, buscar si el código empieza con la abreviatura del grupo
+  if (!group) {
+    group = groups.find(g => {
+      const gAbbr = (g.abbreviation || '').toUpperCase();
+      return gAbbr && (cleanCode.startsWith(gAbbr) || prefix.startsWith(gAbbr));
+    });
+  }
+
+  // 3. Si no coincide y se proporcionó setName, buscar por nombre del set
+  if (!group && setName) {
+    const normSetName = normalize(setName);
+    group = groups.find(g => {
+      const gNorm = normalize(g.name);
+      return gNorm === normSetName || gNorm.includes(normSetName) || normSetName.includes(gNorm);
+    });
+  }
+
+  if (!group) return null;
+
+  const { products, prices } = await getGroupProductsAndPrices(group.groupId);
+  if (!products || products.length === 0 || !prices || prices.length === 0) {
+    return null;
+  }
+
+  const normCode = normalize(cleanCode);
+
+  // Buscar coincidencia exacta por número de carta en extendedData
+  let matchingProds = products.filter(p => {
+    const num = normalize(p.extendedData?.find(e => e.name === 'Number')?.value);
+    return num && (num === normCode || num.includes(normCode) || normCode.includes(num));
+  });
+
+  // Si no coincide directo (ej: carta en idioma español BLVO-SP001 vs BLVO-EN001 en TCGPlayer)
+  if (matchingProds.length === 0) {
+    const parts = cleanCode.split('-');
+    const digits = (parts[1] || '').replace(/[^0-9]/g, '');
+    if (digits) {
+      matchingProds = products.filter(p => {
+        const num = p.extendedData?.find(e => e.name === 'Number')?.value || '';
+        const pDigits = (num.split('-')[1] || '').replace(/[^0-9]/g, '');
+        return pDigits && pDigits === digits;
+      });
+    }
+  }
+
+  // Si aún no hay match, intentar por coincidencia de nombre de producto con el nombre de la carta
+  if (matchingProds.length === 0 && cardName) {
+    const normCardName = normalize(cardName);
+    matchingProds = products.filter(p => {
+      const pNorm = normalize(p.name);
+      return pNorm === normCardName || pNorm.includes(normCardName) || normCardName.includes(pNorm);
+    });
+  }
+
+  if (matchingProds.length === 0) return null;
+
+  // Seleccionar el producto según la rareza si hay múltiples variantes (ej: Rarity Collection)
+  let matchedProd = null;
+  if (rarity) {
+    matchedProd = matchingProds.find(p => {
+      const rVal = p.extendedData?.find(e => e.name === 'Rarity')?.value;
+      return isSameRarity(rVal, rarity) || isSameRarity(p.name, rarity);
+    });
+  }
+
+  if (!matchedProd) {
+    matchedProd = matchingProds[0];
+  }
+
+  const priceObj = prices.find(p => p.productId === matchedProd.productId);
+  if (!priceObj) return null;
+
+  const marketPrice = typeof priceObj.marketPrice === 'number' ? Number(priceObj.marketPrice.toFixed(2)) : null;
+  const lowPrice = typeof priceObj.lowPrice === 'number' ? Number(priceObj.lowPrice.toFixed(2)) : null;
+
+  if (marketPrice === null && lowPrice === null) return null;
+
+  return {
+    marketPrice,
+    lowPrice,
+    matchedNumber: matchedProd.extendedData?.find(e => e.name === 'Number')?.value || cleanCode,
+    productName: matchedProd.name,
+  };
+}
+
+/**
+ * Realiza una búsqueda directa en TCGPlayer por nombre de carta (fallback secundario).
  * @param {string} cardName
  * @returns {Promise<Array>} Lista de variantes de la carta
  */
@@ -56,13 +266,11 @@ async function searchTCGPlayer(cardName) {
 
     const items = response.data?.results?.[0]?.results || [];
 
-    // Guardar en caché en memoria
     searchCache.set(cacheKey, {
       items,
-      expiresAt: Date.now() + CACHE_TTL_MS,
+      expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
     });
 
-    // Limpieza periódica de caché para evitar crecimiento ilimitado
     if (searchCache.size > 500) {
       const now = Date.now();
       for (const [k, v] of searchCache.entries()) {
@@ -73,15 +281,13 @@ async function searchTCGPlayer(cardName) {
     return items;
   } catch (err) {
     const statusInfo = err.response?.status ? ` (Status: ${err.response.status})` : '';
-    logger.warn(`⚠️  Error al consultar TCGPlayer para "${cardName}": ${err.message}${statusInfo}`);
+    logger.debug(`TCGPlayer direct search "${cardName}": ${err.message}${statusInfo}`);
     return [];
   }
 }
 
 /**
- * Realiza una búsqueda directa en TCGPlayer filtrando por el número de carta / set code exacto.
- * TCGPlayer indexa `customAttributes.number` en mayúsculas (ej: "MP24-EN001", "RA01-EN001").
- *
+ * Realiza una búsqueda directa en TCGPlayer filtrando por setCode (fallback secundario).
  * @param {string} setCode
  * @returns {Promise<Array>} Lista de productos con ese código exacto
  */
@@ -116,13 +322,13 @@ async function searchBySetCode(setCode) {
 
     searchCache.set(cacheKey, {
       items,
-      expiresAt: Date.now() + CACHE_TTL_MS,
+      expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
     });
 
     return items;
   } catch (err) {
     const statusInfo = err.response?.status ? ` (Status: ${err.response.status})` : '';
-    logger.warn(`⚠️  Error al consultar TCGPlayer por código "${setCode}": ${err.message}${statusInfo}`);
+    logger.debug(`TCGPlayer direct setCode "${setCode}": ${err.message}${statusInfo}`);
     return [];
   }
 }
@@ -131,24 +337,51 @@ async function searchBySetCode(setCode) {
  * Obtiene el precio de mercado y precio más bajo de una carta específica en TCGPlayer.
  * Exclusivo para cartas que cuentan con setCode (número de expansión).
  *
- * @param {string} cardName - Nombre de la carta (ej: "Blue-Eyes White Dragon")
- * @param {string|null} setCode - Código de la expansión (ej: "MP24-EN001" o "RA01-EN001")
- * @param {string|null} rarity - Rareza opcional (ej: "Quarter Century Secret Rare")
+ * @param {string} cardName - Nombre de la carta (ej: "Armed Dragon Thunder LV10")
+ * @param {string|null} setCode - Código de la expansión (ej: "BLVO-EN001" o "RA05-EN076")
+ * @param {string|null} rarity - Rareza opcional (ej: "Secret Rare", "PCR")
  * @param {string|null} setName - Nombre de la expansión opcional
  * @returns {Promise<{ marketPrice: number|null, lowPrice: number|null, matchedNumber: string|null }>}
  */
 async function getPriceForCard(cardName, setCode = null, rarity = null, setName = null) {
-  // Solo se busca precio en TCGPlayer si la carta tiene código de set
   if (!setCode || typeof setCode !== 'string' || !setCode.trim()) {
     return { marketPrice: null, lowPrice: null, matchedNumber: null };
   }
 
   const cleanCode = setCode.trim().toUpperCase();
-  const targetRarityNorm = normalize(rarity);
+  const cleanRarity = (rarity || '').trim();
+  const cacheKey = `${cleanCode}|${cleanRarity.toLowerCase()}`;
 
+  const cached = priceCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.priceInfo;
+  }
+
+  // 1. Intentar primero con el mirror oficial de TCGPlayer (TCGCSV)
+  // No sufre de bloqueos 403 en entornos Cloud Run y contiene todo el catálogo diario de TCGPlayer
+  try {
+    const csvPrice = await getPriceFromTCGCSV(cardName, cleanCode, cleanRarity, setName);
+    if (csvPrice && (csvPrice.marketPrice !== null || csvPrice.lowPrice !== null)) {
+      const result = {
+        marketPrice: csvPrice.marketPrice,
+        lowPrice: csvPrice.lowPrice,
+        matchedNumber: csvPrice.matchedNumber || cleanCode,
+      };
+
+      priceCache.set(cacheKey, {
+        priceInfo: result,
+        expiresAt: Date.now() + PRICE_CACHE_TTL_MS,
+      });
+
+      return result;
+    }
+  } catch (err) {
+    logger.warn(`⚠️ Error consultando precio TCGCSV para "${cardName}" (${cleanCode}): ${err.message}`);
+  }
+
+  // 2. Si no se encontró en el mirror, intentar con la API directa de TCGPlayer
   let items = await searchBySetCode(cleanCode);
 
-  // Si no se encontró por código exacto, intentar búsqueda por nombre y filtrar por código/rareza
   if (!items || items.length === 0) {
     if (cardName) {
       const nameItems = await searchTCGPlayer(cardName);
@@ -168,18 +401,14 @@ async function getPriceForCard(cardName, setCode = null, rarity = null, setName 
   }
 
   let match = null;
+  const targetRarityNorm = normalize(cleanRarity);
 
-  // Si hay más de una variante con el mismo código (ej: Rarity Collection), emparejar por rareza
   if (targetRarityNorm) {
-    // 1. Coincidencia exacta de rareza normalizada
-    match = items.find(i => normalize(i.rarityName) === targetRarityNorm);
-
-    // 2. Si no hubo coincidencia exacta, verificar si la rareza o el nombre del producto lo incluye
+    match = items.find(i => isSameRarity(i.rarityName, cleanRarity));
     if (!match) {
       match = items.find(i => {
-        const rNorm = normalize(i.rarityName);
         const pNorm = normalize(i.productName);
-        return rNorm === targetRarityNorm || rNorm.includes(targetRarityNorm) || targetRarityNorm.includes(rNorm) || pNorm.includes(targetRarityNorm);
+        return pNorm.includes(targetRarityNorm);
       });
     }
   }
@@ -195,11 +424,18 @@ async function getPriceForCard(cardName, setCode = null, rarity = null, setName 
   const marketPrice = typeof match.marketPrice === 'number' ? Number(match.marketPrice.toFixed(2)) : null;
   const lowPrice = typeof match.lowestPrice === 'number' ? Number(match.lowestPrice.toFixed(2)) : null;
 
-  return {
+  const result = {
     marketPrice,
     lowPrice,
     matchedNumber: match.customAttributes?.number || match.setCode || cleanCode,
   };
+
+  priceCache.set(cacheKey, {
+    priceInfo: result,
+    expiresAt: Date.now() + PRICE_CACHE_TTL_MS,
+  });
+
+  return result;
 }
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000; // 24 horas
@@ -224,6 +460,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 module.exports = {
   searchTCGPlayer,
+  searchBySetCode,
   getPriceForCard,
   isPriceOutdated,
   sleep,
