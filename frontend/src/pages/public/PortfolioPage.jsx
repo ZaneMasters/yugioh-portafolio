@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
-import { Sparkles, Ghost, ShoppingCart } from 'lucide-react'
+import { Ghost, ShoppingCart, Layers, Heart, MessageCircle } from 'lucide-react'
 import { Navbar } from '../../components/layout/Navbar'
 import { CardGrid } from '../../components/cards/CardGrid'
 import { FiltersPanel } from '../../components/filters/FiltersPanel'
@@ -11,6 +11,8 @@ import { useDebounce } from '../../hooks/useDebounce'
 import { usePublicFolders } from '../../hooks/usePublicFolders'
 import { HeroBackground } from '../../components/ui/HeroBackground'
 import { CartSidebar } from '../../components/cart/CartSidebar'
+import { ShinyText } from '../../components/ui/ShinyText'
+import { CountUp } from '../../components/ui/CountUp'
 import { useCartStore } from '../../store/useCartStore'
 
 /**
@@ -134,12 +136,12 @@ export default function PortfolioPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Banner Hero Épico */}
-        <div className="relative w-full h-[160px] sm:h-[200px] mb-6 rounded-2xl overflow-hidden shadow-xl border border-white/10">
+        <div className="relative w-full min-h-[170px] sm:min-h-[200px] mb-6 rounded-2xl overflow-hidden shadow-xl border border-white/10">
           {/* Fondo Animado Carrusel */}
           <HeroBackground />
           {/* Gradientes para integración y legibilidad */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#080a11] via-[#080a11]/50 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#080a11]/80 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#080a11] via-[#080a11]/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#080a11]/90 via-[#080a11]/40 to-transparent" />
 
           {/* Contenido del Banner */}
           <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-7">
@@ -148,41 +150,79 @@ export default function PortfolioPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
+              {/* Badges de estado superior */}
+              {whatsapp && (
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-[11px] font-semibold backdrop-blur-sm">
+                    <MessageCircle className="w-3 h-3 text-emerald-400 shrink-0" />
+                    <span>WhatsApp para pedidos activo</span>
+                  </span>
+                </div>
+              )}
+
               <h1 className="text-2xl sm:text-3xl font-black text-white mb-1 font-display drop-shadow-[0_0_12px_rgba(0,0,0,0.9)]">
                 {currentTab === 'inventory' ? 'Colección de ' : 'Cartas Buscadas por '}
-                <span className="text-gradient">{displayName}</span>
+                <ShinyText
+                  text={displayName}
+                  color="#f59e0b"
+                  shineColor="#ffffff"
+                  speed={3.5}
+                  className="font-display font-black text-gradient"
+                />
               </h1>
 
-              <p className="text-slate-300 text-sm max-w-xl font-medium drop-shadow-md">
-                {loading
-                  ? 'Consultando los registros del milenio...'
-                  : totalCount > 0
-                  ? totalQuantity > totalCount
-                    ? `${totalCount} cartas distintas (${totalQuantity} en total) en su ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
-                    : `${totalCount} carta${totalCount === 1 ? '' : 's'} en su ${currentTab === 'inventory' ? 'colección' : 'wishlist'}`
-                  : currentTab === 'inventory'
-                    ? 'Esta colección está vacía por ahora'
-                    : 'No hay cartas en la wishlist'}
-              </p>
+              <div className="text-slate-300 text-xs sm:text-sm max-w-xl font-medium drop-shadow-md flex items-center gap-1.5 flex-wrap">
+                {loading ? (
+                  <span>Consultando los registros del milenio...</span>
+                ) : totalCount > 0 ? (
+                  <>
+                    <span className="font-stat font-bold text-amber-300 text-sm sm:text-base">
+                      <CountUp to={totalCount} />
+                    </span>
+                    <span>cartas distintas</span>
+                    {totalQuantity > totalCount && (
+                      <span className="text-slate-400">
+                        (<span className="font-stat font-bold text-amber-300"><CountUp to={totalQuantity} /></span> en total)
+                      </span>
+                    )}
+                    <span>en su {currentTab === 'inventory' ? 'colección' : 'wishlist'}</span>
+                  </>
+                ) : currentTab === 'inventory' ? (
+                  <span>Esta colección está vacía por ahora</span>
+                ) : (
+                  <span>No hay cartas en la wishlist</span>
+                )}
+              </div>
             </motion.div>
           </div>
         </div>
 
-        {/* Pestañas (Tabs) */}
-        <div className="flex justify-center border-b border-white/10 mb-8 max-w-xs mx-auto">
-          {['inventory', 'wishlist'].map((tab) => (
+        {/* Pestañas (Tabs) Segmentadas con Iconos y Reglas Better-UI */}
+        <div className="flex justify-center mb-8 max-w-sm mx-auto">
+          <div className="flex p-1 rounded-xl bg-white/[0.03] border border-white/10 backdrop-blur-md w-full">
             <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
-              className={`px-6 py-3 text-sm font-medium border-b-2 active:scale-[0.96] transition-all duration-150 cursor-pointer ${
-                currentTab === tab
-                  ? 'border-amber-400 text-amber-400 font-semibold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-white/20'
+              onClick={() => handleTabChange('inventory')}
+              className={`flex-1 flex items-center justify-center gap-2 ps-3.5 pe-4 py-2 rounded-lg text-xs sm:text-sm font-semibold active:scale-[0.96] transition-[background-color,color,box-shadow,transform] duration-150 ease-out cursor-pointer ${
+                currentTab === 'inventory'
+                  ? 'bg-amber-500 text-black shadow-[0_2px_12px_rgba(245,158,11,0.3)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               }`}
             >
-              {tab === 'inventory' ? 'Colección' : 'Wishlist'}
+              <Layers className="w-4 h-4 stroke-2" />
+              <span>Colección</span>
             </button>
-          ))}
+            <button
+              onClick={() => handleTabChange('wishlist')}
+              className={`flex-1 flex items-center justify-center gap-2 ps-3.5 pe-4 py-2 rounded-lg text-xs sm:text-sm font-semibold active:scale-[0.96] transition-[background-color,color,box-shadow,transform] duration-150 ease-out cursor-pointer ${
+                currentTab === 'wishlist'
+                  ? 'bg-rose-500 text-white shadow-[0_2px_12px_rgba(244,63,94,0.3)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              }`}
+            >
+              <Heart className="w-4 h-4 stroke-2" />
+              <span>Wishlist</span>
+            </button>
+          </div>
         </div>
 
         {/* Filtros */}

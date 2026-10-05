@@ -148,7 +148,7 @@ export function CardGrid({
                 colCount === 3 ? 'grid-cols-3' : 
                 'grid-cols-4'
               } gap-4 sm:gap-5 pb-4 sm:pb-5`}>
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {rowCards.map((card) => (
                     <CardItem 
                       key={card.id} 
