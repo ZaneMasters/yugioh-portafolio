@@ -19,17 +19,8 @@ const tcgAxios = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Origin': 'https://www.tcgplayer.com',
-    'Referer': 'https://www.tcgplayer.com/',
-    'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Windows"',
-    'Sec-Fetch-Dest': 'empty',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Site': 'same-site',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Accept': 'application/json',
   },
 });
 
@@ -81,7 +72,8 @@ async function searchTCGPlayer(cardName) {
 
     return items;
   } catch (err) {
-    logger.warn(`⚠️  Error al consultar TCGPlayer para "${cardName}": ${err.message}`);
+    const statusInfo = err.response?.status ? ` (Status: ${err.response.status})` : '';
+    logger.warn(`⚠️  Error al consultar TCGPlayer para "${cardName}": ${err.message}${statusInfo}`);
     return [];
   }
 }
@@ -129,7 +121,8 @@ async function searchBySetCode(setCode) {
 
     return items;
   } catch (err) {
-    logger.warn(`⚠️  Error al consultar TCGPlayer por código "${setCode}": ${err.message}`);
+    const statusInfo = err.response?.status ? ` (Status: ${err.response.status})` : '';
+    logger.warn(`⚠️  Error al consultar TCGPlayer por código "${setCode}": ${err.message}${statusInfo}`);
     return [];
   }
 }
@@ -181,11 +174,12 @@ async function getPriceForCard(cardName, setCode = null, rarity = null, setName 
     // 1. Coincidencia exacta de rareza normalizada
     match = items.find(i => normalize(i.rarityName) === targetRarityNorm);
 
-    // 2. Si no hubo coincidencia exacta, verificar si el nombre del producto contiene la rareza exacta
+    // 2. Si no hubo coincidencia exacta, verificar si la rareza o el nombre del producto lo incluye
     if (!match) {
       match = items.find(i => {
+        const rNorm = normalize(i.rarityName);
         const pNorm = normalize(i.productName);
-        return pNorm.includes(targetRarityNorm);
+        return rNorm === targetRarityNorm || rNorm.includes(targetRarityNorm) || targetRarityNorm.includes(rNorm) || pNorm.includes(targetRarityNorm);
       });
     }
   }

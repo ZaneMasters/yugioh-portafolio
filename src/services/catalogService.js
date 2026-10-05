@@ -54,21 +54,18 @@ const buildIndex = (cards) => {
     level:     card.level,
     attribute: card.attribute,
     archetype: card.archetype,
-    // Precio base TCGPlayer de la carta para fallbacks
-    tcgPrice:  card.card_prices?.[0]?.tcgplayer_price ? parseFloat(card.card_prices[0].tcgplayer_price) || null : null,
     // Todas las artes disponibles — guardamos solo id + URL small para ahorrar RAM
     // La URL full se construye on-demand: https://images.ygoprodeck.com/images/cards/{id}.jpg
     card_images: (card.card_images ?? []).map(i => ({
       id: i.id,
       s:  i.image_url_small,
     })),
-    // Versiones físicas de la carta (set code, rareza, precio de set de respaldo).
-    // Claves cortas para minimizar RAM: n=name, c=code, r=rarity, p=set_price
+    // Versiones físicas de la carta (set code, rareza). Los precios se gestionan vía TCGPlayer.
+    // Claves cortas para minimizar RAM: n=name, c=code, r=rarity
     card_sets: (card.card_sets ?? []).map(s => ({
       n: s.set_name,
       c: s.set_code,
       r: s.set_rarity,
-      p: s.set_price && s.set_price !== '0' && s.set_price !== '0.00' ? parseFloat(s.set_price) || null : null,
     })),
     // Índices de búsqueda
     _searchName:      normalizeString(card.name),
