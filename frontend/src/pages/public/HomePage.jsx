@@ -18,7 +18,8 @@ import {
   MessageCircle,
   Database,
   ChevronRight,
-  Flame
+  Flame,
+  TrendingUp
 } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { usePublicUsers } from '../../hooks/usePublicUsers'
@@ -42,7 +43,7 @@ const FEATURES = [
     icon: Layers,
     tag: 'Control Total',
     title: 'Inventario & Valuación',
-    desc: 'Registra cada carta con su condición (NM, LP, MP), rareza exacta y carpetas temáticas con valuación de mercado automática.',
+    desc: 'Registra cada carta con su Set Code, rareza exacta, edición, idioma y carpetas temáticas con valuación de mercado automática desde TCGPlayer.',
     color: '#fbbf24',
     borderGlow: 'rgba(251, 191, 36, 0.25)',
   },
@@ -251,7 +252,8 @@ export default function HomePage() {
               transition={{ duration: 0.5, delay: 0.16 }}
               className="font-ui text-sm sm:text-lg md:text-xl text-slate-200 max-w-2xl leading-relaxed mb-6 sm:mb-8 font-medium drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] px-2"
             >
-              Gestiona tu inventario con precios en tiempo real, localiza cartas por su{' '}
+              Gestiona tu inventario con precios en tiempo real de{' '}
+              <span className="text-emerald-400 font-bold">TCGPlayer</span>, localiza cartas por su{' '}
               <span className="text-amber-400 font-semibold font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30 whitespace-nowrap">
                 Código de Set
               </span>{' '}
@@ -345,11 +347,15 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="mt-10 flex items-center justify-center gap-4 sm:gap-8 flex-wrap text-xs text-slate-400"
+              className="mt-10 flex items-center justify-center gap-3 sm:gap-6 flex-wrap text-xs text-slate-400"
             >
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/5">
                 <Database className="w-3.5 h-3.5 text-amber-400" />
                 <span><strong className="text-white font-mono">+14,000</strong> Cartas TCG</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/20 text-emerald-300">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Precios en vivo <strong className="text-white font-mono">TCGPlayer</strong></span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/5">
                 <Users className="w-3.5 h-3.5 text-purple-400" />
@@ -495,7 +501,7 @@ export default function HomePage() {
                                 {tcgPrice ? (
                                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/35 text-amber-300 shadow-sm">
                                     <span className="text-[9px] sm:text-[10px] uppercase font-mono font-bold tracking-wider text-amber-400/90">
-                                      Precio TCG:
+                                      Precio TCGPlayer Market:
                                     </span>
                                     <span className="font-stat font-bold text-xs sm:text-sm text-amber-300">
                                       ${Number(tcgPrice).toFixed(2)} USD
@@ -508,7 +514,7 @@ export default function HomePage() {
                                   </div>
                                 ) : (
                                   <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400 text-[10px] font-mono">
-                                    <span>TCG: Sin precio en vivo</span>
+                                    <span>TCGPlayer: Sin precio en vivo</span>
                                   </div>
                                 )}
                               </div>
@@ -755,7 +761,16 @@ export default function HomePage() {
               <span>Yu-Gi-Oh! Inventory & Portfolio</span>
             </div>
             <p className="text-center sm:text-right">
-              Powered by{' '}
+              Precios de mercado sincronizados con{' '}
+              <a
+                href="https://www.tcgplayer.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-slate-400 hover:text-emerald-400 transition-colors font-medium"
+              >
+                TCGPlayer
+              </a>
+              {' '}• Base de datos por{' '}
               <a
                 href="https://db.ygoprodeck.com"
                 target="_blank"
