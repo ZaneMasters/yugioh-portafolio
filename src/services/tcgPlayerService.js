@@ -57,6 +57,54 @@ function isSameRarity(r1, r2) {
   return RARITY_ALIASES.some(group => group.includes(n1) && group.includes(n2));
 }
 
+/**
+ * Selecciona el producto que mejor coincide con la rareza solicitada dentro de un conjunto de variantes
+ * del mismo código de expansión (ej: Rarity Collection donde un mismo setCode tiene hasta 7 rarezas).
+ */
+function findBestRarityMatch(products, targetRarity) {
+  if (!targetRarity || products.length <= 1) return products[0];
+  const targetNorm = normalize(targetRarity);
+
+  // 1. Coincidencia EXACTA de rareza normalizada en extendedData.Rarity
+  let exact = products.find(p => {
+    const rVal = p.extendedData?.find(e => e.name === 'Rarity')?.value;
+    return rVal && normalize(rVal) === targetNorm;
+  });
+  if (exact) return exact;
+
+  // 2. Coincidencia EXACTA en el nombre del producto, ej: '(Secret Rare)'
+  exact = products.find(p => {
+    const pNorm = normalize(p.name);
+    return pNorm.endsWith(targetNorm) || p.name.toLowerCase().includes(`(${targetRarity.toLowerCase()})`);
+  });
+  if (exact) return exact;
+
+  // 3. Modificadores de exclusión para evitar que 'Secret Rare' capture 'Platinum Secret Rare' o 'Quarter Century'
+  const isPlatinum = targetNorm.includes('platinum') || targetNorm.includes('pser');
+  const isQuarter = targetNorm.includes('quarter') || targetNorm.includes('qcsr') || targetNorm.includes('25th');
+  const isCollector = targetNorm.includes('collector') || targetNorm.includes('pcr');
+  const isUltimate = targetNorm.includes('ultimate') || targetNorm.includes('pur') || targetNorm.includes('utr');
+
+  const filtered = products.filter(p => {
+    const pNorm = normalize((p.extendedData?.find(e => e.name === 'Rarity')?.value || '') + ' ' + p.name);
+    if (!isPlatinum && pNorm.includes('platinum')) return false;
+    if (!isQuarter && (pNorm.includes('quarter') || pNorm.includes('qcsr') || pNorm.includes('25th'))) return false;
+    if (!isCollector && (pNorm.includes('collector') || pNorm.includes('pcr'))) return false;
+    if (!isUltimate && (pNorm.includes('ultimate') || pNorm.includes('pur'))) return false;
+    return true;
+  });
+
+  const pool = filtered.length > 0 ? filtered : products;
+
+  // 4. Buscar coincidencia en el pool filtrado
+  const match = pool.find(p => {
+    const rVal = p.extendedData?.find(e => e.name === 'Rarity')?.value;
+    return isSameRarity(rVal, targetRarity) || isSameRarity(p.name, targetRarity);
+  });
+
+  return match || pool[0] || products[0];
+}
+
 const csvAxios = axios.create({
   timeout: 10000,
   headers: {
@@ -205,18 +253,8 @@ async function getPriceFromTCGCSV(cardName, setCode, rarity = null, setName = nu
 
   if (matchingProds.length === 0) return null;
 
-  // Seleccionar el producto según la rareza si hay múltiples variantes (ej: Rarity Collection)
-  let matchedProd = null;
-  if (rarity) {
-    matchedProd = matchingProds.find(p => {
-      const rVal = p.extendedData?.find(e => e.name === 'Rarity')?.value;
-      return isSameRarity(rVal, rarity) || isSameRarity(p.name, rarity);
-    });
-  }
-
-  if (!matchedProd) {
-    matchedProd = matchingProds[0];
-  }
+  // Seleccionar el producto según la rareza exacta si hay múltiples variantes (ej: Rarity Collection)
+  const matchedProd = findBestRarityMatch(matchingProds, rarity);
 
   const priceObj = prices.find(p => p.productId === matchedProd.productId);
   if (!priceObj) return null;
@@ -404,12 +442,27 @@ async function getPriceForCard(cardName, setCode = null, rarity = null, setName 
   const targetRarityNorm = normalize(cleanRarity);
 
   if (targetRarityNorm) {
-    match = items.find(i => isSameRarity(i.rarityName, cleanRarity));
+    // 1. Coincidencia exacta
+    match = items.find(i => normalize(i.rarityName) === targetRarityNorm);
+
+    // 2. Modificadores de exclusión
     if (!match) {
-      match = items.find(i => {
-        const pNorm = normalize(i.productName);
-        return pNorm.includes(targetRarityNorm);
+      const isPlatinum = targetRarityNorm.includes('platinum') || targetRarityNorm.includes('pser');
+      const isQuarter = targetRarityNorm.includes('quarter') || targetRarityNorm.includes('qcsr') || targetRarityNorm.includes('25th');
+      const isCollector = targetRarityNorm.includes('collector') || targetRarityNorm.includes('pcr');
+      const isUltimate = targetRarityNorm.includes('ultimate') || targetRarityNorm.includes('pur') || targetRarityNorm.includes('utr');
+
+      const filtered = items.filter(i => {
+        const iNorm = normalize((i.rarityName || '') + ' ' + (i.productName || ''));
+        if (!isPlatinum && iNorm.includes('platinum')) return false;
+        if (!isQuarter && (iNorm.includes('quarter') || iNorm.includes('qcsr') || iNorm.includes('25th'))) return false;
+        if (!isCollector && (iNorm.includes('collector') || iNorm.includes('pcr'))) return false;
+        if (!isUltimate && (iNorm.includes('ultimate') || iNorm.includes('pur'))) return false;
+        return true;
       });
+
+      const pool = filtered.length > 0 ? filtered : items;
+      match = pool.find(i => isSameRarity(i.rarityName, cleanRarity) || isSameRarity(i.productName, cleanRarity));
     }
   }
 
