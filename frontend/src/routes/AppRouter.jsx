@@ -6,6 +6,7 @@ import { ProtectedRoute } from '../components/layout/ProtectedRoute'
 // Carga perezosa (Lazy Loading) para optimizar el peso del bundle inicial
 const GalleryPage = lazy(() => import('../pages/public/GalleryPage'))
 const HomePage = lazy(() => import('../pages/public/HomePage'))
+const FormatsPage = lazy(() => import('../pages/public/FormatsPage'))
 const PortfolioPage = lazy(() => import('../pages/public/PortfolioPage'))
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'))
 const AdminLayout = lazy(() => import('../pages/admin/AdminLayout'))
@@ -32,6 +33,10 @@ export default function AppRouter() {
           <Routes>
             {/* Raíz → landing page */}
             <Route path="/" element={<HomePage />} />
+
+            {/* Formatos retro y competitivos (Goat, Edison, TCG) */}
+            <Route path="/formats" element={<FormatsPage />} />
+            <Route path="/formatos" element={<Navigate to="/formats" replace />} />
 
             {/* Portafolio público de cualquier usuario por slug */}
             <Route path="/portfolio/:slug" element={<PortfolioPage />} />

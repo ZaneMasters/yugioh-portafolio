@@ -33,6 +33,12 @@ export const queryKeys = {
 
   // Admin: pedidos
   orders: () => ['orders'],
+
+  // Banlist oficial YGOProdeck
+  banlist: (format = 'tcg') => ['banlist', format],
+
+  // Cartas del card pool de un formato
+  formatCards: (format = 'goat') => ['formatCards', format],
 }
 
 
