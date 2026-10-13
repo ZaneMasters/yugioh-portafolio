@@ -240,6 +240,10 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
       return false;
     });
   }
+  if (filters.language) {
+    const langUpper = filters.language.toUpperCase().trim();
+    cards = cards.filter((c) => (c.language ? c.language.toUpperCase() : '') === langUpper);
+  }
 
   // 2. Ordenamiento (más reciente primero)
   cards.sort((a, b) => {
