@@ -40,13 +40,14 @@ const createCard = async (req, res, next) => {
 // Devuelve las cartas del inventario del administrador autenticado
 const getAllCards = async (req, res, next) => {
   try {
-    const { name, type, archetype, folderId, setCode, cursor, limit, refresh } = req.query;
+    const { name, type, archetype, folderId, setCode, language, cursor, limit, refresh } = req.query;
     const filters = {};
     if (name)      filters.name      = name;
     if (type)      filters.type      = type;
     if (archetype) filters.archetype = archetype;
     if (folderId)  filters.folderId  = folderId;
     if (setCode)   filters.setCode   = setCode;
+    if (language)  filters.language  = language;
 
     const userId = req.user.uid;
 
@@ -87,7 +88,7 @@ const getAllCards = async (req, res, next) => {
 const getPortfolioBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const { name, type, archetype, folderId, setCode, cursor, limit } = req.query;
+    const { name, type, archetype, folderId, setCode, language, cursor, limit } = req.query;
  
     const uid = await slugToUid(slug);
     if (!uid) {
@@ -100,6 +101,7 @@ const getPortfolioBySlug = async (req, res, next) => {
     if (archetype) filters.archetype = archetype;
     if (folderId)  filters.folderId  = folderId;
     if (setCode)   filters.setCode   = setCode;
+    if (language)  filters.language  = language;
 
     const pagination = {
       paginate: true,

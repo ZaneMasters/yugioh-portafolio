@@ -242,6 +242,20 @@ cd frontend && npm run dev   # En la carpeta frontend (Puerto 5173 proxy)
 |---|---|---|
 | `GET` | `/health` | Verificar estado del servidor |
 
+### Creación de Usuarios Bajo Demanda (CLI)
+
+Dado que la plataforma no expone registro público por seguridad, los nuevos usuarios/tiendas se crean mediante el script administrativo:
+
+```bash
+# Modo interactivo (te pedirá email, password, slug y whatsapp)
+npm run create-user
+
+# O con parámetros directos
+node scripts/createUser.js --email=tienda@ejemplo.com --password=ClaveSegura123! --slug=mi-tienda --whatsapp=+573001234567
+```
+
+El script valida que el correo y el slug no existan previamente, crea la cuenta en Firebase Authentication e inicializa el documento de perfil en Firestore.
+
 ---
 
 ## 🔐 Autenticación

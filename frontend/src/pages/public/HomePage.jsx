@@ -19,13 +19,15 @@ import {
   Database,
   ChevronRight,
   Flame,
-  TrendingUp
+  TrendingUp,
+  Ban
 } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { usePublicUsers } from '../../hooks/usePublicUsers'
 import { useSearchBySet } from '../../hooks/useSearchBySet'
 import { useAuth } from '../../context/AuthContext'
 import { CardDetailModal } from '../../components/cards/CardDetailModal'
+import { BanlistSection } from '../../components/home/BanlistSection'
 import { Badge } from '../../components/ui/Badge'
 import { SpotlightCard } from '../../components/ui/SpotlightCard'
 import { ShinyText } from '../../components/ui/ShinyText'
@@ -169,6 +171,20 @@ export default function HomePage() {
                 <Users className="w-3.5 h-3.5 stroke-[1.75]" />
                 Coleccionistas
               </a>
+              <a
+                href="#banlist"
+                className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors duration-150 hidden md:inline-flex items-center gap-1.5"
+              >
+                <Ban className="w-3.5 h-3.5 stroke-[1.75]" />
+                Banlist
+              </a>
+              <Link
+                to="/formats"
+                className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors duration-150 hidden lg:inline-flex items-center gap-1.5"
+              >
+                <Layers className="w-3.5 h-3.5 stroke-[1.75]" />
+                Formatos Retro
+              </Link>
               {user ? (
                 <Link
                   to="/admin/search"
@@ -232,7 +248,7 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/60 border border-amber-500/40 text-amber-300 text-xs font-semibold mb-6 tracking-wider uppercase backdrop-blur-md shadow-[0_0_25px_rgba(245,158,11,0.2)]"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
-              <ShinyText text="Plataforma Oficial de Coleccionistas & TCG" color="#fbbf24" shineColor="#fffbeb" speed={3.5} />
+              <ShinyText text="Plataforma de Coleccionistas de YuGiOh" color="#fbbf24" shineColor="#fffbeb" speed={3.5} />
             </motion.div>
 
             {/* Título Principal */}
@@ -596,42 +612,42 @@ export default function HomePage() {
         </AnimatePresence>
 
         {/* ── Sección de Coleccionistas de la Comunidad ────────────────── */}
-        <section id="coleccionistas" className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-12">
-          <div className="flex flex-col items-center text-center mb-10">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/10 text-slate-300 text-xs font-mono font-medium mb-3">
+        <section id="coleccionistas" className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-14">
+          <div className="flex flex-col items-center text-center mb-5 sm:mb-10">
+            <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-white/[0.03] border border-white/10 text-slate-300 text-[11px] sm:text-xs font-mono font-medium mb-2 sm:mb-3">
               <Users className="w-3.5 h-3.5 text-amber-400" />
               <span>COMUNIDAD ACTIVA</span>
             </div>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-wide">
+            <h2 className="font-display text-xl sm:text-3xl lg:text-4xl font-bold text-white tracking-wide">
               DUELISTAS Y PORTAFOLIOS
             </h2>
-            <p className="font-ui text-sm sm:text-base text-slate-400 max-w-md mt-2">
+            <p className="font-ui text-xs sm:text-base text-slate-400 max-w-md mt-1.5 sm:mt-2 hidden sm:block">
               Explora las colecciones públicas de otros miembros, revisa sus cartas en inventario o apóyalos con su lista de deseos.
             </p>
           </div>
 
           {/* Grid de Coleccionistas */}
           {loadingUsers ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
               {[1, 2, 3, 4, 5, 6].map((n) => (
                 <div
                   key={n}
-                  className="h-32 rounded-xl bg-white/[0.02] border border-white/5 animate-pulse"
+                  className="h-20 sm:h-32 rounded-xl bg-white/[0.02] border border-white/5 animate-pulse"
                 />
               ))}
             </div>
           ) : users.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 text-sm">
+            <div className="text-center py-10 text-slate-500 text-xs sm:text-sm">
               No hay coleccionistas registrados aún en la plataforma.
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
               {users.map((u, i) => (
                 <motion.div
                   key={u.slug}
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 + i * 0.05 }}
+                  transition={{ delay: 0.05 + i * 0.04 }}
                   className="h-full"
                 >
                   <SpotlightCard
@@ -639,49 +655,50 @@ export default function HomePage() {
                     className="glass-textured group relative rounded-xl border border-white/10 bg-[#0f1420]/80 hover:bg-[#151c2c]/90 hover:border-amber-500/40 transition-[border-color,background-color,box-shadow] duration-200 cursor-pointer shadow-md hover:shadow-[0_8px_30px_rgba(245,158,11,0.1)] h-full"
                     spotlightColor="rgba(245, 158, 11, 0.15)"
                   >
-                    <div className="p-5 flex flex-col justify-between h-full">
+                    <div className="p-3 sm:p-5 flex flex-col justify-between h-full">
                       <div>
                         <div className="flex items-center justify-between gap-2">
-                          <h3 className="font-heading font-bold text-white text-lg group-hover:text-amber-400 transition-colors truncate">
+                          <h3 className="font-heading font-bold text-white text-sm sm:text-lg group-hover:text-amber-400 transition-colors truncate">
                             {u.displayName}
                           </h3>
                           {u.hasWhatsapp && (
                             <span
                               title="Ventas y tratos activos por WhatsApp"
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full"
+                              className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 sm:px-2 py-0.5 rounded-full shrink-0"
                             >
-                              <MessageCircle className="w-3 h-3 text-emerald-400" />
-                              <span>WhatsApp</span>
+                              <MessageCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-400" />
+                              <span className="hidden xs:inline">WhatsApp</span>
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-500 font-mono truncate mt-1">
+                        <p className="text-[10px] sm:text-xs text-slate-500 font-mono truncate mt-0.5 sm:mt-1">
                           /portfolio/{u.slug}
                         </p>
                       </div>
 
                       {/* Footer con contadores de cartas y link */}
-                      <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-3">
-                          <span className="flex items-center gap-1.5 font-medium text-amber-300 font-stat">
+                      <div className="mt-2.5 sm:mt-5 pt-2 sm:pt-3.5 border-t border-white/10 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <span className="flex items-center gap-1 sm:gap-1.5 font-medium text-amber-300 font-stat text-[11px] sm:text-xs">
                             <Layers className="w-3.5 h-3.5 text-amber-400" />
                             <CountUp to={u.inventoryCount} className="font-bold" />
-                            <span className="text-slate-500 text-[11px] font-ui">cartas</span>
+                            <span className="text-slate-500 text-[10px] sm:text-[11px] font-ui">cartas</span>
                           </span>
                           {u.wishlistCount > 0 && (
                             <span
-                              className="flex items-center gap-1 font-medium text-rose-300 font-stat"
+                              className="flex items-center gap-1 font-medium text-rose-300 font-stat text-[11px] sm:text-xs"
                               title="Cartas en lista de deseos"
                             >
-                              <Heart className="w-3.5 h-3.5 text-rose-400" />
+                              <Heart className="w-3 h-3 text-rose-400" />
                               <CountUp to={u.wishlistCount} className="font-bold" />
                             </span>
                           )}
                         </div>
 
-                        <span className="text-xs font-bold text-slate-400 group-hover:text-amber-400 transition-colors flex items-center gap-1">
-                          Ver Portafolio
-                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                        <span className="text-[11px] sm:text-xs font-bold text-slate-400 group-hover:text-amber-400 transition-colors flex items-center gap-1">
+                          <span className="hidden sm:inline">Ver Portafolio</span>
+                          <span className="sm:hidden">Ver</span>
+                          <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </span>
                       </div>
                     </div>
@@ -691,6 +708,9 @@ export default function HomePage() {
             </div>
           )}
         </section>
+
+        {/* ── Sección de Cartas Baneadas y Limitadas (Banlist) ───────── */}
+        <BanlistSection onSelectCard={setDetailCard} />
 
         {/* ── Sección de Características ("Arsenal para Duelistas") ──── */}
         <section id="caracteristicas" className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-14">

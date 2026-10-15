@@ -102,6 +102,19 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
     </span>
   ) : null
 
+  // Badge de idioma: ÚNICAMENTE visible cuando el idioma es diferente al inglés (SP, JP, FR, etc.)
+  const isNonEnglish = Boolean(card.language && card.language.trim().toUpperCase() !== 'EN')
+  const languageBadge = isNonEnglish ? (
+    <span
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full backdrop-blur-sm text-[10px] font-bold border whitespace-nowrap shrink-0 shadow-sm bg-sky-500/25 text-sky-200 border-sky-400/50 ring-1 ring-sky-400/30"
+      title={`Idioma: ${card.language}`}
+    >
+      <span className="text-[10px]">🌐</span> {card.language.toUpperCase()}
+    </span>
+  ) : null
+
+
+
   return (
     <motion.div
       layout={!disableAnimation}
@@ -131,6 +144,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
             <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 pointer-events-none">
               {priceBadge}
               {reservedBadge}
+              {languageBadge}
             </div>
             <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end pointer-events-none">
               {quantityPill}
@@ -216,6 +230,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
               {reservedBadge}
               {rarityBadge}
               {priceBadge}
+              {languageBadge}
             </div>
           </>
         )}
@@ -238,6 +253,7 @@ export const CardItem = memo(function CardItem({ card, onSelect, viewMode, disab
               {reservedBadge}
               {rarityBadge}
               {priceBadge}
+              {languageBadge}
             </div>
           </>
         )}
