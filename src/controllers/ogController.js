@@ -1,6 +1,7 @@
 'use strict';
 
 const { slugToUid } = require('../utils/slugToUid');
+const folderService = require('../services/folderService');
 const cardService = require('../services/cardService');
 const wishlistService = require('../services/wishlistService');
 const ogImageService = require('../services/ogImageService');
@@ -27,7 +28,13 @@ const getOgImage = async (req, res, next) => {
       const result = await wishlistService.listCards({ onlyPublic: true }, uid, pagination);
       cards = (result.cards || []).filter(c => !c.isHidden);
     } else {
-      const result = await cardService.listCards({}, uid, pagination);
+      const folders = await folderService.listFolders(uid);
+      const privateFolderIds = folders.filter(f => !f.isPublic).map(f => f.id);
+      const result = await cardService.listCards(
+        { onlyPublic: true, excludePrivateFolders: true, privateFolderIds },
+        uid,
+        pagination
+      );
       cards = (result.cards || []).filter(c => !c.isHidden);
     }
 

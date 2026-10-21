@@ -1,5 +1,5 @@
 import { useState, memo } from 'react'
-import { Pencil, Trash2, Check, X, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { Pencil, Trash2, Check, X, Eye, EyeOff, RefreshCw, Lock } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Select'
@@ -178,13 +178,15 @@ export const EditableRow = memo(function EditableRow({
                             key={f.id}
                             type="button"
                             onClick={() => setFolderIds(prev => isSelected ? prev.filter(id => id !== f.id) : [...prev, f.id])}
-                            className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors ${
+                            title={f.isPublic ? 'Colección pública' : 'Colección privada (las cartas se ocultan del portafolio público)'}
+                            className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors inline-flex items-center gap-1 ${
                               isSelected 
                                 ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' 
                                 : 'bg-black/20 border-white/5 text-slate-400 hover:bg-white/5 hover:text-slate-300'
                             }`}
                           >
-                            {f.name}
+                            {!f.isPublic && <Lock className="w-2.5 h-2.5 text-slate-400 shrink-0" />}
+                            <span>{f.name}</span>
                           </button>
                         )
                       })}
@@ -402,8 +404,15 @@ export const EditableRow = memo(function EditableRow({
                           {folders.map(f => {
                             const isSelected = folderIds.includes(f.id)
                             return (
-                              <button key={f.id} type="button" onClick={() => setFolderIds(prev => isSelected ? prev.filter(id => id !== f.id) : [...prev, f.id])} className={`px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border transition-colors ${isSelected ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-black/20 border-white/5 text-slate-500 hover:text-slate-300'}`}>
-                                {f.name}
+                              <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => setFolderIds(prev => isSelected ? prev.filter(id => id !== f.id) : [...prev, f.id])}
+                                title={f.isPublic ? 'Colección pública' : 'Colección privada (las cartas se ocultan del portafolio público)'}
+                                className={`px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border transition-colors inline-flex items-center gap-1 ${isSelected ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-black/20 border-white/5 text-slate-500 hover:text-slate-300'}`}
+                              >
+                                {!f.isPublic && <Lock className="w-2 h-2 text-slate-400 shrink-0" />}
+                                <span>{f.name}</span>
                               </button>
                             )
                           })}

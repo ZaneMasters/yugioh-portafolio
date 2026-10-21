@@ -207,8 +207,35 @@ async function listCards(filters = {}, userId = null, pagination = {}) {
   // 1. Filtrado en memoria
   let cards = rawCards;
 
+  // Filtrar cartas que pertenezcan a carpetas privadas en vistas públicas
+  let privateFolderIds = filters.privateFolderIds;
+  if (!privateFolderIds && (filters.excludePrivateFolders || filters.onlyPublic) && userId) {
+    try {
+      const folderService = require('./folderService');
+      const folders = await folderService.listFolders(userId);
+      privateFolderIds = folders.filter(f => !f.isPublic).map(f => f.id);
+    } catch (err) {
+      logger.warn(`⚠️ Error obteniendo carpetas privadas en listCards: ${err.message}`);
+    }
+  }
+
+  if (privateFolderIds && privateFolderIds.length > 0) {
+    const privateSet = new Set(privateFolderIds);
+    cards = cards.filter((c) => {
+      const cardFolders = Array.isArray(c.folderIds) ? c.folderIds : (c.folderId ? [c.folderId] : []);
+      return !cardFolders.some(id => privateSet.has(id));
+    });
+  }
+
+  if (filters.onlyPublic || filters.excludePrivateFolders) {
+    cards = cards.filter((c) => !c.isHidden);
+  }
+
   if (filters.folderId) {
-    cards = cards.filter(c => c.folderIds && c.folderIds.includes(filters.folderId));
+    cards = cards.filter(c => {
+      const cardFolders = Array.isArray(c.folderIds) ? c.folderIds : (c.folderId ? [c.folderId] : []);
+      return cardFolders.includes(filters.folderId);
+    });
   }
   if (filters.archetype) {
     const archLower = filters.archetype.toLowerCase();
@@ -582,11 +609,17 @@ async function searchBySetCode(setCode) {
       .get();
 
     if (!cardsSnap.empty) {
-      // Obtener perfiles únicamente para los dueños que coinciden
+      // Obtener perfiles y carpetas privadas únicamente para los dueños que coinciden
       const uniqueUserIds = [...new Set(cardsSnap.docs.map(d => d.data().userId).filter(Boolean))];
-      const userDocs = await Promise.all(
-        uniqueUserIds.map(uid => db.collection('users').doc(uid).get())
-      );
+      const [userDocs, privateFolderSnaps] = await Promise.all([
+        Promise.all(uniqueUserIds.map(uid => db.collection('users').doc(uid).get())),
+        Promise.all(uniqueUserIds.map(uid => db.collection('folders').where('userId', '==', uid).where('isPublic', '==', false).get())),
+      ]);
+
+      const privateFolderIdsSet = new Set();
+      privateFolderSnaps.forEach((snap) => {
+        snap.docs.forEach((d) => privateFolderIdsSet.add(d.id));
+      });
 
       const userMap = {};
       userDocs.forEach((uDoc) => {
@@ -602,6 +635,12 @@ async function searchBySetCode(setCode) {
 
       cardsSnap.forEach((doc) => {
         const cardData = doc.data();
+        if (cardData.isHidden) return;
+
+        const cardFolders = Array.isArray(cardData.folderIds) ? cardData.folderIds : (cardData.folderId ? [cardData.folderId] : []);
+        // Si la carta está en alguna carpeta privada, no exponerla a la comunidad
+        if (cardFolders.some(fId => privateFolderIdsSet.has(fId))) return;
+
         const cCode = (cardData.setCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         if (cCode && (cCode.includes(normalizedQuery) || normalizedQuery.includes(cCode))) {
           const owner = userMap[cardData.userId];
