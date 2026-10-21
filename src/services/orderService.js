@@ -77,6 +77,10 @@ class OrderService {
     // Verificar pedidos expirados del vendedor antes de procesar para liberar stock antiguo
     await this.expireOutdatedOrders(sellerId);
 
+    // Obtener carpetas del vendedor para validar que ninguna carta pertenezca a una carpeta privada
+    const sellerFolders = await folderRepository.findAll(sellerId);
+    const privateFolderIds = new Set(sellerFolders.filter(f => !f.isPublic).map(f => f.id));
+
     const { getFirestore } = require('../config/firebase');
     const db = getFirestore();
     const orderNumber = await generateOrderNumber();
@@ -105,6 +109,11 @@ class OrderService {
           throw new AppError(`La carta "${card.name}" no pertenece a este vendedor.`, 403);
         }
 
+        const folderIds = Array.isArray(card.folderIds) ? card.folderIds : (card.folderId ? [card.folderId] : []);
+        if (folderIds.some(fId => privateFolderIds.has(fId))) {
+          throw new AppError(`La carta "${card.name}" está en una colección privada y no está disponible para venta.`, 400);
+        }
+
         const totalQty = Number(card.quantity) || 1;
         const reservedQty = Number(card.reservedQuantity) || 0;
         const availableQty = Math.max(0, totalQty - reservedQty);
@@ -120,8 +129,6 @@ class OrderService {
         const unitPrice = Number(priceVal) || 0;
         const subtotal = unitPrice * reqItem.quantity;
         totalAmount += subtotal;
-
-        const folderIds = Array.isArray(card.folderIds) ? card.folderIds : [];
 
         orderItems.push({
           cardId: doc.id,
