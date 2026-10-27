@@ -11,9 +11,27 @@ const REFRESH_INTERVAL_MS    = 7 * 24 * 60 * 60 * 1000; // 7 días en ms
 /**
  * Versión del esquema de buildIndex.
  * Incrementar cuando se cambie la estructura de buildIndex para invalidar backups viejos.
- * v3 — los precios se consultan en vivo desde TCGPlayer, se remueven card_prices y set_price
+ * v5 — filtrado de rarezas dummy/placeholders de YGOPRODeck (ej: 'New', 'Reprint')
  */
-const CATALOG_SCHEMA_VERSION = 4;
+const CATALOG_SCHEMA_VERSION = 6;
+
+// Rarezas placeholder de YGOPRODeck que no son rarezas reales de YGO
+const DUMMY_RARITIES = new Set([
+  'new',
+  'new artwork',
+  'reprint',
+  'european & oceanian debut',
+  'european debut',
+  'oceanian debut',
+  'force-smw',
+  '2',
+  '3',
+]);
+
+const isDummyRarity = (r) => {
+  if (!r || typeof r !== 'string') return true;
+  return DUMMY_RARITIES.has(r.trim().toLowerCase());
+};
 
 // ── Estado en memoria ────────────────────────────────────────────────────────
 let catalog         = [];
@@ -42,45 +60,70 @@ const normalizeString = (str) => {
  * para reducir drásticamente el uso de memoria RAM (de ~100% a ~15% del original).
  */
 const buildIndex = (cards) => {
-  return cards.map(card => ({
-    id:        card.id,
-    name:      card.name,
-    type:      card.type,
-    frameType: card.frameType,
-    desc:      card.desc,
-    race:      card.race      ?? null,
-    atk:       card.atk,
-    def:       card.def,
-    level:     card.level,
-    attribute: card.attribute,
-    archetype: card.archetype,
-    // Todas las artes disponibles — guardamos solo id + URL small para ahorrar RAM
-    // La URL full se construye on-demand: https://images.ygoprodeck.com/images/cards/{id}.jpg
-    card_images: (card.card_images ?? []).map(i => ({
-      id: i.id,
-      s:  i.image_url_small,
-    })),
-    // Versiones físicas de la carta (set code, rareza). Los precios se gestionan vía TCGPlayer.
-    // Claves cortas para minimizar RAM: n=name, c=code, r=rarity
-    card_sets: (card.card_sets ?? []).map(s => ({
-      n: s.set_name,
-      c: s.set_code,
-      r: s.set_rarity,
-    })),
-    // Índices de búsqueda
-    _searchName:      normalizeString(card.name),
-    _searchArchetype: normalizeString(card.archetype),
-    // Índice de búsqueda por set: guarda TANTO el code completo normalizado,
-    // COMO el prefijo del set (parte antes del guión), COMO el nombre completo.
-    // Ej: "MP24-EN001" → "mp24en001 mp24 2024anniversarytindueling..."
-    // Esto permite buscar por "MP24", "mp24en001", "Anniversary Tin", etc.
-    _searchSets: (card.card_sets ?? []).map(s => {
-      const codeNorm   = normalizeString(s.set_code);
-      const prefixNorm = normalizeString(s.set_code.split('-')[0]); // "MP24" de "MP24-EN001"
-      const nameNorm   = normalizeString(s.set_name);
-      return `${codeNorm} ${prefixNorm} ${nameNorm}`;
-    }).join(' '),
-  }));
+  return cards.map(card => {
+    // Normalizar sets y limpiar rarezas dummy
+    const rawSets = card.card_sets ?? [];
+    const validCodes = new Set();
+    const provisionalCodes = new Set();
+    for (const s of rawSets) {
+      const codeUpper = (s.set_code || '').trim().toUpperCase();
+      if (codeUpper) {
+        if (!isDummyRarity(s.set_rarity)) {
+          validCodes.add(codeUpper);
+        } else {
+          provisionalCodes.add(codeUpper);
+        }
+      }
+    }
+
+    const cleanSets = rawSets
+      .filter(s => {
+        if (!s.set_code) return false;
+        const codeUpper = s.set_code.trim().toUpperCase();
+        // Si ya hay una rareza válida para este setCode, omitir la dummy
+        if (isDummyRarity(s.set_rarity) && validCodes.has(codeUpper)) {
+          return false;
+        }
+        return true;
+      })
+      .map(s => {
+        const codeUpper = (s.set_code || '').trim().toUpperCase();
+        return {
+          n: s.set_name,
+          c: s.set_code,
+          r: isDummyRarity(s.set_rarity) ? null : s.set_rarity,
+          p: provisionalCodes.has(codeUpper) ? 1 : 0,
+        };
+      });
+
+    return {
+      id:        card.id,
+      name:      card.name,
+      type:      card.type,
+      frameType: card.frameType,
+      desc:      card.desc,
+      race:      card.race      ?? null,
+      atk:       card.atk,
+      def:       card.def,
+      level:     card.level,
+      attribute: card.attribute,
+      archetype: card.archetype,
+      card_images: (card.card_images ?? []).map(i => ({
+        id: i.id,
+        s:  i.image_url_small,
+      })),
+      card_sets: cleanSets,
+      // Índices de búsqueda
+      _searchName:      normalizeString(card.name),
+      _searchArchetype: normalizeString(card.archetype),
+      _searchSets: cleanSets.map(s => {
+        const codeNorm   = normalizeString(s.c);
+        const prefixNorm = normalizeString((s.c || '').split('-')[0]);
+        const nameNorm   = normalizeString(s.n);
+        return `${codeNorm} ${prefixNorm} ${nameNorm}`;
+      }).join(' '),
+    };
+  });
 };
 
 // ── Operaciones con Storage ──────────────────────────────────────────────────

@@ -10,8 +10,7 @@ const logger = require('./src/utils/logger');
 const catalogService = require('./src/services/catalogService');
 const { PORT } = require('./src/config/env');
 
-// El catálogo se inicializará dinámicamente en el primer request
-// para evitar que se ejecute durante la fase de análisis de Firebase Deploy.
+// Catálogo inicializado dinámicamente en el primer request.
 
 // Exporta la app Express como una Cloud Function HTTP llamada "api"
 // Firebase Hosting redirige /api/** a esta función

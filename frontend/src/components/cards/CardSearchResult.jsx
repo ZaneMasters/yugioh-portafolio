@@ -8,19 +8,40 @@ import { useInventoryLookup } from '../../hooks/useInventoryLookup'
 // Normaliza igual que el backend (elimina todo lo que no sea letras/números)
 const normalizeStr = (str) => (!str ? '' : str.toLowerCase().replace(/[^a-z0-9]/g, ''))
 
+// Rarezas placeholder de APIs externas que no existen en el juego real
+const DUMMY_RARITIES = new Set([
+  'new',
+  'new artwork',
+  'reprint',
+  'european & oceanian debut',
+  'european debut',
+  'oceanian debut',
+  'force-smw',
+  '2',
+  '3',
+])
+
+const isDummyRarity = (r) => !r || typeof r !== 'string' || DUMMY_RARITIES.has(r.trim().toLowerCase())
+
 /**
  * Dado un query de búsqueda por set (ej: "MP24", "Maximum Gold", "LOB-EN005"),
- * devuelve el PRIMER set de la carta que coincide con el query normalizado.
+ * devuelve el set de la carta que coincide con el query normalizado,
+ * priorizando siempre entradas con rarezas oficiales sobre placeholders como 'New'.
  */
 function findMatchingSet(cardSets, query) {
   if (!cardSets?.length || !query) return null
   const nq = normalizeStr(query)
-  return cardSets.find(s => {
+  const matches = cardSets.filter(s => {
     const codeNorm   = normalizeStr(s.setCode)
     const prefixNorm = normalizeStr(s.setCode?.split('-')[0] ?? '')
     const nameNorm   = normalizeStr(s.setName)
     return codeNorm.includes(nq) || prefixNorm === nq || nameNorm.includes(nq)
-  }) ?? null
+  })
+  if (!matches.length) return null
+
+  // Priorizar matches que tengan rareza oficial
+  const legitMatch = matches.find(s => !isDummyRarity(s.rarity))
+  return legitMatch ?? matches[0]
 }
 
 export const CardSearchResult = memo(function CardSearchResult({
@@ -57,7 +78,7 @@ export const CardSearchResult = memo(function CardSearchResult({
       const match = findMatchingSet(card.cardSets, searchQuery)
       if (match) {
         setSelectedSet(match)
-        setRarity(match.rarity || 'Common')
+        setRarity(isDummyRarity(match.rarity) ? 'Common' : (match.rarity || 'Common'))
         return
       }
     }
@@ -67,7 +88,7 @@ export const CardSearchResult = memo(function CardSearchResult({
       const ownedMatch = card.cardSets.find(s => s.setCode && cardOwnership.sets.has(s.setCode.trim().toUpperCase()))
       if (ownedMatch) {
         setSelectedSet(ownedMatch)
-        setRarity(ownedMatch.rarity || 'Common')
+        setRarity(isDummyRarity(ownedMatch.rarity) ? 'Common' : (ownedMatch.rarity || 'Common'))
       }
     }
   }, [searchType, searchQuery, card.cardSets, cardOwnership])
@@ -80,13 +101,24 @@ export const CardSearchResult = memo(function CardSearchResult({
     const seen = new Set()
     const rarities = []
     for (const s of matches) {
-      if (s.rarity && !seen.has(s.rarity)) {
+      if (s.rarity && !seen.has(s.rarity) && !isDummyRarity(s.rarity)) {
         seen.add(s.rarity)
         rarities.push(s.rarity)
       }
     }
     return rarities
   }, [selectedSet?.setCode, card.cardSets])
+
+  // Indica si el set trajo una rareza dummy/provisional (ej: 'New', 'Reprint', etc.) o sin rareza oficial
+  const hasWeirdRarity = useMemo(() => {
+    if (!selectedSet?.setCode || !card.cardSets?.length) return false
+    const codeNorm = normalizeStr(selectedSet.setCode)
+    const matches = card.cardSets.filter(s => normalizeStr(s.setCode) === codeNorm)
+    return Boolean(
+      selectedSet.hasProvisionalRarity ||
+      matches.some(s => s.hasProvisionalRarity || isDummyRarity(s.rarity) || !s.rarity)
+    )
+  }, [selectedSet?.setCode, selectedSet?.hasProvisionalRarity, card.cardSets])
 
   const handleRarityChange = (newRarity) => {
     setRarity(newRarity)
@@ -121,10 +153,11 @@ export const CardSearchResult = memo(function CardSearchResult({
       setRarity('Common')
       return
     }
-    const found = card.cardSets.find((s) => s.setCode === val)
+    const [code, r] = val.split('|')
+    const found = card.cardSets.find((s) => s.setCode === code && (!r || s.rarity === r)) || card.cardSets.find((s) => s.setCode === code)
     if (found) {
       setSelectedSet(found)
-      setRarity(found.rarity)
+      setRarity(isDummyRarity(found.rarity) ? 'Common' : (found.rarity || 'Common'))
       setEdition('') // Al elegir set, reseteamos la edición manual
     }
   }
@@ -230,8 +263,31 @@ export const CardSearchResult = memo(function CardSearchResult({
                 {selectedSet.setCode}
               </span>
 
-              {/* Selector interactivo de rarezas si la búsqueda es por set y hay múltiples rarezas para este código */}
-              {searchType === 'set' && availableRaritiesForSet.length > 1 ? (
+              {/* Selector interactivo si la rareza es provisional (ej: New) o si hay múltiples rarezas para este código */}
+              {hasWeirdRarity ? (
+                <div className="flex items-center gap-1 bg-amber-500/15 border border-amber-500/40 px-1.5 py-0.5 rounded-lg shadow-sm">
+                  <span className="text-[10px] font-bold text-amber-300 mr-0.5">Rareza:</span>
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={selectedSet.rarity || rarity || 'Ultra Rare'}
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        handleRarityChange(e.target.value)
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[10px] font-bold rounded bg-amber-500/25 border border-amber-500/50 text-amber-200 pl-1.5 pr-5 py-0.5 outline-none hover:border-amber-400 focus:ring-1 focus:ring-amber-400 cursor-pointer appearance-none"
+                      title="Rareza provisional o no confirmada por la API. Selecciona la rareza real de tu carta física (ej: Secret Rare o Starlight Rare)."
+                    >
+                      {RARITIES.filter(r => r.value !== 'Any').map((r) => (
+                        <option key={r.value} value={r.value} className="bg-[#1a2235] text-white">
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3 h-3 text-amber-300 absolute right-1 pointer-events-none" />
+                  </div>
+                </div>
+              ) : searchType === 'set' && availableRaritiesForSet.length > 1 ? (
                 <div className="flex flex-wrap items-center gap-1 bg-purple-500/10 border border-purple-500/25 px-1.5 py-0.5 rounded-lg">
                   <span className="text-[10px] font-semibold text-purple-300/80 mr-0.5">Rareza:</span>
                   {availableRaritiesForSet.length <= 3 ? (
@@ -259,7 +315,11 @@ export const CardSearchResult = memo(function CardSearchResult({
                     <div className="relative inline-flex items-center">
                       <select
                         value={selectedSet.rarity || rarity}
-                        onChange={(e) => handleRarityChange(e.target.value)}
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          handleRarityChange(e.target.value)
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                         className="text-[10px] font-bold rounded bg-purple-500/20 border border-purple-500/40 text-purple-200 pl-1.5 pr-5 py-0.5 outline-none hover:border-purple-400 focus:ring-1 focus:ring-purple-400 cursor-pointer appearance-none"
                       >
                         {availableRaritiesForSet.map((r) => (
@@ -391,7 +451,25 @@ export const CardSearchResult = memo(function CardSearchResult({
                           {selectedSet.setCode}
                         </span>
 
-                        {availableRaritiesForSet.length > 1 ? (
+                        {hasWeirdRarity ? (
+                          /* Solo se muestra si la API trajo algo raro como 'New' */
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold text-amber-400">Rareza no confirmada:</span>
+                            <select
+                              value={rarity && rarity !== 'Any' ? rarity : 'Ultra Rare'}
+                              onChange={(e) => handleRarityChange(e.target.value)}
+                              className="px-2 py-0.5 text-[10px] font-semibold rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 outline-none cursor-pointer hover:bg-amber-500/20 transition-all"
+                              title="La API trajo una rareza provisional como 'New'. Elige la rareza real."
+                            >
+                              <option value="" disabled>Selecciona la rareza real...</option>
+                              {RARITIES.filter(r => r.value !== 'Any').map(r => (
+                                <option key={r.value} value={r.value} className="bg-slate-900 text-slate-200">
+                                  {r.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : availableRaritiesForSet.length > 1 ? (
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="text-[10px] font-semibold text-purple-300">Seleccionar Rareza:</span>
                             {availableRaritiesForSet.map((r) => {
@@ -444,7 +522,7 @@ export const CardSearchResult = memo(function CardSearchResult({
                   /* ── Selector completo cuando la búsqueda es por nombre/arquetipo ── */
                   <>
                     <select
-                      value={selectedSet?.setCode ?? ''}
+                      value={selectedSet ? `${selectedSet.setCode}|${selectedSet.rarity ?? ''}` : ''}
                       onChange={handleSetChange}
                       className="w-full bg-black/30 border border-white/10 rounded-lg text-xs text-slate-200
                                  px-2.5 py-2 outline-none focus:border-amber-500/40 focus:bg-black/50
@@ -452,11 +530,11 @@ export const CardSearchResult = memo(function CardSearchResult({
                       title="Selecciona la expansión de tu carta física"
                     >
                       <option value="">— Sin especificar —</option>
-                      {card.cardSets?.map((s, i) => {
+                      {card.cardSets?.filter(s => !isDummyRarity(s.rarity)).map((s, i) => {
                         const hasSetPrice = s.setPrice && s.setPrice !== '0.00' && s.setPrice !== '0';
                         const setInv = getSetInventory(s.setCode);
                         return (
-                          <option key={`${s.setCode}-${i}`} value={s.setCode}>
+                          <option key={`${s.setCode}-${s.rarity}-${i}`} value={`${s.setCode}|${s.rarity ?? ''}`}>
                             {s.setCode} | {s.rarity}
                             {hasSetPrice ? ` | $${s.setPrice}` : ''}
                             {setInv ? ` [✓ TIENES ×${setInv.quantity} EN INVENTARIO]` : ''}
@@ -470,9 +548,27 @@ export const CardSearchResult = memo(function CardSearchResult({
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/10 border border-amber-500/20 text-amber-400">
                           {selectedSet.setCode}
                         </span>
-                        <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-purple-500/10 border border-purple-500/20 text-purple-300">
-                          {selectedSet.rarity}
-                        </span>
+                        {hasWeirdRarity ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold text-amber-400">Rareza no confirmada:</span>
+                            <select
+                              value={rarity && rarity !== 'Any' ? rarity : 'Ultra Rare'}
+                              onChange={(e) => handleRarityChange(e.target.value)}
+                              className="px-2 py-0.5 text-[10px] font-semibold rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 outline-none cursor-pointer hover:bg-amber-500/20 transition-all"
+                            >
+                              <option value="" disabled>Selecciona la rareza real...</option>
+                              {RARITIES.filter(r => r.value !== 'Any').map(r => (
+                                <option key={r.value} value={r.value} className="bg-slate-900 text-slate-200">
+                                  {r.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-purple-500/10 border border-purple-500/20 text-purple-300">
+                            {selectedSet.rarity}
+                          </span>
+                        )}
                         {setOwnership && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">
                             <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />

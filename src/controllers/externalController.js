@@ -8,7 +8,7 @@ const ygoService = require('../services/ygoService');
  */
 
 // TTL en segundos para las cabeceras HTTP
-const SEARCH_CACHE_TTL = 5 * 60;   // 5 min — búsquedas pueden variar
+const SEARCH_CACHE_TTL = 10;       // 10s — permite frescura inmediata en búsquedas y rarezas
 const CARD_CACHE_TTL   = 60 * 60;  // 1 hora — una carta no cambia frecuentemente
 
 // ── GET /external/cards?name=xxx&lang=en ──────────────────────────────────────────

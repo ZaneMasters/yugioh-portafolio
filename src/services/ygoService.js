@@ -4,7 +4,7 @@ const axios      = require('axios');
 const { YGO_API_BASE_URL } = require('../config/env');
 const AppError       = require('../utils/AppError');
 const logger         = require('../utils/logger');
-const catalogService = require('./catalogService');
+const catalogService   = require('./catalogService');
 
 /**
  * Servicio de integración con YGOProdeck y el catálogo local en memoria.
@@ -97,13 +97,65 @@ function mapExternalCard(rawCard) {
   const images = normalizeImages(rawCard.card_images);
 
   // Sets del catálogo local: {n, c, r, p} → expandir a nombres completos para el frontend
+  // Limpia rarezas placeholder que devuelve YGOPRODeck (ej: 'New', 'Reprint', etc.)
+  const DUMMY_RARITIES = new Set([
+    'new',
+    'new artwork',
+    'reprint',
+    'european & oceanian debut',
+    'european debut',
+    'oceanian debut',
+    'force-smw',
+    '2',
+    '3',
+  ]);
+
+  const isDummyRarity = (r) => {
+    if (!r || typeof r !== 'string') return true;
+    return DUMMY_RARITIES.has(r.trim().toLowerCase());
+  };
+
   const normalizeSets = (sets) => {
     if (!Array.isArray(sets)) return [];
-    return sets.map(s => ({
+
+    // Detectar si para algún setCode vino alguna rareza dummy/provisional como 'New'
+    const hadDummyForCode = new Set();
+    const hasValidRarityForCode = new Set();
+    for (const s of sets) {
+      const code = (s.c ?? s.set_code ?? '').trim().toUpperCase();
+      const rarity = s.r ?? s.set_rarity;
+      if (code) {
+        if (isDummyRarity(rarity)) hadDummyForCode.add(code);
+        else hasValidRarityForCode.add(code);
+      }
+    }
+
+    const mapped = sets.map(s => ({
       setName:   s.n ?? s.set_name   ?? null,
       setCode:   s.c ?? s.set_code   ?? null,
       rarity:    s.r ?? s.set_rarity ?? null,
+      p:         s.p ?? null,
     }));
+
+    // Filtrar entradas redundantes que tienen rareza dummy si ya existe una válida
+    return mapped
+      .filter(s => {
+        if (!s.setCode) return false;
+        const codeUpper = s.setCode.trim().toUpperCase();
+        if (isDummyRarity(s.rarity) && hasValidRarityForCode.has(codeUpper)) {
+          return false; // Descartar "New" cuando ya existe "Ultra Rare", etc.
+        }
+        return true;
+      })
+      .map(s => {
+        const codeUpper = (s.setCode || '').trim().toUpperCase();
+        return {
+          setName: s.setName,
+          setCode: s.setCode,
+          rarity: isDummyRarity(s.rarity) ? null : s.rarity,
+          hasProvisionalRarity: Boolean(s.p || hadDummyForCode.has(codeUpper)),
+        };
+      });
   };
 
   return {
@@ -133,7 +185,7 @@ function mapExternalCard(rawCard) {
  * Resolución directa desde RAM — sin caché intermedia ni llamadas externas.
  *
  * @param {string} query
- * @param {'name'|'archetype'} type
+ * @param {'name'|'archetype'|'set'} type
  */
 async function searchCards(query, type = 'name') {
   try {
