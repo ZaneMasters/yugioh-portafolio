@@ -23,8 +23,8 @@ export function useSearchCards(query = '', type = 'name', lang = 'en') {
     queryFn: ({ signal }) => searchExternalCards(normalized, type, lang, signal),
     select: (res) => res.data ?? [],
     enabled: normalized.length >= (type === 'set' ? 4 : 3),
-    staleTime: 10 * 60 * 1000,  // 10 minutos
-    gcTime:    30 * 60 * 1000,  // 30 minutos en memoria
+    staleTime: 30 * 1000,       // 30 segundos — refresco rápido si los datos cambiaron
+    gcTime:    5 * 60 * 1000,   // 5 minutos en memoria
     retry: (failureCount, error) => {
       // No reintentar en errores 400 (ej. parámetros inválidos) ni aborts
       if (error?.status === 400 || error?.name === 'CanceledError' || error?.name === 'AbortError') return false

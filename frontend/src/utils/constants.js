@@ -55,6 +55,8 @@ export const RARITIES = [
   { value: 'Ghost Rare', label: 'Ghost Rare' },
   { value: 'Starlight Rare', label: 'Starlight Rare' },
   { value: 'Quarter Century Secret Rare', label: 'Quarter Century' },
+  { value: "Collector's Rare", label: "Collector's Rare" },
+  { value: 'Prismatic Secret Rare', label: 'Prismatic Secret Rare' },
   { value: 'Gold Rare', label: 'Gold Rare' },
 ]
 
@@ -69,6 +71,8 @@ export const RARITY_COLORS = {
   'Ghost Rare':                  'bg-gray-100/20 text-gray-100 border-gray-100/30',
   'Starlight Rare':              'bg-indigo-400/20 text-indigo-300 border-indigo-400/30',
   'Quarter Century Secret Rare': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+  "Collector's Rare":            'bg-violet-500/20 text-violet-300 border-violet-500/30',
+  'Prismatic Secret Rare':       'bg-pink-500/20 text-pink-300 border-pink-500/30',
   'Gold Rare':                   'bg-yellow-400/20 text-yellow-300 border-yellow-400/30',
 }
 
